@@ -4,6 +4,7 @@
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
 上游方法论：[`docs/agentic-design-methodology.md`](agentic-design-methodology.md)
+Interaction flow spec：[`docs/role-interaction-flow-spec.md`](role-interaction-flow-spec.md)
 UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 
 ## 0. 参考源与防漂移约束
@@ -33,7 +34,9 @@ Role / user entry
 
 同一个 Agent 面向不同角色时，必须有不同的 surface、语气、数据权限和动作边界。
 
-默认产品 UI 不显示 use case / flow 编号。编号只允许出现在 Discussion Mode、设计评审 overlay 或内部文档中，并且必须明确标注 `For discussion only`。
+默认产品 UI 不显示 use case / flow 编号。编号只允许出现在 Discussion Mode、设计评审 overlay 或内部文档中，并且必须明确标注为评审内容。
+
+Production mode 必须是用户真实进入后看到的业务界面；Discussion mode 是可折叠的设计评审 panel，用来解释当前界面属于哪个 Agent、哪个 flow、哪个权限边界。
 
 ## 2. Role surface matrix
 
@@ -66,8 +69,9 @@ Role / user entry
 下一版 UI mock 必须体现：
 
 - 顶层导航按角色入口组织，不按 Agent tab 组织。
-- Agent chat 是当前 surface 的 copilot，不是全局装饰性浮窗。
+- Agent chat 是当前业务流程里的助手，不是全局装饰性浮窗。
 - 同一 Agent 在不同 surface 中展示不同数据、动作和语气。
 - 社工、家属、System Admin 必须有独立入口，不应看到后台全局 Agent 总览。
-- Use case / flow 编号默认隐藏，只在 Discussion Mode 中出现。
-- Discussion Mode 必须显著区别于产品 UI，并标注 `For discussion only`。
+- Production mode 不出现 surface、capability、policy、flow 编号、权限矩阵或 Agent 架构解释。
+- Use case / flow 编号默认隐藏，只在 Discussion Mode panel 中出现。
+- Discussion Mode 必须显著区别于产品 UI，并作为可折叠评审 panel。

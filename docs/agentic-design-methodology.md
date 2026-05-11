@@ -171,6 +171,23 @@ Agent 能主动找他们说什么？
 
 企业聊天通道中的 chat 数量也应按“交互对象 + 场景 + 权限”拆，而不是按 Agent 数量拆。
 
+### 2.8 Production mode and discussion mode
+
+UI mock 必须区分 production mode 和 discussion mode。
+
+Production mode 是真实用户进入后看到的真实业务界面。它必须按 interaction flow 组织：用户进来看到什么、下一步做什么、Agent 如何介入、哪里需要确认。Production mode 不展示功能清单、权限矩阵、Agent 架构解释、surface、capability、policy、use case 编号或 flow 编号。
+
+Discussion mode 是产品设计评审层，可以作为可折叠 panel 或 overlay。它用于标注当前 production screen 背后的 Agent、business flow、角色、权限边界和来源文档。Discussion mode 可以出现编号和设计解释，但必须默认隐藏或显著区别于 production UI。
+
+判定规则：
+
+```text
+Production mode = 真实用户界面
+Discussion mode = 设计评审标注层
+```
+
+如果默认界面看起来像方法论文档、功能罗列或权限矩阵，而不是用户正在完成的业务流程，则视为漂移。
+
 ## 3. 自治等级
 
 | 等级 | 定义 | 适用范围 |
@@ -258,6 +275,7 @@ H5：用于社工现场服务和家属报告。
 5. [`docs/agentic-flows.md`](agentic-flows.md) - Agentic flow baseline
 6. `docs/agent-definitions.md` - 待创建
 7. [`docs/ui-interaction-model.md`](ui-interaction-model.md) - UI / interaction model
+8. [`docs/role-interaction-flow-spec.md`](role-interaction-flow-spec.md) - 分角色 production interaction flow
 
 已降级为参考：
 
