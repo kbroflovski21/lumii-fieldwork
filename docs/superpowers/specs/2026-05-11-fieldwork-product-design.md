@@ -108,6 +108,8 @@ After service completion, the family member receives a Feishu channel link, open
 
 ## 8. Functional Requirements
 
+Implementation must be result-screen driven. This product is an agentic service: Agents appear as Feishu chat entries and as embedded chat panels inside business dashboards. They should not replace the core dashboard screens needed for scheduling, SOP publishing, service monitoring, log review, and report delivery.
+
 ### 8.1 Worker H5
 
 - Show today's tasks ordered by route.
@@ -140,9 +142,46 @@ After service completion, the family member receives a Feishu channel link, open
 - Support family notes linked to the elder profile.
 - Use larger readable typography and mobile-first layout.
 
-## 9. Agent Requirements
+## 9. Result Screens
 
-### 9.1 Supervisor Agent
+### 9.1 Feishu Chat Agent Entries
+
+- Manager/scheduling Agent: answers operational questions, proposes schedules, sends exceptions, overtime alerts, and end-of-day summaries.
+- SOP debug Agent: runs simulated conversations against unpublished SOP templates and returns missing checks, reminder wording, and log-field preview.
+- Worker task Agent: sends today's task list, next-stop reminder, and exception follow-up cards; field service execution remains in Worker H5.
+- Report Agent: sends generated health report links, attention items, and delivery status to Feishu channels.
+
+Feishu chat interactions should use natural-language messages, cards, and confirm buttons. Complex setup, publishing, and auditing must deep-link to dashboard screens.
+
+### 9.2 Manager Dashboard Screens
+
+- Operations dashboard: today's total, in progress, completed, exceptions, overtime, pending review; embedded Agent chat panel on the side.
+- Scheduling board: elder demand, worker availability, route suggestion, Agent schedule draft, manager confirmation.
+- SOP workbench: template authoring, required checks, prompt wording, expected duration, exception triggers, simulated debug run, publish.
+- Live service board: status by worker, elder, or timeline; exception card drill-down.
+- Service detail and log review: transcript summary, SOP completion, photos, recording, exception marks, worker note, generated ServiceLog, manager approval.
+- Report center: HealthReport generation state, Feishu delivery state, retry, history, and desensitized preview.
+- Field setup pages: only site, worker, elder, family, device, and Feishu identity data required for field deployment.
+
+Dashboard Agents must be side-panel copilots. They can propose and explain, but final publish, schedule confirmation, and review approval happen through explicit dashboard actions.
+
+### 9.3 Worker H5 Screens
+
+- Today's tasks: ordered route, elder, address, service type, expected duration, previous exception.
+- Active service: elder, service type, timer, recording state, SOP progress, latest AI prompt, photo, exception mark, complete action.
+- Service complete: debrief, AI summary, worker remark, next stop.
+
+Worker H5 must avoid complex chat. In-field AI interaction is mainly through headset prompts.
+
+### 9.4 Family Report H5 Screens
+
+- Single-service report: summary, indicators, attention items, comparison with previous visit, worker information.
+- History and trends: timeline plus key health metric charts.
+- Family note: simple note input that becomes future service context.
+
+## 10. Agent Requirements
+
+### 10.1 Supervisor Agent
 
 Context:
 
@@ -168,7 +207,7 @@ Outputs:
 - Exception mark
 - Post-service debrief
 
-### 9.2 Management And Scheduling Agent
+### 10.2 Management And Scheduling Agent
 
 Context:
 
@@ -185,7 +224,7 @@ Behavior:
 - Consider route optimization, service frequency, worker fit, exception priority, and substitutions.
 - Push alerts for overtime, exceptions, completion-rate drop, and scheduling conflicts.
 
-### 9.3 Insight Agent
+### 10.3 Insight Agent
 
 Inputs:
 
@@ -202,7 +241,7 @@ Outputs:
 - Desensitized family health report
 - Worker debrief
 
-## 10. Architecture Boundaries
+## 11. Architecture Boundaries
 
 The MVP architecture should keep the product portable from H5 to future hardware badge:
 
@@ -229,7 +268,7 @@ Reference-aligned provider direction:
 - Alternatives: Volcano stack or Tencent ASR plus GLM.
 - Requirement: ASR, LLM, and TTS must go through internal provider abstraction.
 
-## 11. Data Model
+## 12. Data Model
 
 Core entities:
 
@@ -250,7 +289,7 @@ Core entities:
 
 `Recording` is in MVP scope. Service audio is stored in OSS for traceability, quality review, and dispute handling. The implementation plan must define retention period, access audit, and deletion policy.
 
-## 12. Scenario-To-Test-Case Design
+## 13. Scenario-To-Test-Case Design
 
 These are test-case designs, not implemented tests.
 
@@ -260,6 +299,8 @@ These are test-case designs, not implemented tests.
 | Admin initializes site | Admin | Empty site | Admin creates site, roles, workers, elders, families, devices, and Feishu identities | Manager dashboard shows deployable site data | Site configuration persisted | Worker cannot see other workers' assigned elders | local | smoke |
 | SOP operator debugs template | SOP operator | Unpublished 探访关爱 template and simulated elder profile | Operator runs simulated conversation | SOP progress, AI reminders, and log fields are visible | Template version saved or rejected | Family-facing report must not expose debug transcript | replay | full |
 | Manager schedules worker | Manager | Site has workers, elders, SOP templates, and locations | Manager confirms Agent schedule suggestion | Worker task queue receives ordered tasks | Schedule records created | No schedule mutation before manager confirmation | integration | smoke |
+| Manager uses dashboard Agent panel | Manager | Operations dashboard has live service data | Manager asks side-panel Agent for exceptions | Agent returns answer with linked cards | No mutation unless manager clicks dashboard action | No cross-site data unless admin | integration | smoke |
+| Feishu scheduling Agent sends draft | Manager | Tomorrow has schedulable workers and elders | Agent posts Feishu schedule card | Manager can confirm or open scheduling board | Schedule only persists after confirmation | No schedule mutation from plain text alone | integration | full |
 | AI flags missing SOP step | Worker | Active service transcript missing required medication check | Transcript reaches reminder threshold | Worker hears concise headset prompt | SOP step remains pending until confirmed | Prompt must not expose internal scoring | replay | full |
 | Manager monitors exception | Manager | Active service has AI exception mark | Manager opens Kanban | Exception card is highlighted with summary | Audit read event recorded | No family report text shown as internal evidence | integration | smoke |
 | Manager asks scheduling Agent | Manager | Tomorrow has elders, workers, locations, frequencies | Manager asks for schedule | Agent returns proposed schedule with reasons | No schedule changes until manager confirms | No cross-site data unless admin | integration | full |
@@ -273,7 +314,7 @@ E2E impact:
 - Family report privacy needs explicit negative/non-regression coverage.
 - Voice prompt timing can start as replay tests using saved transcript events before live ASR/TTS canary.
 
-## 13. Acceptance Criteria
+## 14. Acceptance Criteria
 
 Worker:
 
@@ -286,6 +327,7 @@ Manager:
 - Admin or site manager can initialize a deployable site with roles, workers, elders, families, devices, and Feishu identities.
 - SOP operator can create and debug 探访关爱 and 助浴 templates before field use.
 - Manager can schedule, monitor, query Agent, review logs, and export.
+- Manager can use Feishu chat Agent for questions and cards, while final schedule confirmation and review approval happen in dashboard screens.
 - Exceptions are visible in real time.
 - Agent suggestions require manager confirmation before schedule mutation.
 
@@ -306,7 +348,7 @@ Field deployment:
 - A manager can assign a real task to a worker and the worker can receive it in route order.
 - The system can produce ServiceLog, HealthReport, worker debrief, manager review state, and Feishu report delivery from one completed service.
 
-## 14. Confirmed MVP Decisions
+## 15. Confirmed MVP Decisions
 
 1. Scheduling system: assume 金色年华 has no existing scheduling system for MVP. Build scheduling in this product first; if an existing system is later discovered, treat integration as a separate change.
 2. Push channel: use Feishu channel for MVP push delivery and internal alerts.
@@ -314,7 +356,7 @@ Field deployment:
 4. SOP templates: MVP must include 探访关爱 and 助浴 first; additional templates can be ranked during implementation planning.
 5. Frontend stack: use React by default for the implementation plan unless a future repo baseline establishes a different stack before planning begins.
 
-## 15. Risk Register
+## 16. Risk Register
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
@@ -324,7 +366,7 @@ Field deployment:
 | H5 background audio limitations | Real-time supervision may stop during service | Require foreground service mode for MVP and preserve the path to future hardware badge |
 | Manager distrusts auto-scheduling | Low adoption | Agent must provide reasons and require manager confirmation before schedule mutation |
 
-## 16. Approval And Next Step
+## 17. Approval And Next Step
 
 User selected the dual-document approach:
 
