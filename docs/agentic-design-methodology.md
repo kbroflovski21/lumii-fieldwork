@@ -13,7 +13,7 @@
 给新 session 的最短版本：
 
 ```text
-先读业务用例和 agentic flow。
+先按 docs/README.md 的 0/1/2/3 顺序读。
 列矩阵：谁 × 哪个 Agent × 什么权限/场景 × 自治等级。
 矩阵每一项 = 一个 UI / Chat context。
 每个 UI / Chat context 先写 production interaction flow，再画 UI。
@@ -152,27 +152,7 @@ UI 数量按这个矩阵定：
 
 不要按 Agent 数量、角色数量或页面数量推导 UI。
 
-MVP 先按 15 个 UI / Chat context 设计：
-
-| # | 谁 | Agent | 权限/场景 | 自治等级 | UI / Chat context |
-| --- | --- | --- | --- | --- | --- |
-| 1 | 机构 / 总部 | 管理 Agent / 洞察 Agent | 跨站质量、服务量、投诉率、凭证通过率 | Copilot / Delegated | 总部运营复盘 |
-| 2 | 站长 / 运营 | 管理 Agent | 需求、排班、派单、异常 | Copilot / Delegated / Full autonomous | 运营调度工作台 |
-| 3 | 站长 / 运营 | 洞察 Agent | 老人趋势、家属反馈、回访建议 | Copilot / Full autonomous | 站长洞察面板 |
-| 4 | 站长 / 调度 | 管理 Agent | 社工资料、班次、请假、替班、可用性 | Copilot / Delegated | 社工管理台 |
-| 5 | 站长 / 客服 | 管理 Agent | 老人档案、家属授权、服务资格、服务频次 | Copilot / Delegated | 老人 / 家属档案台 |
-| 6 | 服务主管 / SOP 负责人 | 督导 Agent | 服务项目、SOP、异常分支、凭证要求 | Copilot / Delegated | SOP / 服务项目规则台 |
-| 7 | 服务主管 / 培训负责人 | 督导 Agent | 培训资料、新 SOP、新规则、培训状态 | Copilot / Delegated / Full autonomous | 培训管理台 |
-| 8 | 社工 | 督导 Agent | 今日任务、服务前 hint、现场 SOP | Copilot / Full autonomous | 社工现场 H5 |
-| 9 | 社工 | 督导 Agent | 查手册、学习新 SOP、服务规范问答 | Copilot | 社工查手册 / 学习 Chat |
-| 10 | 服务主管 / 质检 | 督导 Agent | SOP 漏项、服务日志、异常闭环 | Copilot / Delegated | 质检审核台 |
-| 11 | 服务主管 / 质检 | 管理 Agent / 凭证能力 | 服务凭证、导出前审核 | Copilot / Delegated | 凭证审核台 |
-| 12 | 客服 / 接线 | 管理 Agent | 外生需求受理、投诉入池 | Copilot / Delegated | 接线 / 需求受理台 |
-| 13 | 客服 / 家属沟通 | 洞察 Agent | 回访、报告草稿、投诉沟通 | Copilot / Delegated / Full autonomous | 家属沟通台 |
-| 14 | 家属 | 洞察 Agent | 服务报告、老人近况、提交需求 | Copilot | 家属 H5 / 小程序 |
-| 15 | System Admin | 系统管理能力 | 组织、账号、渠道、权限、审计 | Copilot / Delegated | Admin Console |
-
-每个 UI / Chat context 都必须先设计 production interaction flow，再决定是否需要外链 panel、H5 或 dashboard。
+矩阵内容不写在 methodology 里，见 3 号文档 [`docs/ui-chat-context-matrix.md`](ui-chat-context-matrix.md)。
 
 ### 2.8 Production mode and discussion mode
 
@@ -270,16 +250,12 @@ H5：用于社工现场服务和家属报告。
 
 ## 7. 文档层级
 
-新 session 只需要按这个顺序读：
+新 session 只需要按 [`docs/README.md`](README.md) 的 0/1/2/3 顺序读：
 
-1. [`docs/agentic-design-methodology.md`](agentic-design-methodology.md) - 方法论总锚点
-2. [`docs/business-use-cases.md`](business-use-cases.md) - 业务用例基线
-3. [`docs/agentic-flows.md`](agentic-flows.md) - Agentic flow baseline
-
-必要时再查：
-
-- [`docs/human-agent-substitution.md`](human-agent-substitution.md)
-- [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)
+0. [`docs/agentic-design-methodology.md`](agentic-design-methodology.md) - methodology
+1. [`docs/business-use-cases.md`](business-use-cases.md) - business case
+2. [`docs/agentic-flows.md`](agentic-flows.md) - agentic flow
+3. [`docs/ui-chat-context-matrix.md`](ui-chat-context-matrix.md) - UI / Chat context matrix
 
 已降级为参考：
 
