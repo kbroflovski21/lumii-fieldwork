@@ -18,3 +18,5 @@
 | 3 | [`ui-chat-context-matrix.md`](ui-chat-context-matrix.md) | UI 矩阵：谁 × Agent × 权限/场景 × 自治等级 |
 
 后续 design spec 必须按 3 号文档里的矩阵项逐项写。每个矩阵项对应一个 UI / Chat context。
+
+下一步执行清单见 [`todos.md`](todos.md)。新 session 必须按 TODOs 逐项写 design spec，再逐项做 UI mock。
