@@ -18,8 +18,8 @@ interface AgentSuggestion {
   type: 'tip' | 'warning' | 'completion'
 }
 
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:3001`
-const WS_URL = `ws://${window.location.hostname}:3001/ws/asr`
+const API_BASE = window.location.origin
+const WS_URL = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/asr`
 
 export default function ServiceSession() {
   const { taskId } = useParams()

@@ -220,6 +220,15 @@ ${(sopSteps || []).map((s, i) => `${i + 1}. ${s.name}：${s.guidance}`).join('\n
   }
 });
 
+// ─── Serve Frontend Static Files ───
+const path = require('path');
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/ws/')) return next();
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 // ─── Health Check ───
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', model: LLM_MODEL });
