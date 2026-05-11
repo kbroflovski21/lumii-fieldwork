@@ -1,9 +1,11 @@
 # 社区养老服务系统用例基线
 
-状态：System use case baseline
+状态：Superseded reference
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
 上游业务用例：[`docs/business-use-cases.md`](business-use-cases.md)
+
+> Superseded note: 2026-05-11 后，主线分析改为 [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)。本文保留为系统能力参考，不再作为 Agent 分类或产品主线的上游依据。
 
 ## 0. 参考源与防漂移约束
 
