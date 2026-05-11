@@ -3,6 +3,7 @@ import Portal from './pages/Portal'
 import TaskList from './pages/worker/TaskList'
 import ServiceSession from './pages/worker/ServiceSession'
 import ServiceComplete from './pages/worker/ServiceComplete'
+import ServiceLog from './pages/worker/ServiceLog'
 import AdminDashboard from './pages/admin/Dashboard'
 import Kanban from './pages/admin/Kanban'
 import AgentChat from './pages/admin/AgentChat'
@@ -148,6 +149,7 @@ export default function App() {
         <Route path="/worker" element={<WorkerLayout><TaskList /></WorkerLayout>} />
         <Route path="/worker/session/:taskId" element={<WorkerLayout><BackNav title="服务进行中" color="#0052CC" /><ServiceSession /></WorkerLayout>} />
         <Route path="/worker/complete/:taskId" element={<WorkerLayout><BackNav title="服务完成" color="#16A34A" /><ServiceComplete /></WorkerLayout>} />
+        <Route path="/worker/log/:taskId" element={<WorkerLayout><BackNav title="服务日志" color="#7C3AED" /><ServiceLog /></WorkerLayout>} />
         {/* Admin routes */}
         <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
         <Route path="/admin/kanban" element={<AdminLayout><Kanban /></AdminLayout>} />

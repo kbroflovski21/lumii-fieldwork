@@ -122,7 +122,7 @@ export default function ServiceComplete() {
                 SOP {sopCompleted}/{sopTotal} 项完成。
                 {task.alert ? `注意事项: ${task.alert}` : '无异常标记。'}
               </p>
-              <button className="text-xs font-medium mt-1.5 flex items-center gap-0.5"
+              <button onClick={() => navigate(`/worker/log/${task.id}`)} className="text-xs font-medium mt-1.5 flex items-center gap-0.5"
                 style={{ color: '#0052CC' }}>
                 查看详情 <ChevronRight size={12} />
               </button>
