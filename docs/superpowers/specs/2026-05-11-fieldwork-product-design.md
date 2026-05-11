@@ -37,6 +37,8 @@ Required design/doc updates:
 
 Build an H5 MVP for community home-based elderly care fieldwork supervision.
 
+This is a field-deployable MVP, not a demo prototype. The design must support site initialization, SOP authoring/debugging, scheduling, worker assignment, home service execution, AI supervision, log/report generation, manager review, and family delivery as one production-like loop.
+
 The MVP must prove the complete three-sided workflow:
 
 - Social worker uses H5 + Bluetooth headset during home service.
@@ -68,6 +70,7 @@ The MVP must prove the complete three-sided workflow:
 | Social worker | Worker | Worker H5 task list | Own assigned tasks, required elder context, own history |
 | Site manager | Manager | Manager H5 dashboard | Own site schedules, workers, elders, logs, statistics |
 | Headquarters admin | Admin | Manager H5 dashboard | All sites, templates, cross-site analysis |
+| SOP operator | Manager | Manager H5 SOP console | Service templates, required checks, AI prompt wording, debug runs |
 | Family member | Family | Report H5 link | Linked elder reports, history, notes |
 
 Privacy boundary:
@@ -76,17 +79,30 @@ Privacy boundary:
 - Internal service logs and raw transcripts are management artifacts.
 - Photos, audio, health data, and transcripts require access control and audit logging.
 
+Field deployment responsibilities:
+
+- Headquarters admin initializes organization, sites, global permissions, and baseline templates.
+- Site manager configures workers, elders, families, devices, Feishu identities, and daily schedules.
+- SOP operator creates and debugs service SOP templates before field use.
+- Worker receives assigned home-service tasks and completes service through the Worker H5 flow.
+- Family member receives the generated health report and leaves notes for future service.
+- AI Agents supervise service, assist scheduling, and generate internal/external artifacts.
+
 ## 7. Scenarios
 
 ### 7.1 Social Worker Day Flow
 
 The worker opens H5 and sees the ordered task queue. On arrival, the worker starts the task and the system loads elder profile, SOP, history, and family notes. During service, the worker keeps the phone away and receives headset prompts only when SOP steps, omissions, or risks require intervention. At the end, the worker completes the service, optionally adds remarks, and the system generates log/report/debrief before switching to the next task.
 
-### 7.2 Site Manager Day Flow
+### 7.2 Site Initialization And SOP Debug Flow
+
+An admin or site manager starts from an empty site, creates the site, workers, elders, family members, devices, and Feishu delivery identities. The SOP operator creates 探访关爱 and 助浴 templates, configures required steps, required questions, AI prompt wording, expected duration, and exception triggers. Before field use, the SOP operator runs a simulated conversation to verify that AI reminders, SOP progress, and log/report fields are generated correctly.
+
+### 7.3 Site Manager Day Flow
 
 The manager confirms daily scheduling, monitors service progress in a Kanban view, receives exception alerts, asks the Agent questions about status or performance, reviews logs, and exports data when needed.
 
-### 7.3 Family Report Flow
+### 7.4 Family Report Flow
 
 After service completion, the family member receives a Feishu channel link, opens the H5 report, reads service summary and health indicators, checks changes from the previous visit, reviews history, and leaves notes that become context for the next service.
 
@@ -105,12 +121,14 @@ After service completion, the family member receives a Feishu channel link, open
 
 ### 8.2 Manager H5
 
+- Initialize site, roles, permissions, workers, elders, family members, devices, and Feishu identities.
 - Create, adjust, and confirm daily schedules.
 - Support Agent-assisted schedule suggestions.
 - Show Kanban task states: pending, en route, in service, completed, exception.
 - Highlight AI-detected exceptions.
 - Support natural-language Agent queries for exceptions, quality, performance, elder health, and scheduling.
 - Manage SOP templates, sites, workers, elders, family members, and devices.
+- Debug SOP templates with simulated elder profiles and conversations before field use.
 - Browse and export service logs.
 - Show service volume, SOP completion, exception rate, worker efficiency, and elder health summaries.
 
@@ -239,6 +257,9 @@ These are test-case designs, not implemented tests.
 | Scenario | Actor | Given | When | Then User-Visible Result | Side Effect | Forbidden Output / Leak Check | Runner Layer | Suite |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Worker completes service | Worker | Assigned task with elder profile and SOP | Worker starts and completes service | Worker sees debrief and next task | Session archived, log/report queued | No unrelated elder data shown | local | smoke |
+| Admin initializes site | Admin | Empty site | Admin creates site, roles, workers, elders, families, devices, and Feishu identities | Manager dashboard shows deployable site data | Site configuration persisted | Worker cannot see other workers' assigned elders | local | smoke |
+| SOP operator debugs template | SOP operator | Unpublished 探访关爱 template and simulated elder profile | Operator runs simulated conversation | SOP progress, AI reminders, and log fields are visible | Template version saved or rejected | Family-facing report must not expose debug transcript | replay | full |
+| Manager schedules worker | Manager | Site has workers, elders, SOP templates, and locations | Manager confirms Agent schedule suggestion | Worker task queue receives ordered tasks | Schedule records created | No schedule mutation before manager confirmation | integration | smoke |
 | AI flags missing SOP step | Worker | Active service transcript missing required medication check | Transcript reaches reminder threshold | Worker hears concise headset prompt | SOP step remains pending until confirmed | Prompt must not expose internal scoring | replay | full |
 | Manager monitors exception | Manager | Active service has AI exception mark | Manager opens Kanban | Exception card is highlighted with summary | Audit read event recorded | No family report text shown as internal evidence | integration | smoke |
 | Manager asks scheduling Agent | Manager | Tomorrow has elders, workers, locations, frequencies | Manager asks for schedule | Agent returns proposed schedule with reasons | No schedule changes until manager confirms | No cross-site data unless admin | integration | full |
@@ -248,6 +269,7 @@ These are test-case designs, not implemented tests.
 E2E impact:
 
 - Future implementation must include at least one local end-to-end smoke path for worker service completion through report generation.
+- Future implementation must include a field-deploy smoke path from empty-site setup through SOP debug, scheduling, worker service, report generation, manager review, and Feishu delivery.
 - Family report privacy needs explicit negative/non-regression coverage.
 - Voice prompt timing can start as replay tests using saved transcript events before live ASR/TTS canary.
 
@@ -261,6 +283,8 @@ Worker:
 
 Manager:
 
+- Admin or site manager can initialize a deployable site with roles, workers, elders, families, devices, and Feishu identities.
+- SOP operator can create and debug 探访关爱 and 助浴 templates before field use.
 - Manager can schedule, monitor, query Agent, review logs, and export.
 - Exceptions are visible in real time.
 - Agent suggestions require manager confirmation before schedule mutation.
@@ -275,6 +299,12 @@ Security:
 - Role-based access control prevents cross-role and cross-site access.
 - Sensitive asset access is audited.
 - Report links do not leak data when invalid or unauthorized.
+
+Field deployment:
+
+- A fresh site can be configured from zero and used for one complete service loop.
+- A manager can assign a real task to a worker and the worker can receive it in route order.
+- The system can produce ServiceLog, HealthReport, worker debrief, manager review state, and Feishu report delivery from one completed service.
 
 ## 14. Confirmed MVP Decisions
 
