@@ -58,6 +58,15 @@ export default function ServiceSession() {
     return () => clearInterval(timer)
   }, [])
 
+  // Preload voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices()
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices()
+    }
+    return () => { window.speechSynthesis?.cancel() }
+  }, [])
+
   // Auto-scroll
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,14 +82,29 @@ export default function ServiceSession() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
   }
 
-  const addSuggestion = useCallback((text: string, type: 'tip' | 'warning' | 'completion' = 'tip') => {
+  const speakText = useCallback((text: string) => {
+    if (!('speechSynthesis' in window)) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'zh-CN'
+    utterance.rate = 1.1
+    utterance.pitch = 1.0
+    const voices = window.speechSynthesis.getVoices()
+    const zhVoice = voices.find(v => v.lang.startsWith('zh') && v.name.includes('female'))
+      || voices.find(v => v.lang.startsWith('zh'))
+    if (zhVoice) utterance.voice = zhVoice
+    window.speechSynthesis.speak(utterance)
+  }, [])
+
+  const addSuggestion = useCallback((text: string, type: 'tip' | 'warning' | 'completion' = 'tip', speak = false) => {
     setSuggestions(prev => [...prev, {
       id: Date.now(),
       text,
       timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       type,
     }])
-  }, [])
+    if (speak) speakText(text)
+  }, [speakText])
 
   // Call LLM agent to analyze transcript
   const analyzeTranscript = useCallback(async () => {
@@ -108,14 +132,14 @@ export default function ServiceSession() {
               const idx = stepNum - 1
               if (idx >= 0 && idx < task.sopProgress.length && next[idx] !== 'completed') {
                 next[idx] = 'completed'
-                addSuggestion(`SOP「${task.sopProgress[idx].name}」已确认完成`, 'completion')
+                addSuggestion(`SOP「${task.sopProgress[idx].name}」已确认完成`, 'completion', true)
               }
             })
             return next
           })
         }
         if (data.suggestion) {
-          addSuggestion(data.suggestion, 'tip')
+          addSuggestion(data.suggestion, 'tip', true)
         }
       }
     } catch (e) {
@@ -127,21 +151,44 @@ export default function ServiceSession() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
       })
       mediaStreamRef.current = stream
 
-      const audioCtx = new AudioContext({ sampleRate: 16000 })
+      const audioCtx = new AudioContext()
       audioCtxRef.current = audioCtx
+      const nativeSR = audioCtx.sampleRate
+      console.log('[ASR] Native sample rate:', nativeSR)
+
       const source = audioCtx.createMediaStreamSource(stream)
       const processor = audioCtx.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
+
+      // Resample float32 from native rate to 16kHz PCM16
+      const resampleAndConvert = (float32: Float32Array, fromRate: number): ArrayBuffer => {
+        const ratio = fromRate / 16000
+        const outLen = Math.round(float32.length / ratio)
+        const int16 = new Int16Array(outLen)
+        for (let i = 0; i < outLen; i++) {
+          const srcIdx = i * ratio
+          const idx = Math.floor(srcIdx)
+          const frac = srcIdx - idx
+          const s0 = float32[idx] || 0
+          const s1 = float32[Math.min(idx + 1, float32.length - 1)] || 0
+          const sample = Math.max(-1, Math.min(1, s0 + frac * (s1 - s0)))
+          int16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF
+        }
+        return int16.buffer
+      }
 
       // Connect WebSocket
       const ws = new WebSocket(WS_URL)
       wsRef.current = ws
 
-      ws.onopen = () => console.log('[ASR] WebSocket connected')
+      ws.onopen = () => {
+        console.log('[ASR] WebSocket connected to', WS_URL)
+        addSuggestion('正在连接语音服务...', 'tip')
+      }
 
       ws.onmessage = (event) => {
         try {
@@ -149,18 +196,14 @@ export default function ServiceSession() {
           if (msg.type === 'asr_ready') {
             setAsrReady(true)
             setIsRecording(true)
-            addSuggestion('语音识别已就绪，开始实时转写', 'tip')
+            addSuggestion(`语音识别已就绪 (${nativeSR}Hz→16kHz)`, 'tip')
 
             // Start sending audio
             processor.onaudioprocess = (e) => {
               if (ws.readyState === WebSocket.OPEN) {
                 const float32 = e.inputBuffer.getChannelData(0)
-                const int16 = new Int16Array(float32.length)
-                for (let i = 0; i < float32.length; i++) {
-                  const s = Math.max(-1, Math.min(1, float32[i]))
-                  int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF
-                }
-                ws.send(int16.buffer)
+                const pcm16k = resampleAndConvert(float32, nativeSR)
+                ws.send(pcm16k)
               }
             }
             source.connect(processor)
@@ -191,7 +234,10 @@ export default function ServiceSession() {
         }
       }
 
-      ws.onerror = () => addSuggestion('语音连接异常，请检查网络', 'warning')
+      ws.onerror = (e) => {
+        console.error('[ASR] WebSocket error:', e, 'URL:', WS_URL)
+        addSuggestion(`语音连接异常 (${WS_URL})`, 'warning')
+      }
       ws.onclose = () => {
         setAsrReady(false)
         setIsRecording(false)
@@ -201,7 +247,8 @@ export default function ServiceSession() {
       analyzeTimerRef.current = setInterval(analyzeTranscript, 15000)
 
     } catch (err: any) {
-      addSuggestion(`麦克风访问失败: ${err.message}`, 'warning')
+      console.error('[ASR] startRecording error:', err)
+      addSuggestion(`启动失败: ${err.message}`, 'warning')
     }
   }
 

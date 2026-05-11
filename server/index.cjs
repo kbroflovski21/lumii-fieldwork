@@ -119,20 +119,12 @@ wss.on('connection', (clientWs) => {
           }
         } catch(e) {}
       } else {
-        // Binary audio data - wrap in continue-task
-        const continueMsg = {
-          header: {
-            action: 'continue-task',
-            task_id: taskId,
-            streaming: 'duplex',
-          },
-          payload: {
-            input: {
-              audio: Buffer.from(data).toString('base64'),
-            }
-          }
-        };
-        dashscopeWs.send(JSON.stringify(continueMsg));
+        // Binary audio data - send raw PCM bytes directly in duplex mode
+        if (!clientWs._loggedFirst) {
+          console.log(`[ASR] First audio chunk: ${data.length} bytes`);
+          clientWs._loggedFirst = true;
+        }
+        dashscopeWs.send(data);
       }
     }
   });
