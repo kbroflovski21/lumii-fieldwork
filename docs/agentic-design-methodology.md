@@ -84,10 +84,6 @@ Production mode 是真实用户界面；Discussion mode 只是可折叠标注层
 - 哪些工作可以让 Agent 主动做
 - 哪些动作必须人确认
 
-当前基线文档：
-
-- [`docs/human-agent-substitution.md`](human-agent-substitution.md)
-
 ### 2.3 Agentic use case analysis
 
 然后把人类工作聚合成责任线，而不是直接按岗位或页面拆 Agent。
@@ -98,10 +94,6 @@ Production mode 是真实用户界面；Discussion mode 只是可折叠标注层
 - 哪些责任线天然应该合并
 - 哪些责任线需要强边界
 - 哪些责任线不应成为业务 Agent，而应作为系统护栏
-
-当前基线文档：
-
-- [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)
 
 ### 2.4 Agentic flow
 

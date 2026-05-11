@@ -4,12 +4,11 @@
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
 方法论：[`docs/agentic-design-methodology.md`](agentic-design-methodology.md)
-上游分析：[`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)
 UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 
 ## 0. 参考源与防漂移约束
 
-本文把 agentic use case analysis 具体化为可交互流程。每条 flow 都从现实业务触发出发，说明 Agent 如何响应、主动发现、生成草案、追问缺口、推动流程，以及哪里必须人工确认。
+本文把业务用例具体化为可交互流程。每条 flow 都从现实业务触发出发，说明 Agent 如何响应、主动发现、生成草案、追问缺口、推动流程，以及哪里必须人工确认。
 
 原始需求链接：
 
