@@ -93,8 +93,11 @@ export default function ServiceSession() {
         </div>
       </div>
 
+      {/* SOP + AI Grid — side by side on desktop */}
+      <div className="md:grid md:grid-cols-2 md:gap-4">
+
       {/* SOP Timeline */}
-      <div className="glass-card p-4 mb-4">
+      <div className="glass-card p-4 mb-4 md:mb-0">
         <h3 className="text-sm font-bold mb-3" style={{ color: '#191C1E' }}>
           服务流程 (SOP)
         </h3>
@@ -173,7 +176,7 @@ export default function ServiceSession() {
       </div>
 
       {/* AI Feedback Section */}
-      <div className="glass-card p-4 mb-24">
+      <div className="glass-card p-4 md:self-start">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 rounded-full flex items-center justify-center"
             style={{ background: 'rgba(0,82,204,0.08)' }}>
@@ -203,8 +206,12 @@ export default function ServiceSession() {
         </p>
       </div>
 
+      </div>{/* end SOP + AI grid */}
+
+      <div className="h-24 md:h-8" />{/* spacer for floating bar */}
+
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg md:max-w-xl px-4">
         <div className="glass-card p-3 flex items-center justify-center gap-3"
           style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
           {/* Camera */}

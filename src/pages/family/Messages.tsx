@@ -67,7 +67,8 @@ export default function FamilyMessages() {
         </p>
       </div>
 
-      {/* Existing Messages */}
+      {/* Existing Messages and New Message — side by side on desktop */}
+      <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-6">
       <div>
         <h3
           className="text-base font-bold mb-3 px-1"
@@ -136,7 +137,7 @@ export default function FamilyMessages() {
             onKeyDown={handleKeyDown}
             placeholder="例如：妈妈最近腿疼，麻烦多关注..."
             rows={4}
-            className="w-full resize-none rounded-xl p-3 mb-3 outline-none transition-shadow focus:ring-2"
+            className="w-full resize-none rounded-xl p-3 mb-3 outline-none transition-shadow focus:ring-2 md:min-h-[150px]"
             style={{
               background: 'rgba(247, 249, 251, 0.8)',
               border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -164,6 +165,7 @@ export default function FamilyMessages() {
             <span>{sending ? '发送中...' : '发送留言'}</span>
           </button>
         </div>
+      </div>
       </div>
 
       {/* Info Card */}

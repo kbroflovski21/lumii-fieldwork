@@ -99,7 +99,7 @@ export default function ServiceComplete() {
       </div>
 
       {/* Generated Documents */}
-      <div className="space-y-3 mb-3">
+      <div className="space-y-3 mb-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
         {/* Service Log (Internal) */}
         <div className="glass-card p-4">
           <div className="flex items-start gap-3">
@@ -188,7 +188,7 @@ export default function ServiceComplete() {
 
       {/* Archive Button */}
       <button
-        className="btn-primary w-full mb-3"
+        className="btn-primary w-full mb-3 md:max-w-lg md:mx-auto md:block"
         onClick={() => setArchived(true)}
         disabled={archived}
         style={archived ? { background: '#94A3B8', boxShadow: 'none' } : undefined}
@@ -199,7 +199,7 @@ export default function ServiceComplete() {
       {/* Next Task Card */}
       {nextTask && (
         <div
-          className="glass-card glass-card-hover p-4 cursor-pointer transition-all"
+          className="glass-card glass-card-hover p-4 cursor-pointer transition-all md:max-w-lg md:mx-auto"
           onClick={() => navigate('/worker')}
         >
           <div className="flex items-center justify-between">

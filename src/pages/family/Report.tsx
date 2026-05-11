@@ -87,7 +87,7 @@ export default function FamilyReport() {
           className="rounded-2xl p-4"
           style={{ background: 'rgba(22, 163, 74, 0.06)' }}
         >
-          <div className="grid grid-cols-2 gap-y-3 gap-x-4" style={{ fontSize: '15px' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4" style={{ fontSize: '15px' }}>
             <div>
               <span style={{ color: '#64748B' }}>服务日期</span>
               <p className="font-semibold" style={{ color: '#191C1E' }}>2026年5月9日</p>
@@ -116,7 +116,7 @@ export default function FamilyReport() {
         >
           健康指标
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {healthCards.map((card) => {
             const colors = statusColors[card.status]
             return (
@@ -219,7 +219,7 @@ export default function FamilyReport() {
           与上次对比
         </h3>
         <div className="glass-card p-5">
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
             {comparisons.map((item) => (
               <div key={item.label} className="flex items-center gap-3">
                 <span

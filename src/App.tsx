@@ -40,7 +40,7 @@ function WorkerLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-page-bg)]">
       <div className="mesh-bg" />
-      <div className="relative z-10 max-w-lg mx-auto pb-8">
+      <div className="relative z-10 max-w-3xl mx-auto pb-8">
         {children}
       </div>
     </div>
@@ -106,7 +106,7 @@ function FamilyLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-page-bg)]">
       <div className="mesh-bg" />
-      <div className="relative z-10 max-w-lg mx-auto pb-8">
+      <div className="relative z-10 max-w-3xl mx-auto pb-8">
         <div className="sticky top-0 z-50 px-4 py-3 flex items-center gap-3" style={{ background: 'rgba(247,249,251,0.85)', backdropFilter: 'blur(20px)' }}>
           <Link to="/" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors">
             <ArrowLeft size={20} />
@@ -114,7 +114,7 @@ function FamilyLayout({ children }: { children: React.ReactNode }) {
           <h1 className="text-base font-bold" style={{ color: '#16A34A' }}>家属端</h1>
           <span className="text-xs text-[var(--color-text-muted)]">王桂芬的健康档案</span>
         </div>
-        <div className="sticky top-[52px] z-40 px-4 pb-2 flex gap-1" style={{ background: 'rgba(247,249,251,0.85)', backdropFilter: 'blur(20px)' }}>
+        <div className="sticky top-[52px] z-40 px-4 pb-2 flex gap-1 max-w-md" style={{ background: 'rgba(247,249,251,0.85)', backdropFilter: 'blur(20px)' }}>
           {tabs.map(tab => {
             const isActive = tab.path === '/family'
               ? location.pathname === '/family' || location.pathname === '/family/'

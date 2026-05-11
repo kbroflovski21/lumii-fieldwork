@@ -68,7 +68,7 @@ export default function TaskList() {
       </div>
 
       {/* Task List */}
-      <div className="space-y-3">
+      <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
         {sortedTasks.map((task) => {
           const status = statusConfig[task.status]
           const isCurrent = task.id === currentTaskId

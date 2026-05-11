@@ -35,7 +35,7 @@ export default function Portal() {
   return (
     <div className="min-h-screen min-h-dvh bg-[var(--color-page-bg)]">
       <div className="mesh-bg" />
-      <div className="relative z-10 max-w-lg mx-auto px-5 py-12">
+      <div className="relative z-10 max-w-4xl mx-auto px-5 py-12">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6"
@@ -53,17 +53,17 @@ export default function Portal() {
         </div>
 
         {/* Endpoint Cards */}
-        <div className="space-y-4">
+        <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-6">
           {endpoints.map((ep) => (
             <Link key={ep.path} to={ep.path} className="block">
               <div className={`glass-card glass-card-hover p-6 bg-gradient-to-br ${ep.gradient} transition-all duration-200`}>
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                <div className="flex items-start gap-4 md:flex-col md:items-center md:text-center">
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shrink-0"
                     style={{ background: `${ep.color}12`, color: ep.color }}>
                     <ep.icon size={24} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 md:flex-col md:gap-1">
                       <h2 className="text-lg font-bold" style={{ color: '#191C1E' }}>{ep.title}</h2>
                       <span className="text-xs font-medium px-2 py-0.5 rounded-full"
                         style={{ background: `${ep.color}10`, color: ep.color }}>
@@ -72,7 +72,7 @@ export default function Portal() {
                     </div>
                     <p className="text-sm" style={{ color: '#64748B' }}>{ep.description}</p>
                   </div>
-                  <div className="text-[var(--color-text-muted)] mt-1">→</div>
+                  <div className="text-[var(--color-text-muted)] mt-1 md:hidden">→</div>
                 </div>
               </div>
             </Link>

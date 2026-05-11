@@ -201,7 +201,7 @@ export default function FamilyHistory() {
   const lastBp = mayRecords.length > 0 ? mayRecords[0].bpSystolic : 0
 
   return (
-    <div className="space-y-4 pt-3 pb-6">
+    <div className="space-y-4 pt-3 pb-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
       {/* Blood Pressure Trend Chart */}
       <div>
         <h3
@@ -277,7 +277,7 @@ export default function FamilyHistory() {
       </div>
 
       {/* Monthly Health Summary */}
-      <div>
+      <div className="md:col-span-2">
         <h3
           className="text-base font-bold mb-3 px-1"
           style={{ color: '#191C1E', fontSize: '17px' }}
