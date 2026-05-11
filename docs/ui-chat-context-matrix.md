@@ -19,6 +19,14 @@ UI / Chat context 数量按这个矩阵定：
 
 每个矩阵项都要有对应 design spec。Production mode 是真实用户界面；Discussion mode 只是可折叠标注层。
 
+每个 design spec 必须包含：
+
+- Production interaction flow：真实用户从进入到完成任务的连续流程。
+- Agent behavior：Agent 何时响应、何时主动提醒、何时生成草稿。
+- Confirmation points：哪些动作必须人确认。
+- Production UI：真实用户默认看到什么。
+- Discussion mode：可折叠标注 panel 显示哪个 Agent、flow、权限边界和来源文档。
+
 ## 2. MVP 矩阵
 
 | # | 谁 | Agent | 权限/场景 | 自治等级 | UI / Chat context | 覆盖 flow |
@@ -46,3 +54,29 @@ UI / Chat context 数量按这个矩阵定：
 | 老人本人 | Human-only，主要通过社工现场服务表达状态和需求 |
 | 保险公司 / 政府 | MVP 只导出凭证包，不直连外部核验系统 |
 | 120 / 外部紧急机构 | 属于 SOP 异常分支，不做独立产品入口 |
+
+## 4. 交叉界面规则
+
+不同 design spec 可能共享同一类界面或组件，例如：
+
+- 运营调度工作台、社工管理台、老人 / 家属档案台都可能在同一个站长后台里。
+- 质检审核台和凭证审核台可能共享审核列表和服务单详情。
+- 家属沟通台和家属 H5 可能共享报告摘要，但权限完全不同。
+
+处理规则：
+
+- Spec 必须按矩阵项分开写，不要因为 UI 复用就合并 spec。
+- UI 可以复用同一个 shell、列表、详情页或组件。
+- 复用 UI 时必须明确当前 context：谁在用、跟哪个 Agent 交互、权限/场景是什么。
+- Production mode 不展示矩阵、Agent 架构或 flow 编号。
+- Discussion mode 负责标注当前 UI 同时覆盖了哪些矩阵项和 flow。
+
+## 5. 防漂移检查
+
+每完成一个 spec 或 mock，检查：
+
+- 是否能追溯到 3 号矩阵中的某一项。
+- 是否覆盖了对应 business use case 和 agentic flow。
+- 是否先写 production interaction flow，再写 UI。
+- 是否把 discussion 内容放在可折叠 panel，而不是默认界面。
+- 是否没有把功能清单当成真实用户界面。
