@@ -5,13 +5,12 @@
 仓库：`aro-network/lumii-fieldwork`
 方法论：[`docs/agentic-design-methodology.md`](agentic-design-methodology.md)
 上游业务用例：[`docs/business-use-cases.md`](business-use-cases.md)
-上游系统用例：[`docs/system-use-cases.md`](system-use-cases.md)
 
 ## 0. 参考源与防漂移约束
 
 本文定义“没有系统时由人做的工作，哪些可以被同角色 Agent 替代”。本文不定义最终顶层 Agent 分类。顶层 Agent 分类必须在本文和后续 agentic flow 稳定后再反推。
 
-原始产品参考链接：
+原始需求链接：
 
 <http://124.221.48.52:3002/l/PlnMHgwtWwdW1zq7lAvUU2EQ/>
 

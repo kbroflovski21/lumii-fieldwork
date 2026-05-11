@@ -20,7 +20,7 @@
 Production mode 是真实用户界面；Discussion mode 只是可折叠标注层。
 ```
 
-原始产品参考链接：
+原始需求链接：
 
 <http://124.221.48.52:3002/l/PlnMHgwtWwdW1zq7lAvUU2EQ/>
 
@@ -257,10 +257,4 @@ H5：用于社工现场服务和家属报告。
 2. [`docs/agentic-flows.md`](agentic-flows.md) - agentic flow
 3. [`docs/ui-chat-context-matrix.md`](ui-chat-context-matrix.md) - UI / Chat context matrix
 
-已降级为参考：
-
-- [`docs/system-use-cases.md`](system-use-cases.md)
-- [`docs/ui-interaction-model.md`](ui-interaction-model.md) - 早期 UI 交互草稿，已被本文 15 项矩阵取代
-- [`docs/role-interaction-flow-spec.md`](role-interaction-flow-spec.md) - 已被 UI / Chat context 矩阵取代，保留为过程草稿
-
-后续重写产品设计文档时，应以上述文档为上游，不应继续在旧 `docs/product-design.md` 上局部修补。
+不要从旧草稿或历史过程文档恢复主线。当前主线只认 `docs/README.md` 里的 0/1/2/3。

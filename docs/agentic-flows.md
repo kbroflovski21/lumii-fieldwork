@@ -11,7 +11,7 @@ UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 
 本文把 agentic use case analysis 具体化为可交互流程。每条 flow 都从现实业务触发出发，说明 Agent 如何响应、主动发现、生成草案、追问缺口、推动流程，以及哪里必须人工确认。
 
-原始产品参考链接：
+原始需求链接：
 
 <http://124.221.48.52:3002/l/PlnMHgwtWwdW1zq7lAvUU2EQ/>
 
