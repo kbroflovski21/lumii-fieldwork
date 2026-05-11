@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lumii Fieldwork Agentic Mock</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f5f4;
+      --ink: #17211c;
+      --muted: #66736d;
+      --line: #d7ded9;
+      --panel: #ffffff;
+      --panel-2: #f9fbfa;
+      --green: #1f7a5a;
+      --blue: #2d6cdf;
+      --red: #b23a48;
+      --gold: #9a6a15;
+      --teal: #247f86;
+      --shadow: 0 14px 34px rgba(31, 42, 36, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: 58px 1fr;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.92);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: #183a2d;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .mode-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-2);
+    }
+
+    .mode-tabs button {
+      padding: 7px 10px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .mode-tabs button.active {
+      background: #183a2d;
+      color: #fff;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(460px, 1fr) 360px;
+      gap: 14px;
+      padding: 14px;
+      min-height: calc(100vh - 58px);
+    }
+
+    .rail, .workspace, .chat {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      min-width: 0;
+      box-shadow: 0 1px 0 rgba(0,0,0,.02);
+    }
+
+    .rail {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .rail-head, .panel-head, .chat-head {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .kicker {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .flow-list {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      overflow: auto;
+    }
+
+    .flow {
+      text-align: left;
+      padding: 10px;
+      border: 1px solid transparent;
+      background: #f7faf8;
+      border-radius: 7px;
+      color: var(--ink);
+    }
+
+    .flow.active {
+      border-color: #1f7a5a;
+      background: #eef8f3;
+    }
+
+    .flow strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .flow span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .status-stack {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .chip.green { color: var(--green); border-color: #b9dbc9; background: #f0faf4; }
+    .chip.blue { color: var(--blue); border-color: #c2d2f4; background: #f1f5ff; }
+    .chip.red { color: var(--red); border-color: #edc6cb; background: #fff2f4; }
+    .chip.gold { color: var(--gold); border-color: #ead7a9; background: #fff8e6; }
+    .chip.teal { color: var(--teal); border-color: #b7dde1; background: #effbfc; }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 14px;
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .main-card, .side-card, .phone, .report {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .main-card {
+      min-height: 440px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+
+    .card-title h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .card-body {
+      padding: 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfb;
+      min-height: 78px;
+    }
+
+    .metric b {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .steps {
+      display: grid;
+      gap: 9px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: start;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .num {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: #eef4f1;
+      color: #214236;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .step h4 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .step p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .action {
+      padding: 7px 9px;
+      border-radius: 6px;
+      background: #183a2d;
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .ghost {
+      background: #f3f5f4;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .side-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .phone {
+      width: 100%;
+      background: #111;
+      padding: 10px;
+    }
+
+    .phone-screen {
+      border-radius: 14px;
+      min-height: 390px;
+      background: #f7faf8;
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .phone-top {
+      padding: 12px;
+      background: #173a2c;
+      color: #fff;
+    }
+
+    .phone-top strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .phone-top span {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(255,255,255,.72);
+    }
+
+    .phone-body {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mini-card {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .mini-card strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .mini-card p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      background: #dce5df;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 62%;
+      background: #1f7a5a;
+    }
+
+    .chat {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .chat-log {
+      padding: 14px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fbfcfb;
+    }
+
+    .msg {
+      max-width: 92%;
+      padding: 10px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .msg.agent {
+      border-color: #c8ddd2;
+      background: #f0faf4;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #eef3ff;
+      border-color: #c9d7fb;
+    }
+
+    .link-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .link {
+      padding: 6px 8px;
+      border-radius: 6px;
+      background: #fff;
+      border: 1px solid #b9dbc9;
+      color: var(--green);
+      font-size: 12px;
+    }
+
+    .chat-input {
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .chat-input input {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .chat-input button {
+      border-radius: 7px;
+      background: #183a2d;
+      color: #fff;
+      padding: 0 12px;
+    }
+
+    .report {
+      background: #fff;
+    }
+
+    .report .card-body {
+      display: grid;
+      gap: 10px;
+    }
+
+    .trend {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      align-items: end;
+      gap: 6px;
+      height: 72px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    .bar {
+      border-radius: 5px 5px 0 0;
+      background: #2d6cdf;
+      min-height: 16px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 250px minmax(420px, 1fr);
+      }
+      .chat {
+        grid-column: 1 / -1;
+        min-height: 420px;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .topbar {
+        align-items: flex-start;
+        height: auto;
+        padding: 10px;
+        flex-direction: column;
+      }
+      .layout, .content {
+        grid-template-columns: 1fr;
+      }
+      .mode-tabs {
+        width: 100%;
+        overflow-x: auto;
+      }
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">LF</div>
+        <div>
+          <h1>Lumii Fieldwork Agentic Service Mock</h1>
+          <p>企业聊天入口 + 外部业务面板 + H5 现场服务</p>
+        </div>
+      </div>
+      <div class="mode-tabs" aria-label="Agent tabs">
+        <button class="active" data-agent="管理 Agent">管理 Agent</button>
+        <button data-agent="督导 Agent">督导 Agent</button>
+        <button data-agent="洞察 Agent">洞察 Agent</button>
+        <button data-agent="合规能力">合规能力</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="rail">
+        <div class="rail-head">
+          <p class="kicker">Agentic flows</p>
+          <h2>从业务触发到人工确认</h2>
+        </div>
+        <div class="flow-list" id="flowList"></div>
+      </aside>
+
+      <section class="workspace">
+        <div class="panel-head">
+          <div>
+            <p class="kicker" id="panelKicker">管理工作台</p>
+            <h2 id="panelTitle">外生电话需求受理</h2>
+          </div>
+          <div class="status-stack" id="statusStack"></div>
+        </div>
+        <div class="content">
+          <div class="main-card">
+            <div class="card-title">
+              <h3 id="mainCardTitle">需求结构化与分诊</h3>
+              <button class="action" id="primaryAction">确认进入待排班池</button>
+            </div>
+            <div class="card-body">
+              <div class="summary-grid" id="metricGrid"></div>
+              <div class="steps" id="steps"></div>
+            </div>
+          </div>
+
+          <div class="side-stack">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="phone-top">
+                  <strong id="phoneTitle">社工 H5</strong>
+                  <span id="phoneSub">今日任务与服务前提示</span>
+                </div>
+                <div class="phone-body" id="phoneBody"></div>
+              </div>
+            </div>
+            <div class="report">
+              <div class="card-title">
+                <h3 id="reportTitle">家属 / 运营视角</h3>
+                <span class="chip teal" id="reportChip">脱敏</span>
+              </div>
+              <div class="card-body" id="reportBody"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="chat">
+        <div class="chat-head">
+          <p class="kicker">企业聊天通道</p>
+          <h2 id="chatTitle">管理 Agent</h2>
+        </div>
+        <div class="chat-log" id="chatLog"></div>
+        <div class="chat-input">
+          <input id="chatText" value="明天还有哪些需求没排？" aria-label="chat input">
+          <button id="sendBtn">发送</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const flows = [
+      {
+        id: "F01",
+        agent: "管理 Agent",
+        title: "外生电话需求受理",
+        subtitle: "接线员输入一句话，Agent 结构化需求并提示缺口",
+        panel: "需求结构化与分诊",
+        action: "确认进入待排班池",
+        chips: [["Copilot", "blue"], ["确认 required", "gold"], ["外生需求", "teal"]],
+        metrics: [["1", "来电需求待确认"], ["3", "缺失字段"], ["中", "建议紧急程度"]],
+        steps: [
+          ["接收来电", "家属来电：王阿姨这两天头晕，想安排上门看看。", "记录"],
+          ["结构化需求", "Agent 抽取老人、联系人、服务类型、期望时间和备注。", "补全"],
+          ["资格与历史", "系统提示老人属于政府购买服务对象，上次服务有血压偏高。", "查看"],
+          ["分诊建议", "建议服务类型：探访关爱；紧急程度：中；需要站长确认。", "确认"]
+        ],
+        phone: [
+          ["待排班", "王阿姨 | 探访关爱 | 建议明日上午"],
+          ["历史风险", "上次血压偏高，家属反馈最近头晕。"]
+        ],
+        report: ["外生需求来源会保留受理人和时间。", "进入待排班池前必须人工确认。"],
+        chat: [
+          ["agent", "收到家属来电。我已整理为一条待分诊需求，还缺期望上门时间和是否已经就医。"],
+          ["agent", "该老人上次服务血压偏高，建议按探访关爱处理，紧急程度为中。", "打开需求面板"]
+        ]
+      },
+      {
+        id: "F02",
+        agent: "管理 Agent",
+        title: "内生服务需求生成",
+        subtitle: "Agent 主动发现频次到期、异常复访和风险触发",
+        panel: "待确认内生需求",
+        action: "批量进入待排班池",
+        chips: [["Full autonomous", "green"], ["低风险待办", "teal"], ["需确认", "gold"]],
+        metrics: [["18", "明日到期服务"], ["4", "异常复访"], ["2", "高风险老人"]],
+        steps: [
+          ["扫描频次", "按服务频次和上次服务时间生成明日待服务清单。", "自动"],
+          ["叠加风险", "异常复访和长期未服务老人提升优先级。", "排序"],
+          ["生成待办", "Agent 创建待确认需求，不直接排班。", "查看"],
+          ["人工确认", "站长确认后进入待排班池。", "确认"]
+        ],
+        phone: [
+          ["明日计划", "18 个服务需求等待站长确认。"],
+          ["复访提醒", "李叔上次跌倒风险，建议优先上午。"]
+        ],
+        report: ["内生需求可自动生成，但进入排班池需要确认。", "来源、规则和时间点全部留痕。"],
+        chat: [
+          ["agent", "我发现明天有 18 个到期服务需求，其中 4 个是异常复访。"],
+          ["agent", "已生成待确认需求池。", "打开待排班池"]
+        ]
+      },
+      {
+        id: "F04",
+        agent: "管理 Agent",
+        title: "排班草案生成与派单确认",
+        subtitle: "Agent 生成草案，人确认后派单",
+        panel: "排班调度面板",
+        action: "确认并下发任务",
+        chips: [["Delegated", "blue"], ["派单需确认", "gold"], ["路线/技能", "teal"]],
+        metrics: [["12", "待排任务"], ["5", "可用社工"], ["2", "冲突提醒"]],
+        steps: [
+          ["读取需求池", "合并内生和外生需求，按优先级排序。", "查看"],
+          ["匹配社工", "考虑可用时段、技能、培训状态、路线和服务时长。", "匹配"],
+          ["生成草案", "输出路线顺序、冲突说明和替代方案。", "生成"],
+          ["派单确认", "站长确认后下发到社工 H5。", "下发"]
+        ],
+        phone: [
+          ["今日路线", "王阿姨 09:30 | 刘叔 10:50 | 陈奶奶 14:20"],
+          ["任务提示", "第一站需关注血压和头晕反馈。"]
+        ],
+        report: ["改派、取消和派单都需要人工确认。", "请假和培训未完成会阻止自动推荐。"],
+        chat: [
+          ["user", "明天帮我先排一版。"],
+          ["agent", "已生成排班草案。小李路线最短，但助浴培训未完成，不建议安排助浴任务。", "打开排班面板"]
+        ]
+      },
+      {
+        id: "F05",
+        agent: "督导 Agent",
+        title: "社工服务前 hint",
+        subtitle: "服务前主动给出老人上下文、风险和凭证要求",
+        panel: "服务前准备",
+        action: "确认已读",
+        chips: [["Full autonomous", "green"], ["社工 H5", "teal"], ["SOP 上下文", "blue"]],
+        metrics: [["3", "关键提示"], ["1", "家属留言"], ["2", "凭证要求"]],
+        steps: [
+          ["加载任务", "社工打开第一站任务，系统加载老人档案和服务项目。", "打开"],
+          ["汇总 hint", "Agent 汇总上次异常、家属留言和本次 SOP 关注点。", "生成"],
+          ["检查设备", "提醒手机电量、耳机、录音权限和拍照要求。", "检查"],
+          ["确认出发", "社工确认已读关键风险。", "确认"]
+        ],
+        phone: [
+          ["王阿姨 | 探访关爱", "上次血压偏高；家属留言最近头晕。"],
+          ["本次必做", "询问血压、饮食、睡眠；拍摄药盒照片。"]
+        ],
+        report: ["服务前 hint 属于 SOP 执行的一部分。", "它不是独立培训 Agent，而是督导责任线。"],
+        chat: [
+          ["agent", "第一站王阿姨有 3 条关键提示：血压、头晕、药盒照片。"],
+          ["agent", "已同步到社工 H5。", "打开服务任务"]
+        ]
+      },
+      {
+        id: "F06",
+        agent: "督导 Agent",
+        title: "服务中 SOP 漏项提醒",
+        subtitle: "Agent 跟踪 SOP 状态，只在漏项和风险时介入",
+        panel: "现场服务督导",
+        action: "标记已补问",
+        chips: [["Copilot", "blue"], ["少打扰", "green"], ["耳机/H5", "teal"]],
+        metrics: [["62%", "SOP 进度"], ["1", "遗漏必问项"], ["0", "严重异常"]],
+        steps: [
+          ["实时转写", "服务中记录对话，不展示给家属。", "记录"],
+          ["推进 SOP", "Agent 判断已完成血压和用药确认。", "推进"],
+          ["发现漏项", "饮食情况尚未询问，达到提醒阈值。", "提醒"],
+          ["社工补问", "社工补问后状态更新。", "完成"]
+        ],
+        phone: [
+          ["服务进行中", "SOP 进度 62%"],
+          ["耳机提示", "还需要了解今天饮食和头晕持续时间。"]
+        ],
+        report: ["督导负责规范执行和事实采集。", "不直接做结算审核判断。"],
+        chat: [
+          ["agent", "小李正在王阿姨家服务。SOP 进度 62%，有一个饮食问题待补问。"],
+          ["agent", "我已通过耳机短提醒，不打断对话。"]
+        ]
+      },
+      {
+        id: "F07",
+        agent: "督导 Agent",
+        title: "现场异常分支升级",
+        subtitle: "异常按 SOP 分支处理，升级动作留确认",
+        panel: "异常处理面板",
+        action: "通知站长并留痕",
+        chips: [["Confirm-required", "gold"], ["异常分支", "red"], ["督导/管理", "teal"]],
+        metrics: [["1", "现场异常"], ["2", "建议动作"], ["高", "风险等级"]],
+        steps: [
+          ["识别异常", "老人表示头晕加重，站立不稳。", "识别"],
+          ["进入分支", "SOP 建议停止服务、测量血压、通知站长。", "分支"],
+          ["确认升级", "社工确认通知站长，必要时联系家属或 120。", "确认"],
+          ["留痕", "异常时间、处理动作和责任人进入服务记录。", "留痕"]
+        ],
+        phone: [
+          ["异常分支", "头晕加重 | 停止助浴动作"],
+          ["建议", "测量血压；通知站长；必要时联系家属。"]
+        ],
+        report: ["紧急事件是 SOP 的异常分支。", "通知和升级属于高后果动作，默认需要确认。"],
+        chat: [
+          ["agent", "王阿姨服务中出现头晕加重。我建议停止服务并通知站长。"],
+          ["agent", "已打开异常处理面板，等待社工确认升级。", "打开异常面板"]
+        ]
+      },
+      {
+        id: "F09",
+        agent: "合规能力",
+        title: "服务凭证包生成与缺证据提醒",
+        subtitle: "服务完成后生成可导出凭证包草案",
+        panel: "凭证包面板",
+        action: "退回补充照片",
+        chips: [["Delegated", "blue"], ["合规强边界", "gold"], ["MVP 可导出", "teal"]],
+        metrics: [["9/11", "凭证项完成"], ["2", "缺失证据"], ["否", "结算就绪"]],
+        steps: [
+          ["汇总事实", "服务对象、人员、项目、时间线、SOP、照片、转写引用。", "汇总"],
+          ["规则校验", "探访关爱要求时长和药盒照片。", "校验"],
+          ["发现缺口", "药盒照片缺失；异常处理备注不足。", "提醒"],
+          ["审核处理", "站长退回补充或说明原因。", "处理"]
+        ],
+        phone: [
+          ["补充请求", "请补拍药盒照片或说明无法拍摄原因。"],
+          ["凭证状态", "当前不可标记结算就绪。"]
+        ],
+        report: ["凭证包关系到养护险/政府结算。", "MVP 不接外部接口，只支持导出。"],
+        chat: [
+          ["agent", "王阿姨这单凭证包已生成，但缺药盒照片和异常处理备注。"],
+          ["agent", "暂不能标记结算就绪。", "打开凭证面板"]
+        ]
+      },
+      {
+        id: "F11",
+        agent: "洞察 Agent",
+        title: "家属报告生成与发送",
+        subtitle: "从服务事实生成脱敏报告，发送前确认",
+        panel: "家属报告预览",
+        action: "确认发送报告链接",
+        chips: [["Delegated", "blue"], ["脱敏", "green"], ["发送需确认", "gold"]],
+        metrics: [["1", "报告草案"], ["4", "健康指标"], ["0", "内部信息泄漏"]],
+        steps: [
+          ["读取事实", "使用已完成服务记录和老人历史。", "读取"],
+          ["生成报告", "转成家属可读摘要和关注提醒。", "生成"],
+          ["脱敏检查", "排除内部审核、原始转写和社工绩效。", "检查"],
+          ["发送确认", "站长确认后发送报告链接。", "发送"]
+        ],
+        phone: [
+          ["家属报告", "今日完成探访关爱，重点关注头晕和血压。"],
+          ["反馈入口", "补充注意事项或申请回访。"]
+        ],
+        report: ["健康趋势", "血压关注、睡眠下降、情绪稳定"],
+        chat: [
+          ["agent", "王阿姨家属报告草案已生成，已通过脱敏检查。"],
+          ["agent", "可发送报告链接，或先打开预览。", "打开报告预览"]
+        ]
+      },
+      {
+        id: "F12",
+        agent: "洞察 Agent",
+        title: "投诉与主动回访",
+        subtitle: "反馈不是留言，投诉和回访要闭环",
+        panel: "投诉与回访面板",
+        action: "创建回访任务",
+        chips: [["Copilot", "blue"], ["Delegated", "teal"], ["关闭需确认", "gold"]],
+        metrics: [["2", "待回访"], ["1", "投诉处理中"], ["24h", "处理时限"]],
+        steps: [
+          ["接收反馈", "家属反馈：昨天服务后老人说没讲清楚用药。", "接收"],
+          ["分类判断", "Agent 判断为服务质疑，不是普通留言。", "分类"],
+          ["生成回访", "建议站长或家属沟通人员回访。", "生成"],
+          ["结果回流", "回访结果进入老人档案或新服务需求。", "回流"]
+        ],
+        phone: [
+          ["回访提醒", "王阿姨家属有服务质疑，需 24h 内回访。"],
+          ["处理状态", "待站长分配责任人。"]
+        ],
+        report: ["投诉关闭必须人工确认。", "回访可能生成新的外生需求。"],
+        chat: [
+          ["agent", "家属新反馈疑似服务质疑。我建议创建回访任务，不要作为普通留言处理。"],
+          ["agent", "已准备回访问题清单。", "打开回访面板"]
+        ]
+      }
+    ];
+
+    const state = {
+      active: flows[0],
+      agent: "管理 Agent"
+    };
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function renderFlowList() {
+      const list = document.getElementById("flowList");
+      list.innerHTML = "";
+      flows.forEach((flow) => {
+        const button = el("button", `flow${flow.id === state.active.id ? " active" : ""}`);
+        button.innerHTML = `<strong>${flow.id} ${flow.title}</strong><span>${flow.subtitle}</span>`;
+        button.addEventListener("click", () => {
+          state.active = flow;
+          state.agent = flow.agent;
+          document.querySelectorAll(".mode-tabs button").forEach((tab) => {
+            tab.classList.toggle("active", tab.dataset.agent === state.agent);
+          });
+          render();
+        });
+        list.appendChild(button);
+      });
+    }
+
+    function renderPanel() {
+      const flow = state.active;
+      document.getElementById("panelKicker").textContent = flow.agent === "合规能力" ? "管理 Agent 下的强边界能力" : `${flow.agent} 工作台`;
+      document.getElementById("panelTitle").textContent = flow.title;
+      document.getElementById("mainCardTitle").textContent = flow.panel;
+      document.getElementById("primaryAction").textContent = flow.action;
+
+      const chips = document.getElementById("statusStack");
+      chips.innerHTML = "";
+      flow.chips.forEach(([label, color]) => chips.appendChild(el("span", `chip ${color}`, label)));
+
+      const metrics = document.getElementById("metricGrid");
+      metrics.innerHTML = "";
+      flow.metrics.forEach(([value, label]) => {
+        const metric = el("div", "metric");
+        metric.innerHTML = `<b>${value}</b><span>${label}</span>`;
+        metrics.appendChild(metric);
+      });
+
+      const steps = document.getElementById("steps");
+      steps.innerHTML = "";
+      flow.steps.forEach(([title, body, action], index) => {
+        const step = el("div", "step");
+        step.innerHTML = `<div class="num">${index + 1}</div><div><h4>${title}</h4><p>${body}</p></div><button class="action ghost">${action}</button>`;
+        steps.appendChild(step);
+      });
+    }
+
+    function renderPhoneAndReport() {
+      const flow = state.active;
+      document.getElementById("phoneTitle").textContent = flow.agent === "督导 Agent" ? "社工 H5" : "业务移动视图";
+      document.getElementById("phoneSub").textContent = flow.agent === "洞察 Agent" ? "家属报告与回访" : "任务、hint、确认和提醒";
+      const phone = document.getElementById("phoneBody");
+      phone.innerHTML = "";
+      flow.phone.forEach(([title, body], index) => {
+        const card = el("div", "mini-card");
+        card.innerHTML = `<strong>${title}</strong><p>${body}</p>${index === 0 ? '<div class="progress"><span></span></div>' : ""}`;
+        phone.appendChild(card);
+      });
+
+      document.getElementById("reportTitle").textContent = flow.agent === "洞察 Agent" ? "家属 / 老人洞察" : "运营 / 审核侧影响";
+      document.getElementById("reportChip").textContent = flow.agent === "合规能力" ? "可导出" : "脱敏";
+      const report = document.getElementById("reportBody");
+      report.innerHTML = "";
+      flow.report.forEach((item, index) => {
+        const card = el("div", "mini-card");
+        if (Array.isArray(item)) {
+          card.innerHTML = `<strong>${item[0]}</strong><p>${item[1]}</p><div class="trend"><div class="bar" style="height:32px"></div><div class="bar" style="height:44px"></div><div class="bar" style="height:38px"></div><div class="bar" style="height:54px"></div><div class="bar" style="height:61px"></div><div class="bar" style="height:48px"></div></div>`;
+        } else {
+          card.innerHTML = `<strong>${index === 0 ? "规则" : "边界"}</strong><p>${item}</p>`;
+        }
+        report.appendChild(card);
+      });
+    }
+
+    function renderChat() {
+      const flow = state.active;
+      document.getElementById("chatTitle").textContent = flow.agent === "合规能力" ? "管理 Agent / 合规能力" : flow.agent;
+      const log = document.getElementById("chatLog");
+      log.innerHTML = "";
+      flow.chat.forEach(([kind, text, link]) => {
+        const msg = el("div", `msg ${kind}`);
+        msg.textContent = text;
+        if (link) {
+          const row = el("div", "link-row");
+          row.appendChild(el("button", "link", link));
+          msg.appendChild(row);
+        }
+        log.appendChild(msg);
+      });
+    }
+
+    function render() {
+      renderFlowList();
+      renderPanel();
+      renderPhoneAndReport();
+      renderChat();
+    }
+
+    document.querySelectorAll(".mode-tabs button").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        state.agent = tab.dataset.agent;
+        const first = flows.find((flow) => flow.agent === state.agent);
+        if (first) state.active = first;
+        document.querySelectorAll(".mode-tabs button").forEach((item) => item.classList.toggle("active", item === tab));
+        render();
+      });
+    });
+
+    document.getElementById("sendBtn").addEventListener("click", () => {
+      const input = document.getElementById("chatText");
+      const log = document.getElementById("chatLog");
+      const user = el("div", "msg user", input.value || "查看当前待办");
+      const reply = el("div", "msg agent", "我会先生成草案或打开对应业务面板；涉及派单、导出、发送、关闭等动作会等待人工确认。");
+      log.appendChild(user);
+      log.appendChild(reply);
+      log.scrollTop = log.scrollHeight;
+    });
+
+    render();
+  </script>
+</body>
+</html>
