@@ -5,7 +5,7 @@
 仓库：`aro-network/lumii-fieldwork`
 上游业务用例：[`docs/business-use-cases.md`](business-use-cases.md)
 
-> Superseded note: 2026-05-11 后，主线分析改为 [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)。本文保留为系统能力参考，不再作为 Agent 分类或产品主线的上游依据。
+> Superseded note: 2026-05-11 后，主线分析改为 [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)，方法论以 [`docs/agentic-design-methodology.md`](agentic-design-methodology.md) 为准。本文保留为系统能力参考，不再作为 Agent 分类或产品主线的上游依据。
 
 ## 0. 参考源与防漂移约束
 
@@ -57,7 +57,7 @@
 - 创建机构、站点、服务区域和服务范围。
 - 创建角色和权限模板。
 - 配置站点负责人、服务主管、调度、社工、需求受理人员。
-- 配置飞书群、通知对象和基础消息模板。
+- 配置企业聊天群、通知对象和基础消息模板。
 - 导入或新建基础服务项目和 SOP 模板。
 
 输入：
@@ -475,7 +475,7 @@ Agentic 机会：
 - 哪些系统用例由人主动发起
 - 哪些系统用例由系统主动发现并提醒
 - 哪些系统用例可以自然语言交互
-- 哪些系统用例需要卡片或面板确认
-- 哪些系统用例适合在飞书里完成，哪些必须进入 web 面板
+- 哪些系统用例需要轻量确认或 web 面板确认
+- 哪些系统用例适合在企业聊天通道中通过 chat/link 完成，哪些必须进入外部 web 面板
 
 下一层仍不应直接固化任何顶层 Agent 命名。顶层 Agent 分类应在 agentic flow 完成后再反推。

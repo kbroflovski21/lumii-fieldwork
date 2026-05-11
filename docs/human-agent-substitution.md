@@ -3,6 +3,7 @@
 状态：Human-to-Agent substitution baseline
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
+方法论：[`docs/agentic-design-methodology.md`](agentic-design-methodology.md)
 上游业务用例：[`docs/business-use-cases.md`](business-use-cases.md)
 上游系统用例：[`docs/system-use-cases.md`](system-use-cases.md)
 
@@ -401,4 +402,5 @@ Copilot：
 - Agent 何时追问补信息。
 - Agent 何时推荐下一步。
 - Agent 何时需要人工确认。
-- Agent 的输出在飞书、web 面板、H5 或导出文件中如何呈现。
+- Agent 的输出在企业聊天通道、web 面板、H5 或导出文件中如何呈现。
+- 企业聊天通道不绑定飞书卡片；复杂 dashboard、panel 和审核台通过链接或快捷入口打开外部 web 业务界面。

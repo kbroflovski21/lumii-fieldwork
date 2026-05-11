@@ -1,8 +1,10 @@
 # Fieldwork Product Design Spec
 
 日期：2026-05-11
-状态：Approved for documentation
+状态：Superseded draft
 团队阅读版：[`docs/product-design.md`](../../product-design.md)
+
+> Superseded note: 2026-05-11 后，产品设计主线改为 [`docs/agentic-design-methodology.md`](../../agentic-design-methodology.md)、[`docs/business-use-cases.md`](../../business-use-cases.md)、[`docs/human-agent-substitution.md`](../../human-agent-substitution.md) 和 [`docs/agentic-use-case-analysis.md`](../../agentic-use-case-analysis.md)。本文保留为早期 superpowers spec 参考，不再作为 Agent 分类或产品主线的上游依据。
 
 ## 1. Reference Source
 

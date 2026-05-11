@@ -1,9 +1,11 @@
 # 社区居家养老 AI 督导 H5 MVP 产品设计文档
 
-状态：Approved for documentation
+状态：Superseded draft
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
 配套 superpowers spec：[`docs/superpowers/specs/2026-05-11-fieldwork-product-design.md`](superpowers/specs/2026-05-11-fieldwork-product-design.md)
+
+> Superseded note: 2026-05-11 后，产品设计主线改为 [`docs/agentic-design-methodology.md`](agentic-design-methodology.md)、[`docs/business-use-cases.md`](business-use-cases.md)、[`docs/human-agent-substitution.md`](human-agent-substitution.md) 和 [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md)。本文保留为早期草稿和参考，不再作为 Agent 分类、业务主线或聊天通道设计的上游依据。
 
 ## 0. 参考源与防漂移约束
 
