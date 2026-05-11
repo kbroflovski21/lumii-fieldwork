@@ -130,46 +130,39 @@
 
 UI 不是 Agent 设计的起点，而是 Agent 责任和 flow 的承载方式。
 
-### 2.7 Role / entry / surface / agent / policy
+### 2.7 Chat type driven interaction design
 
-Agent 不是一个固定页面，也不等于一个飞书 bot 或一个聊天窗口。Agent 是能力和责任主体；谁与它交互、通过什么入口交互、处在什么业务场景、具有什么权限，决定它呈现为哪一种交互面。
+Agent 在产品里应被理解成一个可以联系的对象，类似飞书里的联系人。UI / interaction design 不是先按页面、角色矩阵或 Agent 架构拆，而是先列清楚：哪些人会在什么 Chat 里联系这个 Agent。
 
-后续 UI 和交互设计必须使用下面的模型：
-
-```text
-Role / user entry
-  -> Surface
-  -> Agent capability
-  -> Permission policy
-```
-
-必须先回答：
-
-- 谁在跟 Agent 说话
-- 是企业聊天、web panel、H5、小程序、admin console，还是主动推送
-- 当前业务场景是什么
-- 该角色能看到哪些数据
-- 该角色能让 Agent 做哪些动作
-- Agent 能主动推送哪些事项
-- 哪些数据和动作必须被禁止
-
-同一个 Agent 可以有多个交互面。例如洞察 Agent：
-
-| 交互面 | 使用者 | 入口 | 允许内容 | 禁止内容 |
-| --- | --- | --- | --- | --- |
-| 内部洞察工作台 | 站长、服务主管、客服 | web panel / 企业聊天 | 老人趋势、家属反馈、回访建议、报告草稿、投诉归因 | 超出站点授权的数据 |
-| 家属端入口 | 家属 | H5 / 小程序 / 主动推送 | 脱敏服务摘要、老人近况、注意事项、需求和投诉入口 | 内部备注、质检结论、原始转写、其他老人信息 |
-
-因此，不能用“有几个 Agent”直接推导“有几个页面”。更稳定的问题是：
+后续交互设计必须使用下面的模型：
 
 ```text
-这个业务里有哪些人会跟 Agent 说话？
-他们在什么场景下说？
-Agent 能主动找他们说什么？
-每个交互面有哪些权限边界？
+Agent contact
+  -> Chat type
+  -> Production flow in that chat
+  -> Optional linked panel / H5 / admin page
+  -> Discussion annotation
 ```
 
-企业聊天通道中的 chat 数量也应按“交互对象 + 场景 + 权限”拆，而不是按 Agent 数量拆。
+Chat type 是一类联系上下文，例如：
+
+- 站长或运营人员找 Agent 处理今日需求、排班、异常和凭证。
+- 社工找 Agent 看今日任务、服务前提示、现场 SOP 和异常处理。
+- 家属找 Agent 看服务报告、追问老人近况、提交需求或投诉。
+- 客服找 Agent 处理回访、投诉和家属报告草稿。
+- System admin 找 Agent 配置组织、账号、渠道、权限和审计。
+
+一个 Chat type 可以包含多人，也可以在飞书、企微、H5、小程序或 web panel 中呈现。复杂操作可以从 chat 打开外部 panel，但这个 panel 仍然服务于该 Chat type 的业务 flow。
+
+因此，不能用“有几个角色”“有几个页面”或“有几个 Agent”推导 UI 数量。更稳定的问题是：
+
+```text
+这个 Agent 有哪些类型的人会联系它？
+每一类联系发生在哪种 Chat type？
+这个 Chat type 承载什么业务 flow？
+需要链接到哪个 panel / H5 / admin page？
+Discussion mode 需要标注哪些 Agent / flow / 权限信息？
+```
 
 ### 2.8 Production mode and discussion mode
 
@@ -177,7 +170,7 @@ UI mock 必须区分 production mode 和 discussion mode。
 
 Production mode 是真实用户进入后看到的真实业务界面。它必须按 interaction flow 组织：用户进来看到什么、下一步做什么、Agent 如何介入、哪里需要确认。Production mode 不展示功能清单、权限矩阵、Agent 架构解释、surface、capability、policy、use case 编号或 flow 编号。
 
-Discussion mode 是产品设计评审层，可以作为可折叠 panel 或 overlay。它用于标注当前 production screen 背后的 Agent、business flow、角色、权限边界和来源文档。Discussion mode 可以出现编号和设计解释，但必须默认隐藏或显著区别于 production UI。
+Discussion mode 是产品设计评审层，可以作为可折叠 panel 或 overlay。它用于标注当前 Chat type / production flow 背后的 Agent、business flow、参与者、权限边界和来源文档。Discussion mode 可以出现编号和设计解释，但必须默认隐藏或显著区别于 production UI。
 
 判定规则：
 
@@ -256,6 +249,7 @@ H5：用于社工现场服务和家属报告。
 后续讨论必须遵守：
 
 - 不先按页面、菜单或后台模块拆 Agent。
+- 不按角色数量推导 UI 数量；先按 Chat type / 联系上下文拆 interaction flow。
 - 不把每个功能点都升级成一个可见 Agent。
 - 不把传统岗位一一映射成 Agent。
 - 不因为某个能力重要就直接新增 Agent；先判断它是不是独立责任线。
@@ -275,10 +269,11 @@ H5：用于社工现场服务和家属报告。
 5. [`docs/agentic-flows.md`](agentic-flows.md) - Agentic flow baseline
 6. `docs/agent-definitions.md` - 待创建
 7. [`docs/ui-interaction-model.md`](ui-interaction-model.md) - UI / interaction model
-8. [`docs/role-interaction-flow-spec.md`](role-interaction-flow-spec.md) - 分角色 production interaction flow
+8. `docs/chat-type-interaction-flow-spec.md` - 待创建，按 Chat type 组织 production interaction flow
 
 已降级为参考：
 
 - [`docs/system-use-cases.md`](system-use-cases.md)
+- [`docs/role-interaction-flow-spec.md`](role-interaction-flow-spec.md) - 已被 Chat type 方法取代，保留为过程草稿
 
 后续重写产品设计文档时，应以上述文档为上游，不应继续在旧 `docs/product-design.md` 上局部修补。
