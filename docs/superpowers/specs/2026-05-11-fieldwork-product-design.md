@@ -43,7 +43,7 @@ The MVP must prove the complete three-sided workflow:
 - AI supervises the service by voice, follows SOP progress, and flags risks.
 - Service completion automatically produces an internal service log and an external family health report.
 - Site manager can schedule work, monitor live status, review logs, and talk to a management Agent.
-- Family member receives a readable H5 report, reviews history/trends, and leaves notes for future service.
+- Family member receives a readable H5 report through Feishu channel, reviews history/trends, and leaves notes for future service.
 
 ## 4. Non-Goals
 
@@ -88,7 +88,7 @@ The manager confirms daily scheduling, monitors service progress in a Kanban vie
 
 ### 7.3 Family Report Flow
 
-After service completion, the family member receives a WeChat/SMS link, opens the H5 report, reads service summary and health indicators, checks changes from the previous visit, reviews history, and leaves notes that become context for the next service.
+After service completion, the family member receives a Feishu channel link, opens the H5 report, reads service summary and health indicators, checks changes from the previous visit, reviews history, and leaves notes that become context for the next service.
 
 ## 8. Functional Requirements
 
@@ -198,7 +198,7 @@ API Gateway: auth, routing, rate limit
 Backend services
 - Voice pipeline: ASR -> LLM -> TTS
 - Agent engine: supervisor, management/scheduling, insight
-- Business services: scheduling, management, push, export
+- Business services: scheduling, management, Feishu push, export
         |
 Data layer: PostgreSQL + Redis + OSS
         |
@@ -223,11 +223,14 @@ Core entities:
 - Schedule
 - Session
 - Transcript
+- Recording
 - ServiceLog
 - HealthReport
 - FamilyNote
 
 `ServiceLog` and `HealthReport` must be distinct entities. They can share a source session, but they serve different audiences and have different privacy constraints.
+
+`Recording` is in MVP scope. Service audio is stored in OSS for traceability, quality review, and dispute handling. The implementation plan must define retention period, access audit, and deletion policy.
 
 ## 12. Scenario-To-Test-Case Design
 
@@ -273,15 +276,25 @@ Security:
 - Sensitive asset access is audited.
 - Report links do not leak data when invalid or unauthorized.
 
-## 14. Open Questions
+## 14. Confirmed MVP Decisions
 
-1. Whether 金色年华 has an existing scheduling system that must be integrated or replaced.
-2. Which push channel is mandatory for MVP: WeChat, SMS, or both.
-3. Whether service audio must be stored in MVP or only transiently processed.
-4. Which SOP templates must be included first beyond 探访关爱 and 助浴.
-5. Whether the first implementation target should be Vue 3 or React.
+1. Scheduling system: assume 金色年华 has no existing scheduling system for MVP. Build scheduling in this product first; if an existing system is later discovered, treat integration as a separate change.
+2. Push channel: use Feishu channel for MVP push delivery and internal alerts.
+3. Service audio: store recordings in OSS, not transient-only processing.
+4. SOP templates: MVP must include 探访关爱 and 助浴 first; additional templates can be ranked during implementation planning.
+5. Frontend stack: use React by default for the implementation plan unless a future repo baseline establishes a different stack before planning begins.
 
-## 15. Approval And Next Step
+## 15. Risk Register
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| ASR errors from dialects, noise, or multiple speakers | SOP tracking and exception detection may be inaccurate | Use hotwords, speaker separation, confidence thresholds, and worker remarks as fallback |
+| AI interrupts too often | Worker service experience declines | Keep prompts limited to SOP milestones, omissions, exceptions, and safety risks |
+| Family report leaks internal information | Privacy and trust risk | Keep ServiceLog and HealthReport separate; enforce desensitization and negative tests |
+| H5 background audio limitations | Real-time supervision may stop during service | Require foreground service mode for MVP and preserve the path to future hardware badge |
+| Manager distrusts auto-scheduling | Low adoption | Agent must provide reasons and require manager confirmation before schedule mutation |
+
+## 16. Approval And Next Step
 
 User selected the dual-document approach:
 
@@ -289,4 +302,3 @@ User selected the dual-document approach:
 - Product design document for team reading.
 
 After this spec is reviewed and committed, the next superpowers step is to invoke `superpowers:writing-plans` before any implementation work.
-
