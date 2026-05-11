@@ -130,6 +130,47 @@
 
 UI 不是 Agent 设计的起点，而是 Agent 责任和 flow 的承载方式。
 
+### 2.7 Role / entry / surface / agent / policy
+
+Agent 不是一个固定页面，也不等于一个飞书 bot 或一个聊天窗口。Agent 是能力和责任主体；谁与它交互、通过什么入口交互、处在什么业务场景、具有什么权限，决定它呈现为哪一种交互面。
+
+后续 UI 和交互设计必须使用下面的模型：
+
+```text
+Role / user entry
+  -> Surface
+  -> Agent capability
+  -> Permission policy
+```
+
+必须先回答：
+
+- 谁在跟 Agent 说话
+- 是企业聊天、web panel、H5、小程序、admin console，还是主动推送
+- 当前业务场景是什么
+- 该角色能看到哪些数据
+- 该角色能让 Agent 做哪些动作
+- Agent 能主动推送哪些事项
+- 哪些数据和动作必须被禁止
+
+同一个 Agent 可以有多个交互面。例如洞察 Agent：
+
+| 交互面 | 使用者 | 入口 | 允许内容 | 禁止内容 |
+| --- | --- | --- | --- | --- |
+| 内部洞察工作台 | 站长、服务主管、客服 | web panel / 企业聊天 | 老人趋势、家属反馈、回访建议、报告草稿、投诉归因 | 超出站点授权的数据 |
+| 家属端入口 | 家属 | H5 / 小程序 / 主动推送 | 脱敏服务摘要、老人近况、注意事项、需求和投诉入口 | 内部备注、质检结论、原始转写、其他老人信息 |
+
+因此，不能用“有几个 Agent”直接推导“有几个页面”。更稳定的问题是：
+
+```text
+这个业务里有哪些人会跟 Agent 说话？
+他们在什么场景下说？
+Agent 能主动找他们说什么？
+每个交互面有哪些权限边界？
+```
+
+企业聊天通道中的 chat 数量也应按“交互对象 + 场景 + 权限”拆，而不是按 Agent 数量拆。
+
 ## 3. 自治等级
 
 | 等级 | 定义 | 适用范围 |
@@ -214,9 +255,9 @@ H5：用于社工现场服务和家属报告。
 2. [`docs/business-use-cases.md`](business-use-cases.md) - 业务用例基线
 3. [`docs/human-agent-substitution.md`](human-agent-substitution.md) - 人类角色到 Agent 替代模型
 4. [`docs/agentic-use-case-analysis.md`](agentic-use-case-analysis.md) - Agentic use case 主线分析
-5. `docs/agentic-flows.md` - 待创建
+5. [`docs/agentic-flows.md`](agentic-flows.md) - Agentic flow baseline
 6. `docs/agent-definitions.md` - 待创建
-7. `docs/ui-interaction-model.md` - 待创建
+7. [`docs/ui-interaction-model.md`](ui-interaction-model.md) - UI / interaction model
 
 已降级为参考：
 
