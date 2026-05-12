@@ -29,4 +29,6 @@ Agentic UI 参考链接：
 
 当前没有有效 UI artifact；需要先重新确认 product design，才能创建新的页面实现或部署产物。
 
+第一版完整 business-flow mockup 的 production design 见 [`mockup-business-flow-spec.md`](mockup-business-flow-spec.md)。该文档只在准备 mockup 时使用，不替代 0/1/2/3 文档链。
+
 部署方式见 [`deploy-guide.md`](deploy-guide.md)。部署文档只说明怎么发布产物，不定义产品形态。
