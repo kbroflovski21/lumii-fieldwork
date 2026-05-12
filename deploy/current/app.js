@@ -1,5 +1,7 @@
+const initialRole = new URLSearchParams(window.location.search).get('role');
+
 const state = {
-  role: 'ops',
+  role: ['ops', 'worker', 'qa', 'audit'].includes(initialRole) ? initialRole : 'ops',
   discussion: false,
   flow: {
     triaged: false,
@@ -65,6 +67,9 @@ const confirmRoot = document.getElementById('confirm-root');
 
 function setRole(role) {
   state.role = role;
+  const url = new URL(window.location.href);
+  url.searchParams.set('role', role);
+  window.history.replaceState({}, '', url);
   render();
 }
 
@@ -188,7 +193,7 @@ function opsConversation() {
 
 function workerConversation() {
   return `
-    ${bubble('agent', '李娜，周秀兰的探访任务已下发。出发前先看 4 条关键 hint。')}
+    ${bubble('agent', '李娜，周秀兰的探访任务已下发。出发前先看服务前 hint。')}
     ${hintCard()}
     ${time('13:52')}
     ${bubble('agent wide', '服务中我会跟踪 SOP 关键项。当前建议先确认老人昨晚头晕是否和用药相关。')}
