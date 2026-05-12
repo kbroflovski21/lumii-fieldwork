@@ -723,6 +723,10 @@ h1 {
   background: #eef2f8;
 }
 
+.red-shell.no-rail {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .role-rail {
   position: sticky;
   top: 0;
@@ -1030,6 +1034,10 @@ h1 {
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 18px 44px rgba(31, 46, 68, 0.14);
   backdrop-filter: blur(16px);
+}
+
+.red-shell.no-rail .composer {
+  left: 20px;
 }
 
 .composer input {

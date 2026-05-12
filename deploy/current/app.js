@@ -113,8 +113,9 @@ function complete(key) {
 
 function render() {
   const role = roles[state.role];
+  const shellClass = showRoleRail() ? 'red-shell' : 'red-shell no-rail';
   root.innerHTML = `
-    <div class="red-shell">
+    <div class="${shellClass}">
       ${rail()}
       <section class="agent-stage">
         <header class="agent-head">
@@ -151,15 +152,24 @@ function render() {
 }
 
 function rail() {
+  if (!showRoleRail()) return '';
+  const visibleRoles = state.role === 'ops' ? ['ops', 'qa', 'audit'] : ['qa', 'audit'];
   return `
     <nav class="role-rail" aria-label="角色登录">
-      ${Object.entries(roles).map(([key, role]) => `
+      ${visibleRoles.map(key => {
+        const role = roles[key];
+        return `
         <button class="rail-btn ${state.role === key ? 'active' : ''}" data-role="${key}" title="${role.label}">
           ${role.icon}
         </button>
-      `).join('')}
+      `;
+      }).join('')}
     </nav>
   `;
+}
+
+function showRoleRail() {
+  return state.role === 'ops' || state.role === 'qa';
 }
 
 function conversation() {
