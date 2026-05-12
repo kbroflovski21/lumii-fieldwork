@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金色年华 · Business Use Case 全集</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  background: rgb(247, 249, 251);
+  color: #191C1E;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+  z-index: -1;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -150px; right: -150px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0, 82, 204, 0.06) 0%, transparent 70%);
+  z-index: -1;
+}
+
+.bg-green {
+  position: fixed;
+  top: 50%; left: 60%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(22, 163, 106, 0.05) 0%, transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 64px 24px 48px;
+}
+
+.hero h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #191C1E;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.hero .subtitle {
+  font-size: 1rem;
+  color: #64748B;
+  margin-bottom: 8px;
+}
+
+.hero .version {
+  font-size: 0.85rem;
+  color: #64748B;
+  font-style: italic;
+}
+
+/* Glass Card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.glass-card h2 {
+  font-size: 1.3rem;
+  color: #191C1E;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.controls button {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(0,82,204,0.2);
+  color: #0052CC;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.controls button:hover {
+  background: #0052CC;
+  color: #fff;
+}
+
+/* TOC Grid */
+.toc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.toc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(0, 82, 204, 0.03);
+  border: 1px solid rgba(0, 82, 204, 0.06);
+  text-decoration: none;
+  color: #191C1E;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.toc-item:hover {
+  background: rgba(0, 82, 204, 0.08);
+  border-color: rgba(0, 82, 204, 0.15);
+  transform: translateY(-1px);
+}
+
+.toc-item .uc-id {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.78rem;
+  color: #0052CC;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toc-item .uc-title {
+  font-size: 0.88rem;
+  color: #434654;
+}
+
+.toc-item .priority-dot {
+  margin-left: auto;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.priority-dot.high { background: #DC2626; }
+.priority-dot.medium { background: #ea580c; }
+.priority-dot.low { background: #0052CC; }
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  background: rgba(0, 82, 204, 0.06);
+  color: #191C1E;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid rgba(0, 82, 204, 0.1);
+}
+
+.data-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  color: #434654;
+  vertical-align: top;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+
+.data-table tr:hover td { background: rgba(0, 82, 204, 0.02); }
+
+/* Domain Section Header */
+.domain-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 48px 0 20px;
+}
+
+.domain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.domain-badge.domain-a { background: linear-gradient(135deg, #0052CC, #2684FF); }
+.domain-badge.domain-b { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.domain-badge.domain-c { background: linear-gradient(135deg, #16A34A, #4ade80); }
+.domain-badge.domain-d { background: linear-gradient(135deg, #ea580c, #fb923c); }
+.domain-badge.domain-e { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+.domain-badge.domain-f { background: linear-gradient(135deg, #DC2626, #f87171); }
+.domain-badge.domain-g { background: linear-gradient(135deg, #4338ca, #818cf8); }
+.domain-badge.domain-h { background: linear-gradient(135deg, #0052CC, #60a5fa); }
+.domain-badge.domain-i { background: linear-gradient(135deg, #b45309, #fbbf24); }
+.domain-badge.domain-j { background: linear-gradient(135deg, #DC2626, #fb7185); }
+.domain-badge.domain-k { background: linear-gradient(135deg, #16A34A, #86efac); }
+.domain-badge.domain-l { background: linear-gradient(135deg, #64748B, #94a3b8); }
+
+/* Use Case Card */
+.uc-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.uc-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.uc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 28px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.uc-card-header:hover {
+  background: rgba(0, 82, 204, 0.02);
+}
+
+.uc-card-header .arrow {
+  font-size: 0.8rem;
+  color: #64748B;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.uc-card.open .uc-card-header .arrow {
+  transform: rotate(90deg);
+}
+
+.uc-card-header .uc-id-badge {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  color: #0052CC;
+  background: rgba(0, 82, 204, 0.08);
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.uc-card-header .uc-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #191C1E;
+  flex: 1;
+}
+
+.priority-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.priority-badge.high {
+  background: rgba(220, 38, 38, 0.1);
+  color: #DC2626;
+}
+
+.priority-badge.medium {
+  background: rgba(234, 88, 12, 0.1);
+  color: #ea580c;
+}
+
+.priority-badge.low {
+  background: rgba(0, 82, 204, 0.1);
+  color: #0052CC;
+}
+
+.uc-card-body {
+  display: none;
+  padding: 0 28px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.uc-card.open .uc-card-body {
+  display: block;
+}
+
+.uc-card-body .data-table td:first-child {
+  font-weight: 600;
+  color: #191C1E;
+  white-space: nowrap;
+  width: 120px;
+}
+
+/* Actor badges */
+.actor-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  padding: 2px 10px;
+  border-radius: 12px;
+  margin: 2px 4px 2px 0;
+  font-weight: 500;
+}
+
+.actor-badge.primary {
+  background: rgba(22, 163, 106, 0.1);
+  color: #16A34A;
+}
+
+.actor-badge.secondary {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+/* Terminal Block */
+.terminal-block {
+  background: #1a1b26;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.terminal-block .terminal-header {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.terminal-block .terminal-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+}
+
+.terminal-block .terminal-dot.red { background: #ff5f57; }
+.terminal-block .terminal-dot.yellow { background: #febc2e; }
+.terminal-block .terminal-dot.green { background: #28c840; }
+
+.terminal-block pre {
+  color: #a9b1d6;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  white-space: pre;
+  margin: 0;
+}
+
+.terminal-block pre .comment { color: #565f89; }
+.terminal-block pre .arrow { color: #7aa2f7; }
+.terminal-block pre .keyword { color: #bb9af7; }
+.terminal-block pre .uc-ref { color: #9ece6a; }
+.terminal-block pre .relation { color: #ff9e64; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 1.6rem; }
+  .container { padding: 0 12px 60px; }
+  .glass-card { padding: 20px 16px; border-radius: 16px; }
+  .uc-card-header { padding: 16px 18px; gap: 10px; }
+  .uc-card-body { padding: 0 18px 18px; }
+  .toc-grid { grid-template-columns: 1fr; }
+  .uc-card-header .uc-title { font-size: 0.95rem; }
+  .data-table { font-size: 0.82rem; }
+  .data-table td, .data-table th { padding: 8px 10px; }
+  .uc-card-body .data-table td:first-child { white-space: normal; width: auto; }
+  .terminal-block { padding: 18px 16px; }
+  .terminal-block pre { font-size: 0.72rem; }
+  .domain-header { margin: 36px 0 16px; }
+  .hero { padding: 40px 16px 32px; }
+}
+
+/* Smooth scroll */
+html { scroll-behavior: smooth; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="bg-green"></div>
+
+<div class="hero">
+  <h1>金色年华 · Business Use Case 全集</h1>
+  <div class="subtitle">社区居家养老服务 — 业务用例完整文档</div>
+  <div class="version">v0.2 / 2026-05-12 &nbsp;|&nbsp; 基于《社区居家养老服务》业务需求梳理，对照基线文档修订</div>
+</div>
+
+<div class="container">
+
+<!-- Controls -->
+<div class="controls">
+  <button onclick="expandAll()">展开全部</button>
+  <button onclick="collapseAll()">收起全部</button>
+</div>
+
+<!-- TOC -->
+<div class="glass-card">
+  <h2>目录 · 28 个业务用例</h2>
+  <div class="toc-grid">
+    <a class="toc-item" onclick="openAndScroll('uc-b-001')"><span class="uc-id">UC-B-001</span><span class="uc-title">初始化机构与站点</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-002')"><span class="uc-id">UC-B-002</span><span class="uc-title">管理社工档案与可用性</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-003')"><span class="uc-id">UC-B-003</span><span class="uc-title">管理设备</span><span class="priority-dot low"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-004')"><span class="uc-id">UC-B-004</span><span class="uc-title">管理老人档案与服务资格</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-005')"><span class="uc-id">UC-B-005</span><span class="uc-title">管理家属信息与接收渠道</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-006')"><span class="uc-id">UC-B-006</span><span class="uc-title">管理服务项目与SOP模板</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-007')"><span class="uc-id">UC-B-007</span><span class="uc-title">管理项目规则</span><span class="priority-dot low"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-008')"><span class="uc-id">UC-B-008</span><span class="uc-title">管理培训资料与知识库</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-009')"><span class="uc-id">UC-B-009</span><span class="uc-title">查询服务规范与操作指引</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-010')"><span class="uc-id">UC-B-010</span><span class="uc-title">受理服务需求</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-011')"><span class="uc-id">UC-B-011</span><span class="uc-title">分诊并确认服务需求</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-012')"><span class="uc-id">UC-B-012</span><span class="uc-title">制定排班计划</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-013')"><span class="uc-id">UC-B-013</span><span class="uc-title">调整排班任务</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-014')"><span class="uc-id">UC-B-014</span><span class="uc-title">查看今日服务任务</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-015')"><span class="uc-id">UC-B-015</span><span class="uc-title">启动上门服务</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-016')"><span class="uc-id">UC-B-016</span><span class="uc-title">执行上门服务</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-017')"><span class="uc-id">UC-B-017</span><span class="uc-title">记录服务异常</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-018')"><span class="uc-id">UC-B-018</span><span class="uc-title">完成服务并归档</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-019')"><span class="uc-id">UC-B-019</span><span class="uc-title">生成服务日志与凭证</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-020')"><span class="uc-id">UC-B-020</span><span class="uc-title">审核服务凭证</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-021')"><span class="uc-id">UC-B-021</span><span class="uc-title">导出服务凭证包</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-022')"><span class="uc-id">UC-B-022</span><span class="uc-title">处理投诉与质疑</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-023')"><span class="uc-id">UC-B-023</span><span class="uc-title">发起并执行主动回访</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-024')"><span class="uc-id">UC-B-024</span><span class="uc-title">生成家属健康报告</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-025')"><span class="uc-id">UC-B-025</span><span class="uc-title">查看健康报告与历史趋势</span><span class="priority-dot high"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-026')"><span class="uc-id">UC-B-026</span><span class="uc-title">提交服务注意事项</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-027')"><span class="uc-id">UC-B-027</span><span class="uc-title">查询服务统计与运营复盘</span><span class="priority-dot medium"></span></a>
+    <a class="toc-item" onclick="openAndScroll('uc-b-028')"><span class="uc-id">UC-B-028</span><span class="uc-title">管理权限隐私与审计留痕</span><span class="priority-dot high"></span></a>
+  </div>
+</div>
+
+<!-- Actor Overview -->
+<div class="glass-card">
+  <h2>参与者（Actor）总览</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>Actor</th><th>类型</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>社工</td><td><span class="actor-badge primary">Primary</span></td><td>一线上门服务人员，执行探访关爱、助浴、助医陪诊等服务</td></tr>
+      <tr><td>站长</td><td><span class="actor-badge primary">Primary</span></td><td>站点管理者，负责排班调度、服务监控、日志审核</td></tr>
+      <tr><td>总部管理员</td><td><span class="actor-badge primary">Primary</span></td><td>跨站点管理，全局配置与数据分析</td></tr>
+      <tr><td>家属</td><td><span class="actor-badge primary">Primary</span></td><td>老人的家庭成员，接收健康报告、查看趋势、留言</td></tr>
+      <tr><td>服务主管/SOP负责人</td><td><span class="actor-badge primary">Primary</span></td><td>负责SOP设计、培训组织、凭证标准制定</td></tr>
+      <tr><td>需求受理人员</td><td><span class="actor-badge primary">Primary</span></td><td>负责接听电话、记录外生需求、初步分诊</td></tr>
+      <tr><td>质检/审核/结算人员</td><td><span class="actor-badge primary">Primary</span></td><td>独立于站长的审核角色，负责凭证合规和结算对接</td></tr>
+      <tr><td>系统</td><td><span class="actor-badge secondary">Secondary</span></td><td>实时督导、异常检测、日志/报告自动生成、智能提醒等后台能力</td></tr>
+      <tr><td>微信/短信平台</td><td><span class="actor-badge secondary">Secondary</span></td><td>消息推送渠道</td></tr>
+      <tr><td>保险公司/政府/机构结算方</td><td><span class="actor-badge secondary">Secondary</span></td><td>接收导出的凭证包，完成结算（对接方）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Core Business Objects -->
+<div class="glass-card">
+  <h2>核心业务对象</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>业务对象</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>站点</td><td>服务站点，归属机构，包含地址、区域、服务覆盖范围</td></tr>
+      <tr><td>社工（含技能/班次/培训状态）</td><td>一线服务人员，记录技能资质、排班班次、培训完成情况、可用状态</td></tr>
+      <tr><td>老人（含服务资格/禁忌）</td><td>服务对象，记录服务资格（养护险/政府购买/机构自费）、频次限制、禁忌事项</td></tr>
+      <tr><td>家属</td><td>老人的家庭联系人，记录授权关系、信息接收渠道偏好</td></tr>
+      <tr><td>服务项目</td><td>可提供的服务类型（探访关爱、助浴、助医陪诊等）</td></tr>
+      <tr><td>SOP</td><td>每种服务项目对应的标准操作流程模板，含步骤、话术、时长、检查项</td></tr>
+      <tr><td>项目规则</td><td>不同资金来源（养护险/政府购买/机构）下的结算标准、审核要求、频次限制</td></tr>
+      <tr><td>服务需求</td><td>待服务的需求条目，来源分内生（定频、异常跟进、健康风险）和外生（电话、小程序、家属、社区转介）</td></tr>
+      <tr><td>待排班池</td><td>经分诊确认后等待排班的服务需求集合</td></tr>
+      <tr><td>上门任务</td><td>已排班并分配给社工的具体服务任务</td></tr>
+      <tr><td>服务过程</td><td>社工执行上门服务的完整会话，含到达、SOP执行、异常记录、完成归档</td></tr>
+      <tr><td>服务凭证</td><td>单次服务产出的结构化记录，含对话摘要、SOP完成情况、照片/录音/签字等证据</td></tr>
+      <tr><td>服务凭证包</td><td>按项目规则打包的凭证集合，用于提交给保险公司/政府/机构进行结算</td></tr>
+      <tr><td>家属报告</td><td>面向家属的脱敏健康报告，含健康指标、服务摘要、关注提醒、趋势对比</td></tr>
+      <tr><td>反馈/投诉/回访</td><td>家属或老人的反馈意见、投诉记录，以及主动回访的执行与结果</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Domain Map -->
+<div class="glass-card">
+  <h2>业务域划分</h2>
+  <table class="data-table">
+    <thead>
+      <tr><th>域</th><th>编号范围</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>A. 机构与站点初始化</td><td>UC-B-001</td><td>机构和站点的创建与基础配置</td></tr>
+      <tr><td>B. 人员与社工管理</td><td>UC-B-002 ~ 003</td><td>社工档案、可用性管理及设备管理</td></tr>
+      <tr><td>C. 老人/家属档案与服务资格</td><td>UC-B-004 ~ 005</td><td>老人健康档案、服务资格、家属信息维护</td></tr>
+      <tr><td>D. 服务类型、SOP与项目规则</td><td>UC-B-006 ~ 007</td><td>服务项目定义、SOP模板管理、结算与审核规则</td></tr>
+      <tr><td>E. 培训与知识支持</td><td>UC-B-008 ~ 009</td><td>培训资料管理、服务规范查询</td></tr>
+      <tr><td>F. 服务需求进入与分诊</td><td>UC-B-010 ~ 011</td><td>多渠道需求受理、分诊确认与路由</td></tr>
+      <tr><td>G. 排班与派单</td><td>UC-B-012 ~ 013</td><td>排班计划制定与临时调整</td></tr>
+      <tr><td>H. SOP驱动的上门服务</td><td>UC-B-014 ~ 018</td><td>社工从查看任务到完成服务的全流程</td></tr>
+      <tr><td>I. 服务凭证与审核</td><td>UC-B-019 ~ 021</td><td>凭证生成、合规审核、凭证包导出</td></tr>
+      <tr><td>J. 反馈、投诉与主动回访</td><td>UC-B-022 ~ 023</td><td>投诉处理、主动回访</td></tr>
+      <tr><td>K. 家属报告、洞察与运营复盘</td><td>UC-B-024 ~ 027</td><td>家属健康报告、历史趋势、家属留言、运营统计与复盘</td></tr>
+      <tr><td>L. 权限、隐私与留痕</td><td>UC-B-028</td><td>权限管理、隐私保护、审计日志</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Main Business Flow -->
+<div class="terminal-block">
+  <div class="terminal-header">
+    <div class="terminal-dot red"></div>
+    <div class="terminal-dot yellow"></div>
+    <div class="terminal-dot green"></div>
+  </div>
+  <pre><span class="comment">## 主业务链路</span>
+
+机构/站点初始化
+  <span class="arrow">--></span> 人员/老人/家属/服务项目准备
+  <span class="arrow">--></span> 培训与知识支持
+  <span class="arrow">--></span> 服务需求进入
+  <span class="arrow">--></span> 分诊确认 <span class="arrow">--></span> 待排班池
+  <span class="arrow">--></span> 排班派单
+  <span class="arrow">--></span> SOP驱动的上门服务
+  <span class="arrow">--></span> 服务凭证采集 <span class="arrow">--></span> 服务凭证包生成
+  <span class="arrow">--></span> 服务凭证审核
+  <span class="arrow">--></span> 导出给保险公司/政府/机构结算
+  <span class="arrow">--></span> 家属报告 / 投诉回访 / 老人洞察 / 运营复盘</pre>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN A -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-a">A. 机构与站点初始化</span>
+</div>
+
+<div class="uc-card" id="uc-b-001">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-001</span>
+    <span class="uc-title">初始化机构与站点</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-001</td></tr>
+      <tr><td>用例名称</td><td>初始化机构与站点</td></tr>
+      <tr><td>用例描述</td><td>总部管理员创建机构信息并初始化下属服务站点，配置站点的基础属性、服务覆盖区域和管理人员</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：总部管理员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>建立机构-站点组织架构，为后续人员、老人、服务项目的挂载提供基础</td></tr>
+      <tr><td>前置条件</td><td>总部管理员已登录管理端；机构已完成工商注册/资质审批</td></tr>
+      <tr><td>后置条件</td><td>机构信息已创建；至少一个站点已初始化并可投入使用</td></tr>
+      <tr><td>触发条件</td><td>新机构上线；新增服务站点；站点信息变更</td></tr>
+      <tr><td>基本流程</td><td>1. 总部管理员进入机构管理页面<br>2. 录入机构基础信息：名称、统一社会信用代码、资质类型、联系人<br>3. 创建下属站点：站点名称、地址、所属行政区域、服务覆盖范围（街道/社区）<br>4. 为站点指定站长<br>5. 配置站点的服务能力：可提供的服务项目列表、最大社工人数<br>6. 系统校验信息完整性并保存<br>7. 站点状态置为"已就绪"，可开始录入社工和老人信息</td></tr>
+      <tr><td>备选流程</td><td>3a. 批量导入多个站点信息 → 系统解析导入文件并逐条校验<br>4a. 站长尚未录入系统 → 先跳转到社工管理（UC-B-002）创建站长账号后再回来指定</td></tr>
+      <tr><td>异常流程</td><td>E1. 站点服务覆盖区域与已有站点重叠 → 系统提醒并要求确认或调整</td></tr>
+      <tr><td>业务规则</td><td>每个站点必须有且仅有一名站长；站点服务覆盖区域不宜重叠；机构信息创建后部分字段（如信用代码）不可修改</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN B -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-b">B. 人员与社工管理</span>
+</div>
+
+<div class="uc-card" id="uc-b-002">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-002</span>
+    <span class="uc-title">管理社工档案与可用性</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-002</td></tr>
+      <tr><td>用例名称</td><td>管理社工档案与可用性</td></tr>
+      <tr><td>用例描述</td><td>站长或总部管理员维护社工的完整档案信息，包括技能资质、排班班次、培训状态、请假与临时不可用，并支持替补社工的快速指定</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、总部管理员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>确保社工信息完整、可用性实时准确，为排班派单提供可靠的人力资源数据</td></tr>
+      <tr><td>前置条件</td><td>站点已初始化（UC-B-001）</td></tr>
+      <tr><td>后置条件</td><td>社工档案已创建或更新；可用性状态已同步到排班模块</td></tr>
+      <tr><td>触发条件</td><td>新社工入职；社工信息变更；社工请假/临时不可用；培训完成/资质到期</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入社工管理页面<br>2. 录入/编辑社工基础信息：姓名、手机号、身份证号、所属站点<br>3. 配置社工技能与资质：持有技能标签（探访关爱、助浴、助医陪诊等）、资质证书编号及有效期<br>4. 设置排班班次：默认工作时段、每日最大服务户数<br>5. 维护培训状态：已完成培训列表、待培训项、培训到期提醒<br>6. 管理可用性：当前状态（在岗/请假/培训中/临时不可用）、请假时段、不可用原因<br>7. 设置替补关系：为社工指定默认替补人选（技能匹配、区域就近）<br>8. 系统保存并同步可用性到排班模块</td></tr>
+      <tr><td>备选流程</td><td>6a. 社工临时请假 → 系统自动检查其名下待执行任务，提示站长是否启用替补<br>7a. 未指定替补 → 系统根据技能和区域自动推荐替补候选</td></tr>
+      <tr><td>异常流程</td><td>E1. 删除仍有活跃排班的社工 → 系统阻止并提示先处理排班<br>E2. 社工资质到期 → 系统标记为"资质过期"，排班时自动排除并提醒站长</td></tr>
+      <tr><td>业务规则</td><td>社工必须至少持有一项技能标签才能参与排班；资质过期的社工不可分配对应类型的服务任务；总部管理员可管理所有站点社工，站长仅可管理本站点</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-003">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-003</span>
+    <span class="uc-title">管理设备</span>
+    <span class="priority-badge low">Low</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-003</td></tr>
+      <tr><td>用例名称</td><td>管理设备</td></tr>
+      <tr><td>用例描述</td><td>管理员为社工绑定手机和蓝牙耳机，监控设备在线状态</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、总部管理员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>确保社工的服务设备正常可用，为未来切换硬件工牌做准备</td></tr>
+      <tr><td>前置条件</td><td>社工已录入系统（UC-B-002）</td></tr>
+      <tr><td>后置条件</td><td>设备已绑定到社工，状态可监控</td></tr>
+      <tr><td>触发条件</td><td>新社工入职领取设备；设备更换；设备故障排查</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入设备管理页面<br>2. 管理员为社工绑定设备（手机设备ID + 蓝牙耳机型号）<br>3. 系统显示设备状态（在线/离线、最后活跃时间）<br>4. 管理员可解绑或更换设备</td></tr>
+      <tr><td>备选流程</td><td>--</td></tr>
+      <tr><td>异常流程</td><td>E1. 设备长时间离线 → 系统提醒管理员排查</td></tr>
+      <tr><td>业务规则</td><td>每个社工绑定一台手机 + 一个蓝牙耳机；未来硬件工牌到位时，同一界面切换设备类型</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge low">Low</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN C -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-c">C. 老人/家属档案与服务资格</span>
+</div>
+
+<div class="uc-card" id="uc-b-004">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-004</span>
+    <span class="uc-title">管理老人档案与服务资格</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-004</td></tr>
+      <tr><td>用例名称</td><td>管理老人档案与服务资格</td></tr>
+      <tr><td>用例描述</td><td>管理员维护老人的完整档案，包括基础信息、健康档案、服务资格（养护险/政府购买/机构自费）、服务频次限制和禁忌事项。服务完成后系统自动追加健康数据</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、总部管理员</span><br><span class="actor-badge secondary">次要：系统（自动更新健康数据）</span></td></tr>
+      <tr><td>业务目标</td><td>维护准确的老人档案和服务资格数据，支撑排班、服务执行、凭证审核和结算</td></tr>
+      <tr><td>前置条件</td><td>站点已初始化（UC-B-001）</td></tr>
+      <tr><td>后置条件</td><td>老人档案已创建或更新；服务资格信息可供排班和结算模块使用</td></tr>
+      <tr><td>触发条件</td><td>老人初次签约服务；老人信息变更；服务资格变更；每次服务完成后自动更新健康数据</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入老人管理页面<br>2. 录入/编辑基础信息：姓名、性别、年龄、身份证号、地址、联系电话<br>3. 建立健康档案：基础病史、用药情况、身体指标基线、过敏史<br>4. 配置服务资格：资金来源类型（养护险/政府购买/机构自费）、对应的服务项目范围<br>5. 设置频次限制：每种服务类型的周/月最大服务次数（依据资格类型和项目规则）<br>6. 录入禁忌事项：不可提供的服务类型、特殊注意事项（如对某类清洁剂过敏）<br>7. 录入专属注意事项（如独居、有宠物、门锁密码等）<br>8. 系统保存档案</td></tr>
+      <tr><td>备选流程</td><td>8a. 每次服务完成后，系统自动将本次采集的健康数据追加到档案中（如最新血压值、体重），不覆盖人工录入的基线数据<br>4a. 老人同时具备多种服务资格 → 系统支持多资格并存，排班和结算时按规则选择优先资格</td></tr>
+      <tr><td>异常流程</td><td>E1. 服务资格到期 → 系统标记为"资格过期"，排班时提醒站长，不自动生成新需求<br>E2. 频次限制已满 → 系统在排班时自动拦截，提示本周期剩余可用次数</td></tr>
+      <tr><td>业务规则</td><td>健康档案是服务执行的核心上下文来源；不同服务资格对应不同的项目规则和结算标准；禁忌事项在排班和服务启动时必须向社工提醒</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-005">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-005</span>
+    <span class="uc-title">管理家属信息与接收渠道</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-005</td></tr>
+      <tr><td>用例名称</td><td>管理家属信息与接收渠道</td></tr>
+      <tr><td>用例描述</td><td>管理员维护老人关联的家属信息，配置家属的授权关系和信息接收渠道偏好</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、总部管理员</span><br><span class="actor-badge secondary">次要：家属</span></td></tr>
+      <tr><td>业务目标</td><td>确保家属信息完整，健康报告和通知能准确送达授权家属</td></tr>
+      <tr><td>前置条件</td><td>老人档案已建立（UC-B-004）</td></tr>
+      <tr><td>后置条件</td><td>家属信息已关联到老人；接收渠道已配置</td></tr>
+      <tr><td>触发条件</td><td>老人签约时录入家属信息；家属信息变更；家属授权调整</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入老人详情页的"家属管理"模块<br>2. 录入家属信息：姓名、与老人关系、联系方式<br>3. 配置授权关系：是否为主要联系人、是否有权查看健康报告、是否有权提交留言、是否有权发起投诉<br>4. 设置接收渠道偏好：微信推送/短信/小程序通知，可多选<br>5. 一位老人可关联多位家属，分别配置授权和渠道<br>6. 系统保存并校验联系方式有效性</td></tr>
+      <tr><td>备选流程</td><td>3a. 家属通过小程序自助绑定 → 系统发送验证请求给管理员，管理员确认后绑定生效</td></tr>
+      <tr><td>异常流程</td><td>E1. 家属联系方式无效（微信未关注公众号/手机号错误） → 系统标记并提醒管理员核实</td></tr>
+      <tr><td>业务规则</td><td>每位老人至少关联一位家属作为主要联系人；健康报告仅推送给有查看授权的家属；紧急情况通知所有已关联家属</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN D -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-d">D. 服务类型、SOP与项目规则</span>
+</div>
+
+<div class="uc-card" id="uc-b-006">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-006</span>
+    <span class="uc-title">管理服务项目与SOP模板</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-006</td></tr>
+      <tr><td>用例名称</td><td>管理服务项目与SOP模板</td></tr>
+      <tr><td>用例描述</td><td>服务主管创建、编辑、启用或停用服务项目及其对应的SOP模板，定义每种服务类型的标准流程、引导话术和凭证要求（照片/录音/签字/时长等）</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：服务主管/SOP负责人、总部管理员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>标准化各类上门服务的流程和质量要求，明确每种服务的凭证采集标准和完成判定标准</td></tr>
+      <tr><td>前置条件</td><td>机构已初始化（UC-B-001）</td></tr>
+      <tr><td>后置条件</td><td>服务项目和SOP模板已创建/更新，可用于排班、服务执行和凭证审核</td></tr>
+      <tr><td>触发条件</td><td>新增服务类型；现有SOP需要优化调整；凭证标准变更</td></tr>
+      <tr><td>基本流程</td><td>1. 服务主管进入服务项目管理页面<br>2. 创建或编辑服务项目：名称、类别、适用人群、预计时长范围<br>3. 编辑SOP模板：步骤列表（每步包含：步骤名、引导话术、检查项、预期时长）<br>4. 配置凭证要求：该服务类型需要采集的证据类型（拍照/录音/老人签字/服务时长记录），每种证据的数量和质量要求<br>5. 设定完成判定标准：必须完成的SOP步骤列表、最低服务时长、必须采集的凭证项<br>6. 服务主管保存模板<br>7. 模板生效，可在排班和服务中使用</td></tr>
+      <tr><td>备选流程</td><td>2a. 复制已有模板 → 在副本上修改，快速创建变体<br>5a. 按服务资格类型设置差异化完成标准（如养护险要求签字+照片，机构自费仅需时长记录）</td></tr>
+      <tr><td>异常流程</td><td>E1. 停用正在排班中引用的模板 → 系统提醒有关联排班，确认后停用，已排班任务不受影响<br>E2. 删除已有服务记录引用的服务项目 → 系统阻止删除，仅允许停用</td></tr>
+      <tr><td>业务规则</td><td>每个服务项目必须关联一个有效的SOP模板；凭证要求是审核和结算的依据；已停用的模板不影响历史记录</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-007">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-007</span>
+    <span class="uc-title">管理项目规则</span>
+    <span class="priority-badge low">Low</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-007</td></tr>
+      <tr><td>用例名称</td><td>管理项目规则</td></tr>
+      <tr><td>用例描述</td><td>总部管理员或服务主管为不同资金来源（养护险/政府购买/机构自费）配置结算标准、审核要求和频次限制规则</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：总部管理员、服务主管/SOP负责人</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>建立清晰的项目规则体系，确保凭证审核和结算有据可依，不同资金来源的差异化要求被系统化管理</td></tr>
+      <tr><td>前置条件</td><td>服务项目已创建（UC-B-006）</td></tr>
+      <tr><td>后置条件</td><td>项目规则已生效，可供排班、凭证审核和结算导出使用</td></tr>
+      <tr><td>触发条件</td><td>新增资金来源渠道；政策调整导致规则变更；新服务项目上线需配置规则</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入项目规则管理页面<br>2. 选择资金来源类型（养护险/政府购买/机构自费）<br>3. 为每种服务项目配置规则：<br>&nbsp;&nbsp;&nbsp;- 结算单价（按次/按时长/按月包）<br>&nbsp;&nbsp;&nbsp;- 单次服务最低/最高时长<br>&nbsp;&nbsp;&nbsp;- 每周/每月最大服务频次<br>&nbsp;&nbsp;&nbsp;- 必须提交的凭证类型和数量<br>&nbsp;&nbsp;&nbsp;- 审核流程要求（是否需要双人审核、抽检比例）<br>4. 设置规则生效日期和失效日期<br>5. 系统校验规则完整性并保存<br>6. 规则生效后自动应用于新的排班和凭证审核</td></tr>
+      <tr><td>备选流程</td><td>3a. 从已有规则模板复制并修改 → 快速配置类似规则<br>4a. 设置规则为"草稿"状态 → 需审批后方可生效</td></tr>
+      <tr><td>异常流程</td><td>E1. 新规则与已有规则冲突（如同一服务项目在同一资金来源下有多条生效规则） → 系统提醒并要求调整<br>E2. 修改已生效规则 → 系统提示已有在途服务可能受影响，要求确认</td></tr>
+      <tr><td>业务规则</td><td>每种服务项目在每种资金来源下至多有一条生效规则；规则变更不影响已完成的历史服务记录；结算时以服务发生日对应的生效规则为准</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge low">Low</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN E -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-e">E. 培训与知识支持</span>
+</div>
+
+<div class="uc-card" id="uc-b-008">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-008</span>
+    <span class="uc-title">管理培训资料与知识库</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-008</td></tr>
+      <tr><td>用例名称</td><td>管理培训资料与知识库</td></tr>
+      <tr><td>用例描述</td><td>服务主管上传、组织和维护培训资料（文档、视频、案例），建立可检索的知识库，并跟踪社工的培训完成情况</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：服务主管/SOP负责人</span><br><span class="actor-badge secondary">次要：社工（学习方）、站长（查看培训进度）</span></td></tr>
+      <tr><td>业务目标</td><td>确保社工具备服务所需的知识和技能，培训资料标准化、可追溯，培训完成情况与排班资格挂钩</td></tr>
+      <tr><td>前置条件</td><td>服务项目和SOP模板已创建（UC-B-006）</td></tr>
+      <tr><td>后置条件</td><td>培训资料已发布；社工可查阅学习；培训完成状态已记录</td></tr>
+      <tr><td>触发条件</td><td>新SOP发布需配套培训；新社工入职培训；定期复训；服务质量问题触发补训</td></tr>
+      <tr><td>基本流程</td><td>1. 服务主管进入培训管理页面<br>2. 上传培训资料：标题、类别（入职培训/技能培训/复训）、关联的服务项目/SOP<br>3. 设置培训要求：必修/选修、学习时长要求、考核方式（阅读确认/测验/实操评估）<br>4. 指定培训对象：全员/特定站点/特定技能标签的社工<br>5. 发布培训任务，系统通知相关社工<br>6. 社工完成学习后系统记录完成状态<br>7. 服务主管或站长查看培训完成进度报表</td></tr>
+      <tr><td>备选流程</td><td>6a. 设有考核的培训 → 社工需通过测验或提交实操记录后方可标记完成<br>2a. 基于历史服务异常案例生成培训资料 → 服务主管将典型案例整理为培训素材</td></tr>
+      <tr><td>异常流程</td><td>E1. 培训到期未完成 → 系统标记社工为"培训待补"，排班模块提示站长该社工存在培训缺口<br>E2. 培训资料关联的SOP已停用 → 系统提醒服务主管归档对应培训</td></tr>
+      <tr><td>业务规则</td><td>社工的培训完成状态影响可排班的服务类型（未完成培训的服务类型不可排班）；培训记录作为社工档案的一部分长期保存</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-009">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-009</span>
+    <span class="uc-title">查询服务规范与操作指引</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-009</td></tr>
+      <tr><td>用例名称</td><td>查询服务规范与操作指引</td></tr>
+      <tr><td>用例描述</td><td>社工在日常工作中随时查询服务规范、SOP操作指引、常见问题解答和注意事项</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>社工在服务前和服务中能快速获取规范指引，降低操作失误率，提升服务标准化水平</td></tr>
+      <tr><td>前置条件</td><td>知识库已有培训资料和SOP文档（UC-B-008、UC-B-006）</td></tr>
+      <tr><td>后置条件</td><td>社工已获取所需规范信息</td></tr>
+      <tr><td>触发条件</td><td>社工对某个服务流程有疑问；服务前需要复习SOP；遇到不常见的服务场景</td></tr>
+      <tr><td>基本流程</td><td>1. 社工进入知识查询页面<br>2. 通过关键词搜索或按服务类型浏览<br>3. 系统返回匹配的SOP文档、操作指引、常见问题<br>4. 社工查看详情，获取所需信息<br>5. 系统记录查询行为（可用于分析高频问题）</td></tr>
+      <tr><td>备选流程</td><td>2a. 社工通过语音提问 → 系统以自然语言返回简要回答并附文档链接<br>4a. 社工在服务过程中查询 → 系统优先返回与当前服务类型相关的内容</td></tr>
+      <tr><td>异常流程</td><td>E1. 未找到匹配内容 → 系统记录未命中查询，反馈给服务主管作为知识库补充依据</td></tr>
+      <tr><td>业务规则</td><td>知识库内容以服务主管发布的资料为准；查询记录脱敏后可用于培训改进分析</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN F -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-f">F. 服务需求进入与分诊</span>
+</div>
+
+<div class="uc-card" id="uc-b-010">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-010</span>
+    <span class="uc-title">受理服务需求</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-010</td></tr>
+      <tr><td>用例名称</td><td>受理服务需求</td></tr>
+      <tr><td>用例描述</td><td>系统通过多种渠道接收服务需求。内生需求包括：定频服务（按服务协议自动生成）、异常跟进（上次服务发现的异常需要复访）、健康风险预警（健康指标持续异常触发）。外生需求包括：电话来访、小程序申请、家属代提交、社区/居委转介</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：需求受理人员</span> <span class="actor-badge secondary">系统（自动生成内生需求）</span><br><span class="actor-badge secondary">次要：家属、社区/居委（外生需求来源）</span></td></tr>
+      <tr><td>业务目标</td><td>统一归集所有服务需求来源，确保每一条需求被记录、可追溯，不遗漏</td></tr>
+      <tr><td>前置条件</td><td>老人档案和服务资格已建立（UC-B-004）；服务项目已配置（UC-B-006）</td></tr>
+      <tr><td>后置条件</td><td>服务需求已创建并进入待分诊状态</td></tr>
+      <tr><td>触发条件</td><td>内生：系统定时任务触发定频需求生成；上次服务异常标记触发跟进需求；健康指标连续异常触发预警需求。外生：电话来访、小程序提交、家属留言转需求、社区转介</td></tr>
+      <tr><td>基本流程</td><td>1. 系统自动生成内生需求：<br>&nbsp;&nbsp;&nbsp;- 按老人服务协议的频次自动创建定频服务需求<br>&nbsp;&nbsp;&nbsp;- 检测到异常跟进标记时自动创建复访需求<br>&nbsp;&nbsp;&nbsp;- 健康指标持续异常时自动创建预警需求<br>2. 外生需求受理：<br>&nbsp;&nbsp;&nbsp;- 需求受理人员接听电话，记录来访信息（老人、需求类型、紧急程度、描述）<br>&nbsp;&nbsp;&nbsp;- 家属通过小程序提交服务申请，系统自动创建需求<br>&nbsp;&nbsp;&nbsp;- 社区/居委转介，需求受理人员手动录入<br>3. 系统为每条需求生成唯一编号，记录来源渠道、创建时间<br>4. 需求进入待分诊队列</td></tr>
+      <tr><td>备选流程</td><td>2a. 电话来访涉及紧急情况（如老人摔倒、突发疾病） → 需求受理人员标记为"紧急"，跳过常规分诊流程，直接通知站长处理<br>1a. 定频需求生成时发现老人服务资格已过期 → 系统仅生成需求但标记为"资格待确认"，提醒站长核实</td></tr>
+      <tr><td>异常流程</td><td>E1. 外生需求涉及未建档老人 → 系统提示先完成建档（UC-B-004），需求暂存为草稿<br>E2. 重复需求（同一老人、同一服务类型、时间窗口内已有待分诊需求） → 系统提醒受理人员确认是否合并</td></tr>
+      <tr><td>业务规则</td><td>所有需求必须关联到具体老人和服务项目；内生需求由系统自动创建，外生需求需人工录入；需求创建后不可删除，仅可取消并记录原因</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-011">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-011</span>
+    <span class="uc-title">分诊并确认服务需求</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-011</td></tr>
+      <tr><td>用例名称</td><td>分诊并确认服务需求</td></tr>
+      <tr><td>用例描述</td><td>站长或需求受理人员对待分诊队列中的服务需求进行审核，校验老人服务资格、判断紧急程度、确认服务类型，通过后将需求投入待排班池</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、需求受理人员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>确保进入排班环节的需求均为有效、合规、优先级明确的需求，过滤无效或重复需求</td></tr>
+      <tr><td>前置条件</td><td>有待分诊的服务需求（UC-B-010）</td></tr>
+      <tr><td>后置条件</td><td>需求已确认并进入待排班池；或需求被退回/取消</td></tr>
+      <tr><td>触发条件</td><td>待分诊队列中出现新需求；站长定时审核待分诊队列</td></tr>
+      <tr><td>基本流程</td><td>1. 站长或受理人员进入分诊工作台，查看待分诊需求列表<br>2. 逐条审核需求：<br>&nbsp;&nbsp;&nbsp;- 校验老人服务资格是否有效<br>&nbsp;&nbsp;&nbsp;- 检查频次限制是否已满<br>&nbsp;&nbsp;&nbsp;- 确认服务类型与老人禁忌无冲突<br>&nbsp;&nbsp;&nbsp;- 判定紧急程度（常规/优先/紧急）<br>3. 确认需求有效 → 设定期望服务日期范围和优先级<br>4. 将需求投入待排班池<br>5. 系统记录分诊结果和操作人</td></tr>
+      <tr><td>备选流程</td><td>2a. 系统自动预校验资格和频次 → 对明确合规的内生定频需求自动通过分诊，直接进入待排班池<br>3a. 需要补充信息 → 站长将需求退回给受理人员补充后重新提交</td></tr>
+      <tr><td>异常流程</td><td>E1. 老人服务资格已过期或频次已满 → 系统拦截并提示，站长可选择驳回或标记为"例外审批"并记录原因<br>E2. 服务类型与老人禁忌冲突 → 系统阻止确认并高亮显示禁忌事项</td></tr>
+      <tr><td>业务规则</td><td>只有通过分诊确认的需求才能进入待排班池；紧急需求可绕过常规排队直接进入排班；分诊操作留痕，记录操作人和时间</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN G -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-g">G. 排班与派单</span>
+</div>
+
+<div class="uc-card" id="uc-b-012">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-012</span>
+    <span class="uc-title">制定排班计划</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-012</td></tr>
+      <tr><td>用例名称</td><td>制定排班计划</td></tr>
+      <tr><td>用例描述</td><td>站长从待排班池中选取服务需求，结合社工技能、可用性和地理位置，制定指定日期的排班计划，将需求转化为具体的上门任务并分配给社工</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长</span><br><span class="actor-badge secondary">次要：系统（排班建议）</span></td></tr>
+      <tr><td>业务目标</td><td>生成合理的每日排班表，确保待排班池中的需求被及时消化，社工-老人匹配合理、路线最优</td></tr>
+      <tr><td>前置条件</td><td>站长已登录管理端；待排班池中有已确认的服务需求（UC-B-011）；社工信息和可用性已维护（UC-B-002）</td></tr>
+      <tr><td>后置条件</td><td>排班表已生成并保存；上门任务已下发到对应社工的任务队列；待排班池中对应需求已消化</td></tr>
+      <tr><td>触发条件</td><td>站长打开排班页面准备安排次日工作；或系统每日定时触发排班建议</td></tr>
+      <tr><td>基本流程</td><td>1. 站长进入排班调度页面，选择排班日期<br>2. 系统展示待排班池中待安排的需求列表（按优先级排序）<br>3. 系统根据需求的服务类型、老人地址、社工技能匹配和地理位置，自动生成排班建议<br>4. 排班建议展示：每位社工对应的服务任务列表、服务类型、路线顺序、预计时长<br>5. 站长审核排班建议，确认或手动调整分配（调换社工-老人配对、调整顺序）<br>6. 站长确认排班<br>7. 系统保存排班表，自动下发上门任务到各社工的任务队列<br>8. 待排班池中已排班的需求标记为"已排班"</td></tr>
+      <tr><td>备选流程</td><td>3a. 系统检测到老人上次有异常标记 → 建议优先安排经验丰富的社工<br>5a. 站长不满意自动建议 → 手动重新调整分配，系统实时更新路线<br>3b. 系统检测到社工技能不匹配 → 过滤不符合条件的社工，仅推荐具备对应技能的社工</td></tr>
+      <tr><td>异常流程</td><td>E1. 可用社工人数不足以覆盖所有待排班需求 → 系统提示缺口，站长决定优先级或协调其他站点<br>E2. 某社工当日请假 → 系统自动推荐替补社工（优先使用预设替补）</td></tr>
+      <tr><td>业务规则</td><td>排班必须满足社工技能与服务类型的匹配要求；每位老人有约定的服务频次；排班需考虑社工地理位置就近原则；有异常标记的老人应优先安排；紧急需求优先排班</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-013">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-013</span>
+    <span class="uc-title">调整排班任务</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-013</td></tr>
+      <tr><td>用例名称</td><td>调整排班任务</td></tr>
+      <tr><td>用例描述</td><td>站长在当日或已排班日期内，临时插入、取消、改期或调换服务任务，处理社工替补</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长</span><br><span class="actor-badge secondary">次要：系统（冲突检测与替补推荐）</span></td></tr>
+      <tr><td>业务目标</td><td>灵活响应突发情况（社工请假、老人临时需求、紧急任务），确保服务不中断</td></tr>
+      <tr><td>前置条件</td><td>已有排班计划（UC-B-012）；站长已登录管理端</td></tr>
+      <tr><td>后置条件</td><td>排班表已更新；受影响社工的任务队列已同步更新；被取消或改期的任务回退至待排班池或标记取消</td></tr>
+      <tr><td>触发条件</td><td>社工请假/生病；老人或家属临时取消或加急；出现紧急情况需优先处理</td></tr>
+      <tr><td>基本流程</td><td>1. 站长进入排班调度页面，选择需调整的日期<br>2. 站长执行调整操作：<br>&nbsp;&nbsp;&nbsp;- 插入新任务：从待排班池选取需求并分配<br>&nbsp;&nbsp;&nbsp;- 取消已有任务：标记取消原因，需求退回待排班池或标记为"已取消"<br>&nbsp;&nbsp;&nbsp;- 改期：将任务移到其他日期<br>&nbsp;&nbsp;&nbsp;- 替补：将任务从一个社工调给另一个社工<br>3. 系统校验调整后的合理性（时间冲突、路线影响、技能匹配）<br>4. 站长确认调整<br>5. 系统更新排班表，实时同步到受影响社工的任务队列</td></tr>
+      <tr><td>备选流程</td><td>2a. 社工整日请假 → 系统自动列出其名下所有任务，建议批量替补方案<br>2b. 站长通过语音描述调整需求 → 系统理解意图并给出调整建议 → 站长确认</td></tr>
+      <tr><td>异常流程</td><td>E1. 调整后某社工任务超负荷 → 系统提醒并建议分担方案<br>E2. 无可用替补社工（技能或时间不匹配） → 系统提示站长协调其他站点或延期服务</td></tr>
+      <tr><td>业务规则</td><td>当日已开始的服务不可取消；已完成的任务不可调整；取消和替补操作留痕，记录原因和操作人</td></tr>
+      <tr><td>非功能需求</td><td>调整后需实时推送到社工端，延迟不超过数秒</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN H -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-h">H. SOP驱动的上门服务</span>
+</div>
+
+<div class="uc-card" id="uc-b-014">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-014</span>
+    <span class="uc-title">查看今日服务任务</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-014</td></tr>
+      <tr><td>用例名称</td><td>查看今日服务任务</td></tr>
+      <tr><td>用例描述</td><td>社工上班后查看当日待完成的上门服务任务列表，了解服务对象、地址、服务类型和注意事项</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>社工清晰掌握今日工作安排，有序出发</td></tr>
+      <tr><td>前置条件</td><td>社工已登录；站长已完成当日排班（UC-B-012）</td></tr>
+      <tr><td>后置条件</td><td>社工已查看任务，准备出发</td></tr>
+      <tr><td>触发条件</td><td>社工上班打开系统（通常为早上08:30左右）</td></tr>
+      <tr><td>基本流程</td><td>1. 社工打开系统，进入任务列表页<br>2. 系统展示今日任务队列，按路线顺序排列<br>3. 每个任务卡片显示：老人姓名、地址、服务类型、预计时长<br>4. 如有上次异常标记，卡片显示提示标签<br>5. 如有老人禁忌事项，卡片显示注意提醒<br>6. 当前（最近）任务高亮置顶</td></tr>
+      <tr><td>备选流程</td><td>3a. 某老人的家属最近提交了留言 → 任务卡片显示留言提示<br>3b. 某任务为紧急插入任务 → 卡片以醒目样式标注"紧急"</td></tr>
+      <tr><td>异常流程</td><td>E1. 当日无排班任务 → 系统显示"今日无任务"</td></tr>
+      <tr><td>业务规则</td><td>任务按路线最优排序；已完成的任务自动收起；禁忌事项和异常标记必须在任务卡片可见</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-015">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-015</span>
+    <span class="uc-title">启动上门服务</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-015</td></tr>
+      <tr><td>用例名称</td><td>启动上门服务</td></tr>
+      <tr><td>用例描述</td><td>社工到达老人家中后确认到达，系统加载该老人的档案和对应SOP，开始服务会话</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br><span class="actor-badge secondary">次要：系统</span></td></tr>
+      <tr><td>业务目标</td><td>准确记录服务开始时间和地点，自动加载服务所需的全部上下文</td></tr>
+      <tr><td>前置条件</td><td>社工已查看任务（UC-B-014）；社工已到达老人住所</td></tr>
+      <tr><td>后置条件</td><td>服务会话已创建；录音已开始；SOP已加载；系统已准备就绪提供实时引导</td></tr>
+      <tr><td>触发条件</td><td>社工点击"到达"按钮</td></tr>
+      <tr><td>基本流程</td><td>1. 社工到达老人住所，点击任务卡片上的"到达"按钮<br>2. 系统创建服务会话，记录到达时间<br>3. 系统加载老人健康档案、历史服务记录、家属留言、禁忌事项、对应SOP模板<br>4. 系统开始录音<br>5. 系统向社工播报关键信息（如"王奶奶上次血压150/95偏高，今天请先关注血压情况"、"家属留言：最近腿疼"、"禁忌：不可使用含酒精清洁剂"）</td></tr>
+      <tr><td>备选流程</td><td>5a. 老人无历史异常记录 → 系统播报标准开场提示<br>5b. 有培训资料与当前服务类型相关 → 系统提供快捷入口供社工服务前复习</td></tr>
+      <tr><td>异常流程</td><td>E1. 社工到达但老人不在家 → 社工标记"未遇"，系统记录并通知站长，任务可改期<br>E2. 网络中断 → 系统缓存数据，恢复后同步</td></tr>
+      <tr><td>业务规则</td><td>到达确认后自动进入服务状态；每次服务必须有明确的开始时间记录</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-016">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-016</span>
+    <span class="uc-title">执行上门服务</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-016</td></tr>
+      <tr><td>用例名称</td><td>执行上门服务</td></tr>
+      <tr><td>用例描述</td><td>社工按SOP为老人提供上门服务（探访关爱、助浴、助医陪诊等），系统实时监听对话并按SOP节奏进行引导提醒，同时监测异常情况并支持紧急处理</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br><span class="actor-badge secondary">次要：系统、老人（被动参与）、站长（异常通知接收方）</span></td></tr>
+      <tr><td>业务目标</td><td>确保服务按SOP规范完成，关键健康信息被准确采集，异常被及时发现和处理</td></tr>
+      <tr><td>前置条件</td><td>服务会话已启动（UC-B-015已完成）；SOP已加载；录音进行中</td></tr>
+      <tr><td>后置条件</td><td>SOP各步骤已执行（或有合理跳过记录）；对话已完整转写；异常已标记；凭证素材已采集</td></tr>
+      <tr><td>触发条件</td><td>服务会话启动后自动进入</td></tr>
+      <tr><td>基本流程</td><td>1. 社工与老人自然对话，系统在后台实时语音识别和分析<br>2. 系统按SOP步骤节奏监测进度（如：是否已询问血压、用药、睡眠、情绪等）<br>3. 当SOP某步骤被自然完成时，系统静默标记该步骤完成<br>4. 当SOP某步骤长时间未触及时，系统通过耳机温和提醒（如"用药情况还没有确认，要不要问一下？"）<br>5. 系统持续监测对话中的异常信号（健康指标异常、情绪异常、安全风险）<br>6. 社工按凭证要求采集证据（拍照、录音片段、老人签字等）<br>7. 社工完成所有SOP步骤，准备结束服务</td></tr>
+      <tr><td>备选流程</td><td>4a. 社工判断某SOP步骤不适用于当前情况 → 社工可语音告知跳过，系统记录跳过原因<br>5a. 系统检测到健康指标异常 → 通过耳机提醒社工重点关注，同时向站长发送告警<br>6a. 社工在服务过程中发现异常需拍照记录 → 社工点击拍照按钮记录异常，可标注类型和语音备注，系统关联到当前服务会话并通知站长（-> UC-B-017）</td></tr>
+      <tr><td>异常流程</td><td>E1. 老人拒绝服务 → 社工记录拒绝原因，标记任务为"老人拒绝"，系统通知站长，服务提前结束<br>E2. 老人突发紧急状况（摔倒、突发疾病等） → 社工立即呼叫120，系统同步通知站长和家属，记录紧急事件<br>E3. 需要从现场通知家属 → 社工通过系统一键联系家属，系统记录通话时间和内容摘要<br>E4. 录音中断（设备故障） → 系统提示社工检查设备，期间SOP进度暂停追踪<br>E5. 站长远程介入（收到告警后联系社工） → 系统记录站长介入时间和指示内容</td></tr>
+      <tr><td>业务规则</td><td>系统在正常对话时保持安静，仅在SOP节点和异常时介入；提醒语气应温和专业；服务过程中的异常和紧急事件处理优先于SOP执行；所有异常记录必须关联到具体的服务会话和老人档案</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-017">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-017</span>
+    <span class="uc-title">记录服务异常</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-017</td></tr>
+      <tr><td>用例名称</td><td>记录服务异常</td></tr>
+      <tr><td>用例描述</td><td>社工在服务过程中发现异常情况（如皮肤伤口、药品异常、安全隐患等），通过拍照、标注或语音备注进行记录</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br><span class="actor-badge secondary">次要：系统、站长（异常通知接收方）</span></td></tr>
+      <tr><td>业务目标</td><td>确保服务过程中发现的异常有影像和文字记录，可追溯、可流转，并及时通知管理层</td></tr>
+      <tr><td>前置条件</td><td>服务会话进行中（UC-B-016）</td></tr>
+      <tr><td>后置条件</td><td>异常记录（含照片和/或标注）已关联到当前服务会话；站长已收到异常通知</td></tr>
+      <tr><td>触发条件</td><td>社工发现需要记录的异常情况；或系统检测到异常并提示社工拍照记录</td></tr>
+      <tr><td>基本流程</td><td>1. 社工发现异常情况<br>2. 社工点击拍照按钮，对异常情况拍照<br>3. 社工可选择手动标记异常类型（如"皮肤异常"、"药品问题"、"安全隐患"等）<br>4. 社工可补充语音备注说明<br>5. 系统将照片和标记关联到当前服务会话<br>6. 系统向站长推送异常通知</td></tr>
+      <tr><td>备选流程</td><td>1a. 系统在对话中检测到异常信号 → 系统提醒社工关注并建议拍照记录<br>3a. 社工不手动标记类型 → 系统根据上下文自动归类</td></tr>
+      <tr><td>异常流程</td><td>E1. 拍照失败（摄像头故障） → 社工通过语音描述异常，系统记录文字描述</td></tr>
+      <tr><td>业务规则</td><td>所有异常记录必须关联到具体的服务会话和老人档案；异常记录作为凭证的一部分进入凭证审核环节</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-018">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-018</span>
+    <span class="uc-title">完成服务并归档</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-018</td></tr>
+      <tr><td>用例名称</td><td>完成服务并归档</td></tr>
+      <tr><td>用例描述</td><td>社工结束本次上门服务，系统自动生成服务摘要，社工确认后归档并切换到下一个任务。归档触发凭证生成和家属报告生成</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：社工</span><br><span class="actor-badge secondary">次要：系统</span></td></tr>
+      <tr><td>业务目标</td><td>明确结束当次服务会话，触发服务凭证（-> UC-B-019）和家属健康报告（-> UC-B-024）的自动生成</td></tr>
+      <tr><td>前置条件</td><td>服务会话进行中；SOP步骤已基本完成</td></tr>
+      <tr><td>后置条件</td><td>服务会话状态变为"已完成"；凭证生成流程触发（-> UC-B-019）；家属报告生成流程触发（-> UC-B-024）；任务队列切换到下一位</td></tr>
+      <tr><td>触发条件</td><td>社工点击"完成"按钮；或系统识别到告别语自动触发结束确认</td></tr>
+      <tr><td>基本流程</td><td>1. 社工与老人告别<br>2. 社工点击"完成服务"（或系统检测到告别语后提示确认结束）<br>3. 系统结束录音，完成对话转写<br>4. 系统生成服务摘要并展示给社工<br>5. 社工查看摘要，可补充备注（语音或文字输入）<br>6. 社工确认归档<br>7. 系统触发服务凭证生成（UC-B-019）和家属健康报告生成（UC-B-024）<br>8. 系统向社工播报本次服务要点和下一站信息（如"下一站：张爷爷，助浴，文三路12-502"）<br>9. 任务队列自动切换到下一个任务</td></tr>
+      <tr><td>备选流程</td><td>5a. 社工无补充 → 直接确认归档<br>9a. 当日所有任务已完成 → 系统生成今日汇总（服务户数、SOP完成情况、关注标记）</td></tr>
+      <tr><td>异常流程</td><td>E1. SOP仍有关键步骤未完成 → 系统提醒社工，社工可选择补充执行或标注原因后强制完成<br>E2. 凭证要求的证据未采集完整（如缺少签字照片） → 系统提醒社工补充采集，社工可选择补充或标注原因</td></tr>
+      <tr><td>业务规则</td><td>服务完成后必须触发凭证和报告的自动生成；社工确认归档后不可撤销</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN I -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-i">I. 服务凭证与审核</span>
+</div>
+
+<div class="uc-card" id="uc-b-019">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-019</span>
+    <span class="uc-title">生成服务日志与凭证</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-019</td></tr>
+      <tr><td>用例名称</td><td>生成服务日志与凭证</td></tr>
+      <tr><td>用例描述</td><td>服务完成归档后，系统自动从对话转写、SOP执行记录、照片、录音、签字等原始数据中生成结构化的服务凭证，按项目规则组织证据内容</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge secondary">主要：系统（自动触发）</span><br><span class="actor-badge secondary">次要：站长（查看方）</span></td></tr>
+      <tr><td>业务目标</td><td>自动产出标准化、结构化的服务凭证，满足不同资金来源的审核和结算要求</td></tr>
+      <tr><td>前置条件</td><td>服务会话已完成归档（UC-B-018）；对话转写已完成；项目规则已配置（UC-B-007）</td></tr>
+      <tr><td>后置条件</td><td>服务凭证已生成并存储，可供审核（UC-B-020）和导出（UC-B-021）</td></tr>
+      <tr><td>触发条件</td><td>社工确认服务归档后系统自动触发</td></tr>
+      <tr><td>基本流程</td><td>1. 系统收集本次服务的全部原始数据（对话转写、SOP进度、异常标记、照片、录音片段、签字记录、社工备注、服务时长）<br>2. 系统根据该老人的服务资格类型查找对应的项目规则<br>3. 系统按项目规则的凭证要求生成结构化凭证：<br>&nbsp;&nbsp;&nbsp;- SOP完成情况清单<br>&nbsp;&nbsp;&nbsp;- 质量评分<br>&nbsp;&nbsp;&nbsp;- 异常列表<br>&nbsp;&nbsp;&nbsp;- 关键对话摘要<br>&nbsp;&nbsp;&nbsp;- 证据清单（照片/录音/签字，按要求逐项列明）<br>&nbsp;&nbsp;&nbsp;- 服务时长记录<br>4. 系统校验凭证完整性：核对项目规则要求的必要证据是否齐全<br>5. 凭证存入系统，关联到社工、老人、服务会话<br>6. 如有证据缺失，凭证标注"证据不完整"并记录缺失项</td></tr>
+      <tr><td>备选流程</td><td>4a. 凭证完整性校验通过 → 标记为"待审核"<br>4b. 凭证有非关键缺失 → 标记为"待审核（有提示）"，审核时展示缺失提示</td></tr>
+      <tr><td>异常流程</td><td>E1. 对话转写质量不足（录音中断过多） → 凭证标注"数据不完整"，提示站长人工补充</td></tr>
+      <tr><td>业务规则</td><td>服务凭证为内部管理文档；每次服务必须产出一份服务凭证；凭证内容按项目规则结构化组织</td></tr>
+      <tr><td>非功能需求</td><td>凭证应在服务完成后1分钟内生成</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-020">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-020</span>
+    <span class="uc-title">审核服务凭证</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-020</td></tr>
+      <tr><td>用例名称</td><td>审核服务凭证</td></tr>
+      <tr><td>用例描述</td><td>质检/审核人员或站长依据项目规则对服务凭证进行合规性审核，检查证据完整性、服务时长、SOP执行质量，审核结果留痕</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：质检/审核/结算人员、站长</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>确保服务凭证符合对应项目规则的审核标准，为后续结算导出提供合规保障</td></tr>
+      <tr><td>前置条件</td><td>有已生成的服务凭证（UC-B-019）</td></tr>
+      <tr><td>后置条件</td><td>凭证已审核（通过/需整改/退回）；审核记录已留痕</td></tr>
+      <tr><td>触发条件</td><td>质检人员日常审核工作；站长日终审核；异常凭证优先审核</td></tr>
+      <tr><td>基本流程</td><td>1. 审核人员进入服务凭证审核工作台<br>2. 按条件筛选待审核凭证（时间、社工、老人、服务类型、资金来源、异常状态）<br>3. 系统自动预检：对照项目规则逐项检查凭证合规性（证据是否齐全、时长是否达标、必要步骤是否完成）<br>4. 审核人员查看凭证详情：完整对话摘要、SOP完成情况、证据清单（照片/录音/签字）、异常标记、社工备注<br>5. 审核人员标注审核结果：<br>&nbsp;&nbsp;&nbsp;- 通过：凭证合规，可进入结算流程<br>&nbsp;&nbsp;&nbsp;- 需整改：标注需补充的内容，退回社工或站长补充<br>&nbsp;&nbsp;&nbsp;- 退回：凭证存在严重问题，需重新服务或说明<br>6. 审核人员填写审核意见<br>7. 系统记录审核结果、审核人、审核时间，形成审计日志</td></tr>
+      <tr><td>备选流程</td><td>3a. 系统预检全部通过且为低风险凭证 → 审核人员可批量通过<br>5a. 站长远程监控中已处理的异常 → 审核时系统展示站长介入记录供参考</td></tr>
+      <tr><td>异常流程</td><td>E1. 审核人员发现凭证数据与实际不符（疑似造假） → 标记为"异常上报"，升级至总部管理员处理</td></tr>
+      <tr><td>业务规则</td><td>有异常标记的凭证必须逐条审核，不可批量通过；审核结果不可修改，只能追加新的审核记录；不同资金来源的凭证按各自项目规则审核；双人审核要求的项目需两位审核人员独立通过</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-021">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-021</span>
+    <span class="uc-title">导出服务凭证包</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-021</td></tr>
+      <tr><td>用例名称</td><td>导出服务凭证包</td></tr>
+      <tr><td>用例描述</td><td>管理员将已审核通过的服务凭证按结算方要求打包导出为结构化凭证包，提交给保险公司、政府或机构进行结算</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：质检/审核/结算人员、总部管理员</span><br><span class="actor-badge secondary">次要：保险公司/政府/机构结算方（接收方）</span></td></tr>
+      <tr><td>业务目标</td><td>满足不同结算方对凭证格式和内容的要求，减少手工整理，提升结算效率</td></tr>
+      <tr><td>前置条件</td><td>有已审核通过的服务凭证（UC-B-020）</td></tr>
+      <tr><td>后置条件</td><td>凭证包已生成并导出，可提交结算</td></tr>
+      <tr><td>触发条件</td><td>到达结算周期（月结/季结）；结算方要求提交凭证</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入凭证包导出页面<br>2. 选择导出范围：时间段、站点、资金来源类型（养护险/政府购买/机构自费）<br>3. 系统筛选符合条件且已审核通过的凭证<br>4. 系统按对应项目规则的结算要求生成凭证包：<br>&nbsp;&nbsp;&nbsp;- 汇总统计表（服务次数、时长、金额）<br>&nbsp;&nbsp;&nbsp;- 逐笔服务明细<br>&nbsp;&nbsp;&nbsp;- 证据附件（照片/录音/签字按规则组织）<br>&nbsp;&nbsp;&nbsp;- 审核记录<br>5. 管理员预览凭证包内容，确认无误<br>6. 管理员选择导出格式（PDF/Excel/压缩包）并下载<br>7. 系统记录导出操作（导出人、时间、范围、文件）</td></tr>
+      <tr><td>备选流程</td><td>3a. 所选范围内存在未审核凭证 → 系统提醒并列出未审核清单，管理员可选择仅导出已审核部分<br>4a. 结算方有专用对接接口 → 系统直接推送凭证包数据，无需手动下载</td></tr>
+      <tr><td>异常流程</td><td>E1. 凭证包生成过程中发现数据异常（如金额汇总与明细不一致） → 系统中止导出并提示排查</td></tr>
+      <tr><td>业务规则</td><td>仅审核通过的凭证可进入凭证包；不同资金来源的凭证分开打包；凭证包导出后对应凭证标记为"已导出"，避免重复结算；导出格式需符合各结算方的规范要求</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN J -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-j">J. 反馈、投诉与主动回访</span>
+</div>
+
+<div class="uc-card" id="uc-b-022">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-022</span>
+    <span class="uc-title">处理投诉与质疑</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-022</td></tr>
+      <tr><td>用例名称</td><td>处理投诉与质疑</td></tr>
+      <tr><td>用例描述</td><td>接收并处理来自家属、老人或社区的投诉与质疑，记录投诉内容、调查处理过程和结果，并跟踪闭环</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、需求受理人员</span><br><span class="actor-badge secondary">次要：质检/审核/结算人员、家属</span></td></tr>
+      <tr><td>业务目标</td><td>建立规范的投诉处理机制，确保每条投诉被记录、跟进和闭环，提升服务满意度，发现系统性问题</td></tr>
+      <tr><td>前置条件</td><td>有投诉来源（家属、老人、社区反馈）</td></tr>
+      <tr><td>后置条件</td><td>投诉已记录、已处理并闭环；如投诉成立，已触发改进措施</td></tr>
+      <tr><td>触发条件</td><td>家属通过电话/小程序提交投诉；老人现场反馈不满；社区/居委转达投诉；质检审核中发现问题</td></tr>
+      <tr><td>基本流程</td><td>1. 需求受理人员接收投诉，记录投诉信息：投诉人、关联老人、关联服务记录、投诉类型（服务质量/态度/时效/其他）、投诉描述<br>2. 系统生成投诉工单，分配给站长处理<br>3. 站长调查投诉：查看关联的服务凭证、对话记录、异常标记<br>4. 站长与相关社工沟通核实<br>5. 站长记录调查结论和处理措施（道歉/补服务/培训/警告等）<br>6. 站长联系投诉人反馈处理结果<br>7. 投诉人确认或系统超时自动闭环<br>8. 系统记录完整的投诉处理过程</td></tr>
+      <tr><td>备选流程</td><td>5a. 投诉涉及严重问题（安全事故、服务造假等） → 升级至总部管理员处理<br>5b. 投诉反映出SOP缺陷 → 触发SOP优化流程（-> UC-B-006）和补充培训（-> UC-B-008）<br>8a. 投诉可转化为新的服务需求（如补服务） → 创建新的服务需求（-> UC-B-010）</td></tr>
+      <tr><td>异常流程</td><td>E1. 投诉涉及的服务记录已被删除或不完整 → 标记为"证据不足"，基于可获取信息进行判断<br>E2. 投诉人拒绝沟通 → 记录尝试沟通过程，按内部调查结论处理</td></tr>
+      <tr><td>业务规则</td><td>每条投诉必须在规定时限内响应（如24小时内首次联系投诉人）；投诉处理全程留痕；投诉数据纳入社工绩效考核和运营复盘</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-023">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-023</span>
+    <span class="uc-title">发起并执行主动回访</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-023</td></tr>
+      <tr><td>用例名称</td><td>发起并执行主动回访</td></tr>
+      <tr><td>用例描述</td><td>站长或系统定期发起对老人或家属的主动回访，收集满意度反馈，发现潜在问题，回访结果可转化为新的服务需求或改进措施</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、需求受理人员</span><br><span class="actor-badge secondary">次要：家属、老人</span></td></tr>
+      <tr><td>业务目标</td><td>主动了解服务满意度，提前发现问题，建立持续改进机制，提升老人和家属的信任感</td></tr>
+      <tr><td>前置条件</td><td>有已完成的服务记录</td></tr>
+      <tr><td>后置条件</td><td>回访记录已保存；如有问题，已触发后续处理</td></tr>
+      <tr><td>触发条件</td><td>系统按配置的回访策略自动生成回访任务（如服务后3天/新老人首次服务后/投诉处理闭环后）；站长手动发起回访</td></tr>
+      <tr><td>基本流程</td><td>1. 系统按回访策略生成回访任务列表，或站长手动创建回访任务<br>2. 需求受理人员或站长按任务联系老人/家属（电话/小程序消息）<br>3. 按回访问卷模板收集反馈：整体满意度、社工态度、服务质量、改进建议<br>4. 记录回访结果和老人/家属的原话<br>5. 系统保存回访记录，关联到对应的服务记录和老人档案<br>6. 回访完成，任务闭环</td></tr>
+      <tr><td>备选流程</td><td>4a. 回访中发现问题或新需求 → 创建新的服务需求（-> UC-B-010）或投诉工单（-> UC-B-022）<br>4b. 回访中获得正面反馈 → 记录并纳入社工表彰参考<br>2a. 家属通过小程序自助填写满意度问卷 → 系统自动收集并关联</td></tr>
+      <tr><td>异常流程</td><td>E1. 多次联系未果 → 系统标记为"联系未果"，记录尝试次数和时间<br>E2. 老人或家属明确拒绝回访 → 记录拒绝，标记该老人的回访偏好为"免打扰"</td></tr>
+      <tr><td>业务规则</td><td>回访频率不宜过高，避免打扰老人和家属；回访数据纳入运营复盘（-> UC-B-027）；投诉处理闭环后必须安排一次回访确认满意度</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN K -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-k">K. 家属报告、洞察与运营复盘</span>
+</div>
+
+<div class="uc-card" id="uc-b-024">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-024</span>
+    <span class="uc-title">生成家属健康报告</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-024</td></tr>
+      <tr><td>用例名称</td><td>生成家属健康报告</td></tr>
+      <tr><td>用例描述</td><td>服务完成归档后，系统自动生成面向家属的健康报告，包含健康指标、服务摘要、关注提醒和历史对比</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge secondary">主要：系统（自动触发）</span><br><span class="actor-badge secondary">次要：家属（消费方）</span></td></tr>
+      <tr><td>业务目标</td><td>让家属及时了解老人的健康状况和服务内容，建立信任</td></tr>
+      <tr><td>前置条件</td><td>服务会话已完成归档（UC-B-018）；对话转写已完成；老人已关联家属（UC-B-005）</td></tr>
+      <tr><td>后置条件</td><td>健康报告已生成；推送通知已发送给授权家属</td></tr>
+      <tr><td>触发条件</td><td>社工确认服务归档后系统自动触发</td></tr>
+      <tr><td>基本流程</td><td>1. 系统收集本次服务的对话转写和老人历史档案<br>2. 系统提取健康相关信息（血压、用药、睡眠、情绪、行动力等）<br>3. 系统生成自然语言健康报告：服务概要、健康指标（带颜色标示）、关注提醒、与上次对比<br>4. 系统对报告进行脱敏处理（不暴露内部质检数据、SOP评分等）<br>5. 系统通过家属配置的接收渠道（微信/短信/小程序）向授权家属推送通知，附健康报告链接</td></tr>
+      <tr><td>备选流程</td><td>5a. 家属未配置推送渠道 → 报告仅存入系统，家属可主动查看</td></tr>
+      <tr><td>异常流程</td><td>E1. 推送发送失败 → 系统记录失败原因，标记待重试</td></tr>
+      <tr><td>业务规则</td><td>健康报告必须脱敏，不得包含内部管理信息；报告用自然语言描述，不是SOP检查清单；关注提醒应给出具体建议（如"建议近期复查"）；仅推送给有查看授权的家属</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-025">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-025</span>
+    <span class="uc-title">查看健康报告与历史趋势</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-025</td></tr>
+      <tr><td>用例名称</td><td>查看健康报告与历史趋势</td></tr>
+      <tr><td>用例描述</td><td>家属查看本次服务的健康报告详情，以及老人的历史服务记录和关键健康指标变化趋势</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：家属</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>家属全面了解老人当次和历史健康变化趋势，增强服务透明度和信任感，辅助健康决策</td></tr>
+      <tr><td>前置条件</td><td>健康报告已生成（UC-B-024）</td></tr>
+      <tr><td>后置条件</td><td>家属已查看报告和/或历史趋势</td></tr>
+      <tr><td>触发条件</td><td>家属收到推送通知点击链接；或家属主动进入查看页面</td></tr>
+      <tr><td>基本流程</td><td>1. 家属点击推送消息中的链接或主动进入系统<br>2. 系统打开健康报告页面<br>3. 页面展示：老人姓名、服务日期时间、服务类型、社工姓名<br>4. 展示健康指标卡片（血压、用药、睡眠、情绪、行动力），每项颜色标示正常/关注/异常<br>5. 展示服务内容摘要（自然语言描述）<br>6. 如有异常，红色高亮展示关注提醒和建议<br>7. 展示与上次对比（关键指标变化趋势）<br>8. 家属可切换到历史视图：以时间线展示每次服务记录（按时间倒序）<br>9. 系统展示关键指标折线图（血压、体重等），支持切换时间范围<br>10. 系统展示月度健康摘要（自动生成的月度总结）</td></tr>
+      <tr><td>备选流程</td><td>8a. 老人仅有1次服务记录 → 无法展示趋势图，仅展示单次记录</td></tr>
+      <tr><td>异常流程</td><td>E1. 链接过期 → 提示家属登录后查看历史记录</td></tr>
+      <tr><td>业务规则</td><td>报告页面应大字体、高对比度，适合中老年家属阅读；家属仅能查看自己授权关联的老人信息</td></tr>
+      <tr><td>非功能需求</td><td>页面加载时间不超过2秒</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-026">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-026</span>
+    <span class="uc-title">提交服务注意事项</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-026</td></tr>
+      <tr><td>用例名称</td><td>提交服务注意事项</td></tr>
+      <tr><td>用例描述</td><td>家属给服务团队留言，告知老人近况或需要特别注意的事项（家属留言），留言内容在下次服务时自动提醒社工</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：家属</span><br><span class="actor-badge secondary">次要：系统（留言消费方）</span></td></tr>
+      <tr><td>业务目标</td><td>家属的特殊关注事项能传递到社工，提升服务针对性</td></tr>
+      <tr><td>前置条件</td><td>家属已关联老人且有留言授权（UC-B-005）</td></tr>
+      <tr><td>后置条件</td><td>留言已记录并关联到老人档案；下次服务时系统将提醒社工</td></tr>
+      <tr><td>触发条件</td><td>家属发现老人有需要特别关注的情况</td></tr>
+      <tr><td>基本流程</td><td>1. 家属进入留言页面<br>2. 家属输入留言内容（如"妈妈最近腿疼，麻烦多关注"）<br>3. 家属提交留言<br>4. 系统将留言关联到对应老人档案<br>5. 下次该老人的服务启动时（UC-B-015），系统将留言内容纳入上下文并提醒社工</td></tr>
+      <tr><td>备选流程</td><td>--</td></tr>
+      <tr><td>异常流程</td><td>--</td></tr>
+      <tr><td>业务规则</td><td>留言为简单文本，不需要复杂交互；留言持续有效直到被后续留言覆盖或家属主动删除；留言功能定位为"注意事项传递"，投诉和质疑请通过投诉渠道处理（UC-B-022）</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="uc-card" id="uc-b-027">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-027</span>
+    <span class="uc-title">查询服务统计与运营复盘</span>
+    <span class="priority-badge medium">Medium</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-027</td></tr>
+      <tr><td>用例名称</td><td>查询服务统计与运营复盘</td></tr>
+      <tr><td>用例描述</td><td>站长或管理员查看服务量、SOP完成率、异常率、社工效率、投诉率、回访满意度等统计数据，支持多维度下钻，并通过运营复盘将发现的问题反馈到培训、SOP优化和排班改进环节</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：站长、总部管理员</span><br><span class="actor-badge secondary">次要：服务主管/SOP负责人（改进接收方）</span></td></tr>
+      <tr><td>业务目标</td><td>基于数据驱动服务质量改进和运营决策，形成"数据→洞察→改进→验证"的闭环</td></tr>
+      <tr><td>前置条件</td><td>有已归档的服务数据</td></tr>
+      <tr><td>后置条件</td><td>管理员已获取所需统计信息；如有改进建议，已触发相应动作</td></tr>
+      <tr><td>触发条件</td><td>管理员需要了解服务运营情况（日终、周会、月度总结等）</td></tr>
+      <tr><td>基本流程</td><td>1. 管理员进入数据统计与复盘页面<br>2. 系统展示关键指标面板：<br>&nbsp;&nbsp;&nbsp;- 服务量趋势（日/周/月）<br>&nbsp;&nbsp;&nbsp;- SOP完成率排行<br>&nbsp;&nbsp;&nbsp;- 异常率趋势与类型分布<br>&nbsp;&nbsp;&nbsp;- 社工人均服务量与效率<br>&nbsp;&nbsp;&nbsp;- 投诉率与处理时效<br>&nbsp;&nbsp;&nbsp;- 回访满意度评分<br>3. 管理员可按维度下钻：站点、社工、服务类型、时间范围、资金来源<br>4. 管理员可查看老人健康指标汇总（管理层视角）<br>5. 系统基于数据趋势提供运营建议：<br>&nbsp;&nbsp;&nbsp;- SOP完成率偏低的服务类型 → 建议组织培训（-> UC-B-008）<br>&nbsp;&nbsp;&nbsp;- 高频异常类型 → 建议优化SOP（-> UC-B-006）<br>&nbsp;&nbsp;&nbsp;- 排班效率偏低的区域 → 建议调整排班策略（-> UC-B-012）<br>6. 管理员可将建议转化为具体的改进任务</td></tr>
+      <tr><td>备选流程</td><td>2a. 管理员通过自然语言提问（如"这周哪些社工SOP完成率低？"） → 系统以文字回答并附数据</td></tr>
+      <tr><td>异常流程</td><td>--</td></tr>
+      <tr><td>业务规则</td><td>总部管理员可查看跨站数据；站长仅可查看本站数据；统计数据包含投诉和回访维度</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge medium">Medium</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- DOMAIN L -->
+<!-- ============================== -->
+<div class="domain-header">
+  <span class="domain-badge domain-l">L. 权限、隐私与留痕</span>
+</div>
+
+<div class="uc-card" id="uc-b-028">
+  <div class="uc-card-header" onclick="toggleCard(this)">
+    <span class="arrow">&#9654;</span>
+    <span class="uc-id-badge">UC-B-028</span>
+    <span class="uc-title">管理权限隐私与审计留痕</span>
+    <span class="priority-badge high">High</span>
+  </div>
+  <div class="uc-card-body">
+    <table class="data-table">
+      <tr><td>用例编号</td><td>UC-B-028</td></tr>
+      <tr><td>用例名称</td><td>管理权限隐私与审计留痕</td></tr>
+      <tr><td>用例描述</td><td>总部管理员配置系统的角色权限体系、数据隐私保护策略和审计日志规则，确保不同角色只能访问授权范围内的数据，所有关键操作留痕可追溯</td></tr>
+      <tr><td>参与者</td><td><span class="actor-badge primary">主要：总部管理员</span><br>次要：--</td></tr>
+      <tr><td>业务目标</td><td>保障老人隐私数据安全，实现最小权限原则，满足监管合规要求，确保所有关键操作可审计追溯</td></tr>
+      <tr><td>前置条件</td><td>机构已初始化（UC-B-001）；各角色人员已录入系统</td></tr>
+      <tr><td>后置条件</td><td>权限策略已生效；隐私保护规则已启用；审计日志持续记录</td></tr>
+      <tr><td>触发条件</td><td>系统初始化配置；新增角色或人员；权限策略调整；合规检查要求</td></tr>
+      <tr><td>基本流程</td><td>1. 总部管理员进入权限与安全管理页面<br>2. 配置角色权限：<br>&nbsp;&nbsp;&nbsp;- 定义角色（总部管理员、站长、社工、服务主管、需求受理人员、质检人员、家属）<br>&nbsp;&nbsp;&nbsp;- 为每个角色配置数据访问范围（如站长仅可访问本站数据）<br>&nbsp;&nbsp;&nbsp;- 为每个角色配置功能操作权限（如社工不可审核凭证）<br>3. 配置隐私保护策略：<br>&nbsp;&nbsp;&nbsp;- 老人身份信息脱敏规则（导出时自动脱敏）<br>&nbsp;&nbsp;&nbsp;- 录音和对话记录的访问权限<br>&nbsp;&nbsp;&nbsp;- 健康数据的加密存储和传输要求<br>&nbsp;&nbsp;&nbsp;- 数据保留期限和过期清理策略<br>4. 配置审计日志规则：<br>&nbsp;&nbsp;&nbsp;- 需记录的操作类型（登录、数据查看、修改、导出、审核、删除等）<br>&nbsp;&nbsp;&nbsp;- 日志保留期限<br>5. 系统保存配置并即时生效<br>6. 管理员可查看审计日志：按时间、操作人、操作类型筛选</td></tr>
+      <tr><td>备选流程</td><td>2a. 从预置角色模板快速配置 → 管理员选择模板后微调权限<br>6a. 异常操作告警 → 系统检测到异常访问模式（如非工作时间大量导出数据）时自动告警</td></tr>
+      <tr><td>异常流程</td><td>E1. 权限配置冲突（如某角色同时拥有"提交凭证"和"审核凭证"权限） → 系统提示职责分离冲突并要求调整</td></tr>
+      <tr><td>业务规则</td><td>遵循最小权限原则；审核人员与被审核人员不可为同一人；审计日志不可删除或篡改；老人隐私数据的访问必须留痕；家属仅能查看自己授权关联的老人数据</td></tr>
+      <tr><td>非功能需求</td><td>--</td></tr>
+      <tr><td>优先级</td><td><span class="priority-badge high">High</span></td></tr>
+      <tr><td>版本 &amp; 日期</td><td>v0.2 / 2026-05-12</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Relationship Diagram -->
+<!-- ============================== -->
+<div class="domain-header" style="margin-top: 56px;">
+  <span class="domain-badge" style="background: linear-gradient(135deg, #191C1E, #434654);">Use Case 关系图</span>
+</div>
+
+<div class="terminal-block">
+  <div class="terminal-header">
+    <div class="terminal-dot red"></div>
+    <div class="terminal-dot yellow"></div>
+    <div class="terminal-dot green"></div>
+  </div>
+  <pre><span class="uc-ref">UC-B-001</span> 初始化机构与站点
+  <span class="arrow">└──→</span> 为 <span class="uc-ref">UC-B-002~005</span> 提供组织基础
+
+<span class="uc-ref">UC-B-002</span> 管理社工档案与可用性
+  <span class="arrow">└──→</span> 社工数据供 <span class="uc-ref">UC-B-012</span> 排班使用
+
+<span class="uc-ref">UC-B-004</span> 管理老人档案与服务资格
+  <span class="arrow">└──→</span> 老人数据供 <span class="uc-ref">UC-B-010</span> 需求生成、<span class="uc-ref">UC-B-012</span> 排班使用
+
+<span class="uc-ref">UC-B-005</span> 管理家属信息与接收渠道
+  <span class="arrow">└──→</span> 家属渠道供 <span class="uc-ref">UC-B-024</span> 报告推送使用
+
+<span class="uc-ref">UC-B-006</span> 管理服务项目与SOP模板
+  <span class="arrow">└──→</span> SOP模板供 <span class="uc-ref">UC-B-016</span> 服务执行使用
+
+<span class="uc-ref">UC-B-007</span> 管理项目规则
+  <span class="arrow">├──→</span> 约束 <span class="uc-ref">UC-B-020</span> 凭证审核标准
+  <span class="arrow">└──→</span> 约束 <span class="uc-ref">UC-B-021</span> 凭证包导出格式
+
+<span class="uc-ref">UC-B-008</span> 管理培训资料与知识库
+  <span class="arrow">└──→</span> 支持 <span class="uc-ref">UC-B-016</span> 服务执行（社工技能保障）
+
+<span class="uc-ref">UC-B-009</span> 查询服务规范与操作指引
+  <span class="arrow">└──→</span> 支持 <span class="uc-ref">UC-B-016</span> 服务执行（现场查询）
+
+<span class="uc-ref">UC-B-010</span> 受理服务需求
+  <span class="arrow">└──→</span> <span class="uc-ref">UC-B-011</span> 分诊并确认服务需求
+
+<span class="uc-ref">UC-B-011</span> 分诊并确认服务需求
+  <span class="arrow">└──→</span> 需求进入待排班池 <span class="arrow">→</span> <span class="uc-ref">UC-B-012</span> 制定排班计划
+
+<span class="uc-ref">UC-B-012</span> 制定排班计划
+  <span class="arrow">└──→</span> 下发上门任务到 <span class="uc-ref">UC-B-014</span>
+
+<span class="uc-ref">UC-B-013</span> 调整排班任务
+  <span class="arrow">└──→</span> 更新 <span class="uc-ref">UC-B-014</span> 的任务队列
+
+<span class="uc-ref">UC-B-014</span> 查看今日服务任务
+  <span class="arrow">└──→</span> <span class="uc-ref">UC-B-015</span> 启动上门服务
+
+<span class="uc-ref">UC-B-015</span> 启动上门服务
+  <span class="arrow">├──→</span> <span class="uc-ref">UC-B-016</span> 执行上门服务
+  <span class="arrow">└──</span> 加载上下文：老人档案(<span class="uc-ref">UC-B-004</span>) + SOP模板(<span class="uc-ref">UC-B-006</span>) + 家属留言(<span class="uc-ref">UC-B-026</span>) + 禁忌事项
+
+<span class="uc-ref">UC-B-016</span> 执行上门服务
+  <span class="arrow">├──</span> <span class="relation">&lt;&lt;extend&gt;&gt;</span> <span class="uc-ref">UC-B-017</span> 记录服务异常
+  <span class="arrow">└──→</span> <span class="uc-ref">UC-B-018</span> 完成服务并归档
+
+<span class="uc-ref">UC-B-018</span> 完成服务并归档
+  <span class="arrow">├──</span> <span class="relation">&lt;&lt;include&gt;&gt;</span> <span class="uc-ref">UC-B-019</span> 生成服务日志与凭证
+  <span class="arrow">└──</span> <span class="relation">&lt;&lt;include&gt;&gt;</span> <span class="uc-ref">UC-B-024</span> 生成家属健康报告
+
+<span class="uc-ref">UC-B-019</span> 生成服务日志与凭证
+  <span class="arrow">└──→</span> 供 <span class="uc-ref">UC-B-020</span> 审核 / <span class="uc-ref">UC-B-021</span> 导出
+
+<span class="uc-ref">UC-B-020</span> 审核服务凭证
+  <span class="arrow">└──→</span> 通过后供 <span class="uc-ref">UC-B-021</span> 导出凭证包
+
+<span class="uc-ref">UC-B-021</span> 导出服务凭证包
+  <span class="arrow">└──→</span> 提交给保险公司/政府/机构结算
+
+<span class="uc-ref">UC-B-022</span> 处理投诉与质疑
+  <span class="arrow">├──→</span> 可生成新服务需求 <span class="arrow">→</span> <span class="uc-ref">UC-B-010</span>
+  <span class="arrow">└──→</span> 可触发SOP优化(<span class="uc-ref">UC-B-006</span>) / 培训(<span class="uc-ref">UC-B-008</span>)
+
+<span class="uc-ref">UC-B-023</span> 发起并执行主动回访
+  <span class="arrow">├──→</span> 可生成新服务需求 <span class="arrow">→</span> <span class="uc-ref">UC-B-010</span>
+  <span class="arrow">└──→</span> 可生成投诉工单 <span class="arrow">→</span> <span class="uc-ref">UC-B-022</span>
+
+<span class="uc-ref">UC-B-024</span> 生成家属健康报告
+  <span class="arrow">└──→</span> 推送到 <span class="uc-ref">UC-B-025</span> 家属查看
+
+<span class="uc-ref">UC-B-027</span> 查询服务统计与运营复盘
+  <span class="arrow">├──→</span> 反馈到 <span class="uc-ref">UC-B-008</span> 培训改进
+  <span class="arrow">├──→</span> 反馈到 <span class="uc-ref">UC-B-006</span> SOP优化
+  <span class="arrow">└──→</span> 反馈到 <span class="uc-ref">UC-B-012</span> 排班策略调整</pre>
+</div>
+
+<!-- ============================== -->
+<!-- Full Index -->
+<!-- ============================== -->
+<div class="domain-header" style="margin-top: 56px;">
+  <span class="domain-badge" style="background: linear-gradient(135deg, #0052CC, #7c3aed);">附：Use Case 全景索引</span>
+</div>
+
+<div class="glass-card">
+  <table class="data-table">
+    <thead>
+      <tr><th>编号</th><th>用例名称</th><th>主要 Actor</th><th>优先级</th><th>所属域</th></tr>
+    </thead>
+    <tbody>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-001</td><td>初始化机构与站点</td><td>总部管理员</td><td><span class="priority-badge high">High</span></td><td>A. 机构与站点初始化</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-002</td><td>管理社工档案与可用性</td><td>站长/总部管理员</td><td><span class="priority-badge high">High</span></td><td>B. 人员与社工管理</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-003</td><td>管理设备</td><td>站长/总部管理员</td><td><span class="priority-badge low">Low</span></td><td>B. 人员与社工管理</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-004</td><td>管理老人档案与服务资格</td><td>站长/总部管理员</td><td><span class="priority-badge high">High</span></td><td>C. 老人/家属档案与服务资格</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-005</td><td>管理家属信息与接收渠道</td><td>站长/总部管理员</td><td><span class="priority-badge high">High</span></td><td>C. 老人/家属档案与服务资格</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-006</td><td>管理服务项目与SOP模板</td><td>服务主管/总部管理员</td><td><span class="priority-badge high">High</span></td><td>D. 服务类型、SOP与项目规则</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-007</td><td>管理项目规则</td><td>总部管理员/服务主管</td><td><span class="priority-badge low">Low</span></td><td>D. 服务类型、SOP与项目规则</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-008</td><td>管理培训资料与知识库</td><td>服务主管/SOP负责人</td><td><span class="priority-badge medium">Medium</span></td><td>E. 培训与知识支持</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-009</td><td>查询服务规范与操作指引</td><td>社工</td><td><span class="priority-badge medium">Medium</span></td><td>E. 培训与知识支持</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-010</td><td>受理服务需求</td><td>需求受理人员/系统</td><td><span class="priority-badge high">High</span></td><td>F. 服务需求进入与分诊</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-011</td><td>分诊并确认服务需求</td><td>站长/需求受理人员</td><td><span class="priority-badge high">High</span></td><td>F. 服务需求进入与分诊</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-012</td><td>制定排班计划</td><td>站长</td><td><span class="priority-badge high">High</span></td><td>G. 排班与派单</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-013</td><td>调整排班任务</td><td>站长</td><td><span class="priority-badge high">High</span></td><td>G. 排班与派单</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-014</td><td>查看今日服务任务</td><td>社工</td><td><span class="priority-badge high">High</span></td><td>H. SOP驱动的上门服务</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-015</td><td>启动上门服务</td><td>社工</td><td><span class="priority-badge high">High</span></td><td>H. SOP驱动的上门服务</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-016</td><td>执行上门服务</td><td>社工</td><td><span class="priority-badge high">High</span></td><td>H. SOP驱动的上门服务</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-017</td><td>记录服务异常</td><td>社工</td><td><span class="priority-badge high">High</span></td><td>H. SOP驱动的上门服务</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-018</td><td>完成服务并归档</td><td>社工</td><td><span class="priority-badge high">High</span></td><td>H. SOP驱动的上门服务</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-019</td><td>生成服务日志与凭证</td><td>系统</td><td><span class="priority-badge high">High</span></td><td>I. 服务凭证与审核</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-020</td><td>审核服务凭证</td><td>质检/审核/结算人员/站长</td><td><span class="priority-badge high">High</span></td><td>I. 服务凭证与审核</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-021</td><td>导出服务凭证包</td><td>质检/审核/结算人员/总部管理员</td><td><span class="priority-badge medium">Medium</span></td><td>I. 服务凭证与审核</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-022</td><td>处理投诉与质疑</td><td>站长/需求受理人员</td><td><span class="priority-badge high">High</span></td><td>J. 反馈、投诉与主动回访</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-023</td><td>发起并执行主动回访</td><td>站长/需求受理人员</td><td><span class="priority-badge medium">Medium</span></td><td>J. 反馈、投诉与主动回访</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-024</td><td>生成家属健康报告</td><td>系统</td><td><span class="priority-badge high">High</span></td><td>K. 家属报告、洞察与运营复盘</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-025</td><td>查看健康报告与历史趋势</td><td>家属</td><td><span class="priority-badge high">High</span></td><td>K. 家属报告、洞察与运营复盘</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-026</td><td>提交服务注意事项</td><td>家属</td><td><span class="priority-badge medium">Medium</span></td><td>K. 家属报告、洞察与运营复盘</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-027</td><td>查询服务统计与运营复盘</td><td>站长/总部管理员</td><td><span class="priority-badge medium">Medium</span></td><td>K. 家属报告、洞察与运营复盘</td></tr>
+      <tr><td style="font-family:monospace;color:#0052CC;font-weight:600">UC-B-028</td><td>管理权限隐私与审计留痕</td><td>总部管理员</td><td><span class="priority-badge high">High</span></td><td>L. 权限、隐私与留痕</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /container -->
+
+<script>
+function toggleCard(header) {
+  var card = header.parentElement;
+  card.classList.toggle('open');
+}
+
+function expandAll() {
+  document.querySelectorAll('.uc-card').forEach(function(c) { c.classList.add('open'); });
+}
+
+function collapseAll() {
+  document.querySelectorAll('.uc-card').forEach(function(c) { c.classList.remove('open'); });
+}
+
+function openAndScroll(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('open');
+  setTimeout(function() {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+// Handle hash-based deep linking on page load
+window.addEventListener('DOMContentLoaded', function() {
+  var hash = window.location.hash;
+  if (hash) {
+    var id = hash.substring(1);
+    openAndScroll(id);
+  }
+});
+</script>
+</body>
+</html>
