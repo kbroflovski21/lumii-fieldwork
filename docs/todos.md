@@ -2,33 +2,30 @@
 
 本文是后续 session 的执行清单。先读 [`README.md`](README.md)，再按本文推进。
 
-## 1. Design spec 任务
+## 1. 当前状态
 
-规则见 3 号文档 [`ui-chat-context-matrix.md`](ui-chat-context-matrix.md)。按 15 个矩阵项逐项写 design spec。
+- [`prd-coverage-matrix.md`](prd-coverage-matrix.md) 是 PRD 覆盖矩阵，不是 product design。
+- 当前没有有效 UI artifact。
+- 红配参考案例只用于理解 Agentic shell，不可机械照搬业务内容或布局。
 
-- [ ] 01 总部运营复盘
-- [ ] 02 运营调度工作台
-- [ ] 03 站长洞察面板
-- [ ] 04 社工管理台
-- [ ] 05 老人 / 家属档案台
-- [ ] 06 SOP / 服务项目规则台
-- [ ] 07 培训管理台
-- [ ] 08 社工现场 H5
-- [ ] 09 社工查手册 / 学习 Chat
-- [ ] 10 质检审核台
-- [ ] 11 凭证审核台
-- [ ] 12 接线 / 需求受理台
-- [ ] 13 家属沟通台
-- [ ] 14 家属 H5 / 小程序
-- [ ] 15 Admin Console
+## 2. 下一步
 
-## 2. UI mock 任务
+先确认新的 production design 规则，再做任何页面：
 
-Design spec 写完并确认后，再逐项更新 UI mock。规则见 [`ui-chat-context-matrix.md`](ui-chat-context-matrix.md)。
+- [ ] 选择一个 PRD 业务覆盖范围。
+- [ ] 判断该角色是单 Agent 还是多 Agent 协作。
+- [ ] 单 Agent：定义登录后直接进入的 Agent 界面。
+- [ ] 多 Agent：定义独立前置页，只包含 Agent contact list 和重要消息。
+- [ ] 定义重要消息来自哪个 Agent，以及点击后进入哪个 Agent 界面。
+- [ ] 定义该 Agent 界面的 chat、business-specific context views / actions、当前任务和当前上下文。
+- [ ] 准备对应 mockup：先落 production mode，再把矩阵项、flow、权限边界和来源文档放进 discussion mode。
+- [ ] 做 CC review 和 subagent review，重点看 business case 是否覆盖、是否漂移。
 
-建议顺序：
+## 3. 防漂移要求
 
-1. 先做 02 运营调度工作台。
-2. 再做 08 社工现场 H5。
-3. 再做 14 家属 H5 / 小程序。
-4. 然后补齐其他矩阵项。
+1. 只从当前 0/1/2/3 文档链开始。
+2. 不把 PRD 覆盖项直接变成页面区块。
+3. 不把所有业务信息铺成常驻界面区块。
+4. 不把 Agent 做成页面附属聊天框。
+5. 不把重要消息做成独立通知中心。
+6. 不把部署方式写成产品形态。

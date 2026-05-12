@@ -4,7 +4,6 @@
 日期：2026-05-11
 仓库：`aro-network/lumii-fieldwork`
 方法论：[`docs/agentic-design-methodology.md`](agentic-design-methodology.md)
-UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 
 ## 0. 参考源与防漂移约束
 
@@ -14,7 +13,7 @@ UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 
 <http://124.221.48.52:3002/l/PlnMHgwtWwdW1zq7lAvUU2EQ/>
 
-界面形态参考链接：
+Agentic shell 参考链接：
 
 <http://124.221.48.52:3000/agent>
 
@@ -25,28 +24,28 @@ UI mock：[`ui-mock/index.html`](../ui-mock/index.html)
 | 触发 | 人发起、Agent 主动发现、外部事件、定时任务 |
 | 责任线 | 督导、管理、洞察、合规能力、系统护栏 |
 | 自治等级 | Human-only、Copilot、Delegated、Full autonomous |
-| 入口 | 企业聊天通道、web panel、社工 H5、家属 H5、导出文件 |
+| 入口 | 企业聊天通道、Web business surface、社工 H5、家属 H5、导出文件 |
 | 确认点 | 需要人工确认后才能改变业务状态的动作 |
 
-企业聊天通道不绑定飞书卡片。复杂操作进入外部 web panel；聊天通道负责提醒、问答、轻量确认和打开链接。
+企业聊天通道不绑定飞书卡片。复杂操作进入外部 Web business surface；聊天通道负责提醒、问答、轻量确认和打开链接。
 
 ## 2. Flow 总览
 
 | Flow | 责任线 | 触发 | 自治等级 | 主入口 |
 | --- | --- | --- | --- | --- |
-| F01 外生电话需求受理 | 管理 | 人发起 | Copilot | 企业聊天通道 / web panel |
-| F02 内生服务需求生成 | 管理 | Agent 主动发现 | Full autonomous | 企业聊天通道 / web panel |
-| F03 分诊进入待排班池 | 管理 | 人确认 | Copilot / Confirm-required | web panel |
-| F04 排班草案生成与派单确认 | 管理 | Agent 主动发现 / 人授权 | Delegated | web panel |
+| F01 外生电话需求受理 | 管理 | 人发起 | Copilot | 企业聊天通道 / Web business surface |
+| F02 内生服务需求生成 | 管理 | Agent 主动发现 | Full autonomous | 企业聊天通道 / Web business surface |
+| F03 分诊进入待排班池 | 管理 | 人确认 | Copilot / Confirm-required | Web business surface |
+| F04 排班草案生成与派单确认 | 管理 | Agent 主动发现 / 人授权 | Delegated | Web business surface |
 | F05 社工服务前 hint | 督导 | Agent 主动发现 | Full autonomous | 社工 H5 |
 | F06 服务中 SOP 漏项提醒 | 督导 | Agent 主动发现 | Copilot | 社工 H5 / 耳机 |
 | F07 现场异常分支升级 | 督导 / 管理 | Agent 主动发现 | Copilot / Confirm-required | 社工 H5 / 企业聊天通道 |
-| F08 服务事实记录草稿 | 督导 | Agent 主动生成 | Delegated | 社工 H5 / web panel |
-| F09 服务凭证包生成与缺证据提醒 | 合规能力 | Agent 主动生成 | Delegated | web panel |
-| F10 凭证审核与导出 | 管理 / 合规能力 | 人发起 | Copilot / Confirm-required | web panel / 导出文件 |
-| F11 家属报告生成与发送 | 洞察 | Agent 生成草案 | Delegated / Confirm-required | web panel / 家属 H5 |
-| F12 投诉与主动回访 | 洞察 / 管理 | 外部事件 / Agent 主动发现 | Copilot / Delegated | 企业聊天通道 / web panel |
-| F13 老人风险趋势提醒 | 洞察 | Agent 主动发现 | Full autonomous | 企业聊天通道 / web panel |
+| F08 服务事实记录草稿 | 督导 | Agent 主动生成 | Delegated | 社工 H5 / Web business surface |
+| F09 服务凭证包生成与缺证据提醒 | 合规能力 | Agent 主动生成 | Delegated | Web business surface |
+| F10 凭证审核与导出 | 管理 / 合规能力 | 人发起 | Copilot / Confirm-required | Web business surface / 导出文件 |
+| F11 家属报告生成与发送 | 洞察 | Agent 生成草案 | Delegated / Confirm-required | Web business surface / 家属 H5 |
+| F12 投诉与主动回访 | 洞察 / 管理 | 外部事件 / Agent 主动发现 | Copilot / Delegated | 企业聊天通道 / Web business surface |
+| F13 老人风险趋势提醒 | 洞察 | Agent 主动发现 | Full autonomous | 企业聊天通道 / Web business surface |
 | F14 培训与查手册 | 督导 | 人发起 / Agent 主动发现 | Copilot / Full autonomous | 企业聊天通道 / 社工 H5 |
 
 ## 3. 关键 Flow 明细
@@ -106,6 +105,36 @@ Agent 做什么：
 - 企业聊天通道提醒站长“明日有 18 个到期服务需求”。
 - web 需求池展示来源、原因和优先级。
 
+### F03 分诊进入待排班池
+
+触发：外生需求创建完成、内生需求候选生成完成，或档案校验显示可以服务。
+
+责任线：管理。
+
+涉及传统角色：站长、调度、需求受理人员、客服。
+
+自治等级：Copilot / Confirm-required。
+
+Agent 做什么：
+
+- 合并电话、小程序、社区转介、周期到期和异常复访形成待分诊池。
+- 校验老人资格、服务类型、频次、地址、联系人、期望时间和紧急程度。
+- 标出需要人工回访、补充信息、拒绝服务或可进入待排班池的原因。
+- 给出建议优先级和推荐服务窗口，但不自动进入排班。
+
+人工确认点：
+
+- 确认需求有效。
+- 要求补充信息或人工回访。
+- 标记不可服务、关闭或延期。
+- 确认进入待排班池。
+- 启动紧急升级路径。
+
+输出：
+
+- Web business surface 展示来源、缺口、风险、建议分诊动作。
+- 企业聊天通道只提醒需要确认的高优先级需求并打开 Web business surface。
+
 ### F04 排班草案生成与派单确认
 
 触发：待排班池有未安排需求，或站长授权生成排班草案。
@@ -131,8 +160,8 @@ Agent 做什么：
 
 输出：
 
-- web 排班面板展示草案、冲突和确认动作。
-- 企业聊天通道发送提醒和打开排班面板链接。
+- Web business surface 展示草案、冲突和确认动作。
+- 企业聊天通道发送提醒和打开相关链接。
 
 ### F05 社工服务前 hint
 
@@ -215,6 +244,34 @@ Agent 做什么：
 - 企业聊天通道提醒站长。
 - web 异常面板留痕。
 
+### F08 服务事实记录草稿
+
+触发：社工确认服务结束，或服务中已形成足够的 SOP、凭证和异常记录。
+
+责任线：督导。
+
+涉及传统角色：社工、服务主管、质检。
+
+自治等级：Delegated。
+
+Agent 做什么：
+
+- 基于社工现场输入、SOP 完成状态、照片、时间线和异常分支生成服务事实记录草稿。
+- 把事实记录和主观总结分开，标出缺照片、缺备注、时长异常和未闭环异常。
+- 为质检台提供只读证据摘要和退回建议。
+
+人工确认点：
+
+- 社工确认服务结束。
+- 社工提交服务记录。
+- 质检退回补充或确认进入审核。
+- 异常记录关闭前必须确认处理结果。
+
+输出：
+
+- 社工 H5 生成可提交的服务事实记录。
+- web 质检台看到只读证据、缺口和退回建议。
+
 ### F09 服务凭证包生成与缺证据提醒
 
 触发：服务完成。
@@ -239,9 +296,38 @@ Agent 做什么：
 
 输出：
 
-- web 凭证面板。
+- Web business surface 中的凭证上下文。
 - 导出文件。
 - 企业聊天通道发送缺证据提醒和打开链接。
+
+### F10 凭证审核与导出
+
+触发：凭证包草案生成后，质检、审核或结算人员进入导出前审核。
+
+责任线：管理 / 合规能力。
+
+涉及传统角色：质检、审核、结算、站长、服务主管。
+
+自治等级：Copilot / Confirm-required。
+
+Agent 做什么：
+
+- 汇总凭证包范围、服务单数量、缺口、规则校验结果和退回历史。
+- 解释每个凭证缺口对结算和合规的影响。
+- 生成导出范围摘要和结算交接说明。
+- 不直连保险公司或政府平台，不自动提交外部系统。
+
+人工确认点：
+
+- 审核通过或退回补充。
+- 标记结算就绪。
+- 导出凭证包。
+- 变更导出范围。
+
+输出：
+
+- Web business surface 显示审核状态、结算状态和导出确认动作。
+- 导出文件只在人工确认后生成，并写入审核/结算留痕。
 
 ### F11 家属报告生成与发送
 
@@ -298,6 +384,34 @@ Agent 做什么：
 - 企业聊天通道用于接收和提醒。
 - web 回访/投诉面板处理闭环。
 
+### F13 老人风险趋势提醒
+
+触发：服务记录、异常、家属反馈、回访结果或长期未服务数据出现风险变化。
+
+责任线：洞察。
+
+涉及传统角色：站长、服务主管、家属沟通、客服。
+
+自治等级：Full autonomous。
+
+Agent 做什么：
+
+- 主动发现睡眠、头晕、独居安全、情绪、频次和投诉反馈的趋势变化。
+- 只基于已确认服务事实和脱敏摘要解释趋势，不展示原始敏感转写。
+- 生成回访建议、新需求草稿或家属沟通草稿。
+
+人工确认点：
+
+- 创建回访任务。
+- 将趋势转为新服务需求。
+- 向家属发送正式说明或处理结论。
+- 关闭投诉或风险事项。
+
+输出：
+
+- 企业聊天通道提醒站长或家属沟通人员处理高风险趋势。
+- web 洞察面板展示趋势、来源摘要、建议动作和确认入口。
+
 ### F14 培训与查手册
 
 触发：社工主动提问、新 SOP 发布、服务前需要注意事项、服务中不确定。
@@ -323,15 +437,8 @@ Agent 做什么：
 
 - 企业聊天通道问答。
 - 社工 H5 服务前和服务中快速查询。
-- web 培训/知识面板。
+- Web business surface 中的培训 / 知识上下文。
 
-## 4. UI mock 对应关系
+## 4. Production design 对应关系
 
-当前 UI mock 覆盖以下视角：
-
-- 企业聊天通道：响应和主动提醒入口，不绑定飞书卡片。
-- 管理工作台：需求池、排班、异常、凭证、回访。
-- 督导工作台：SOP、培训、服务前 hint、服务中提醒。
-- 洞察工作台：家属报告、老人趋势、投诉回访。
-- 社工 H5：任务、hint、服务中提醒、异常、完成。
-- 家属 H5：脱敏报告和反馈入口。
+后续 production design 必须从 PRD 矩阵场景出发，先判断用户是单 Agent 还是多 Agent：单 Agent 用户登录后直接进入该 Agent 界面；多 Agent 用户登录后先进入独立前置页，只显示 Agent contact list 和重要消息。Agent 界面里的业务上下文和操作只围绕当前任务或 Agent 产出组织，不能把 PRD coverage 铺成默认界面区块。

@@ -8,15 +8,15 @@
 
 本文锁定本项目的设计方法论，防止后续讨论漂移回传统系统设计方式。
 
-本项目不是传统后台加聊天助手，也不是先画页面再补 AI。它是 agentic service：Agent 能响应人，也能主动发现问题、生成草案、追问缺口、推动流程，并在高后果动作前请求人工确认。
+本项目不是传统后台加聊天框，也不是先画页面再补 AI。它是 agentic service：Agent 能响应人，也能主动发现问题、生成草案、追问缺口、推动流程，并在高后果动作前请求人工确认。
 
 给新 session 的最短版本：
 
 ```text
 先按 docs/README.md 的 0/1/2/3 顺序读。
 列矩阵：谁 × 哪个 Agent × 什么权限/场景 × 自治等级。
-矩阵每一项 = 一个 UI / Chat context。
-每个 UI / Chat context 先写 production interaction flow，再画 UI。
+矩阵每一项 = 一个 PRD 需求覆盖项，不是页面或 UI 数量。
+先确认业务责任和 Agent 协作方式，再转译成真实 Agent 界面。
 Production mode 是真实用户界面；Discussion mode 只是可折叠标注层。
 ```
 
@@ -24,9 +24,11 @@ Production mode 是真实用户界面；Discussion mode 只是可折叠标注层
 
 <http://124.221.48.52:3002/l/PlnMHgwtWwdW1zq7lAvUU2EQ/>
 
-界面形态参考链接：
+Agentic shell 参考链接：
 
 <http://124.221.48.52:3000/agent>
+
+红配链接只作为 agentic shell / interaction structure 参考，不作为布局、颜色、panel 结构或具体页面参考。
 
 ## 1. 核心方法
 
@@ -46,10 +48,10 @@ Production mode 是真实用户界面；Discussion mode 只是可折叠标注层
   -> 责任线聚合
   -> Agentic flow
   -> Agent 分类
-  -> UI / dashboard / panel / H5 / chat channel
+  -> Agent interface / Web-H5-IM surface
 ```
 
-也就是说，Agent 不是页面里的附属助手，而是业务责任的数字化承担者。
+也就是说，Agent 不是页面里的附属聊天能力，而是业务责任的数字化承担者。
 
 ## 2. 设计步骤
 
@@ -128,31 +130,31 @@ Production mode 是真实用户界面；Discussion mode 只是可折叠标注层
 
 ### 2.6 UI / interaction design
 
-最后才设计页面、dashboard、panel、H5 和聊天入口。
+最后才设计 Agent 界面、Web/H5/IM surface 和业务上下文承载方式。
 
 UI 不是 Agent 设计的起点，而是 Agent 责任和 flow 的承载方式。
 
-### 2.7 UI / Chat context matrix
+### 2.7 PRD coverage matrix
 
 Agent 在产品里像一个可以联系的对象，类似飞书里的联系人。
 
-UI 数量按这个矩阵定：
+矩阵项是 PRD 需求覆盖项，不是 UI 数量或页面数量：
 
 ```text
-谁 × 哪个 Agent × 什么权限/场景 × 自治等级 = 一个 UI / Chat context
+谁 × 哪个 Agent × 什么权限/场景 × 自治等级 = 一个需求覆盖项
 ```
 
-不要按 Agent 数量、角色数量或页面数量推导 UI。
+不要按 Agent 数量、角色数量、矩阵项数量或页面数量推导 UI。Production design 可以把多个业务覆盖范围转译到同一个真实界面，也可以按单 Agent / 多 Agent 入口规则分开处理。
 
-矩阵内容不写在 methodology 里，见 3 号文档 [`docs/ui-chat-context-matrix.md`](ui-chat-context-matrix.md)。
+矩阵内容不写在 methodology 里，见 3 号文档 [`docs/prd-coverage-matrix.md`](prd-coverage-matrix.md)。
 
 ### 2.8 Production mode and discussion mode
 
-UI mock 必须区分 production mode 和 discussion mode。
+页面实现必须区分 production mode 和 discussion mode。
 
 Production mode 是真实用户进入后看到的真实业务界面。它必须按 interaction flow 组织：用户进来看到什么、下一步做什么、Agent 如何介入、哪里需要确认。Production mode 不展示功能清单、权限矩阵、Agent 架构解释、surface、capability、policy、use case 编号或 flow 编号。
 
-Discussion mode 是产品设计评审层，可以作为可折叠 panel 或 overlay。它用于标注当前 UI / Chat context 背后的 Agent、business flow、参与者、权限边界和来源文档。Discussion mode 可以出现编号和设计解释，但必须默认隐藏或显著区别于 production UI。
+Discussion mode 是产品设计评审层，可以作为可折叠 panel 或 overlay。它用于标注当前 production UI 背后的 Agent、business flow、参与者、权限边界和来源文档。Discussion mode 可以出现编号和设计解释，但必须默认隐藏或显著区别于 production UI。
 
 判定规则：
 
@@ -191,7 +193,7 @@ Discussion mode = 设计评审标注层
 
 - 企业聊天通道本质是 chat-based entry point。
 - Agent 在聊天通道中主要通过文字、语音、文件、链接和必要的轻量交互承载工作。
-- 如果需要复杂 dashboard、control panel、审核台、排班台或凭证面板，应通过链接或快捷入口跳转到外部 web 业务界面。
+- 如果需要复杂批量处理、审核、排班或凭证查看，应通过链接或快捷入口跳转到外部 web 业务界面。
 - 卡片可以作为某些平台的增强体验，但不是核心依赖。
 - 不能把“飞书卡片”写成核心产品假设。
 - 同一条 agentic flow 应能适配飞书、企微或其他企业聊天入口。
@@ -200,7 +202,7 @@ Discussion mode = 设计评审标注层
 
 ```text
 企业聊天通道：用于接收提醒、自然语言交互、轻量确认和打开外部业务链接。
-Web 业务界面：用于复杂配置、批量处理、审核、排班、凭证查看、报表和 dashboard。
+Web 业务界面：用于复杂配置、批量处理、审核、排班、凭证查看、报表。
 H5：用于社工现场服务和家属报告。
 ```
 
@@ -231,7 +233,7 @@ H5：用于社工现场服务和家属报告。
 后续讨论必须遵守：
 
 - 不先按页面、菜单或后台模块拆 Agent。
-- 不按角色数量推导 UI 数量；先按 UI / Chat context 拆 interaction flow。
+- 不按角色数量、Agent 数量或矩阵项数量推导 UI 数量；先按 PRD 覆盖项确认业务责任，再转译成真实 Agent 界面。
 - 不把每个功能点都升级成一个可见 Agent。
 - 不把传统岗位一一映射成 Agent。
 - 不因为某个能力重要就直接新增 Agent；先判断它是不是独立责任线。
@@ -247,6 +249,6 @@ H5：用于社工现场服务和家属报告。
 0. [`docs/agentic-design-methodology.md`](agentic-design-methodology.md) - methodology
 1. [`docs/business-use-cases.md`](business-use-cases.md) - business case
 2. [`docs/agentic-flows.md`](agentic-flows.md) - agentic flow
-3. [`docs/ui-chat-context-matrix.md`](ui-chat-context-matrix.md) - UI / Chat context matrix
+3. [`docs/prd-coverage-matrix.md`](prd-coverage-matrix.md) - PRD coverage matrix
 
-不要从旧草稿或历史过程文档恢复主线。当前主线只认 `docs/README.md` 里的 0/1/2/3。
+当前主线只认 `docs/README.md` 里的 0/1/2/3。
