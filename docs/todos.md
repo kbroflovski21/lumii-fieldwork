@@ -18,8 +18,6 @@
 - [ ] 多 Agent：定义独立前置页，只包含 Agent contact list 和重要消息。
 - [ ] 定义重要消息来自哪个 Agent，以及点击后进入哪个 Agent 界面。
 - [ ] 定义该 Agent 界面的 chat、business-specific context views / actions、当前任务和当前上下文。
-- [ ] 准备对应 mockup：先落 production mode，再把矩阵项、flow、权限边界和来源文档放进 discussion mode。
-- [ ] 部署第一版完整 business-flow mockup 到 staging 3004，覆盖站长 / 运营、社工、质检和审核 / 结算角色。
 - [ ] 做 CC review 和 subagent review，重点看 business case 是否覆盖、是否漂移。
 
 ## 3. 防漂移要求
