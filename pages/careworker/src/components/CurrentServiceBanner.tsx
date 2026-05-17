@@ -125,13 +125,6 @@ function PreServiceBanner({ task }: { task: ServiceTask }) {
 
 function ActiveBanner({ task, recordingStartTime }: { task: ServiceTask | null; recordingStartTime: number | null }) {
   const [elapsed, setElapsed] = useState('00:00')
-  const [sopChecked, setSopChecked] = useState<boolean[]>([])
-
-  const sopSteps = useMemo(() => task ? (SOP_BRIEF[task.serviceType] || []) : [], [task])
-
-  useEffect(() => {
-    setSopChecked(new Array(sopSteps.length).fill(false))
-  }, [sopSteps.length])
 
   useEffect(() => {
     if (!recordingStartTime) return
@@ -146,22 +139,9 @@ function ActiveBanner({ task, recordingStartTime }: { task: ServiceTask | null; 
     return () => clearInterval(timer)
   }, [recordingStartTime])
 
-  useEffect(() => {
-    if (sopSteps.length === 0) return
-    const timers: ReturnType<typeof setTimeout>[] = []
-    sopSteps.forEach((_, i) => {
-      timers.push(setTimeout(() => {
-        setSopChecked(prev => { const next = [...prev]; next[i] = true; return next })
-      }, (i + 1) * 8000 + Math.random() * 4000))
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [sopSteps])
-
-  const ctx = task ? (MOCK_CONTEXT[task.recipientName] || {}) : {}
-
   return (
     <div className="mx-4 mb-3 rounded-xl border border-[#EF4444]/30 bg-[#FEF2F2] overflow-hidden">
-      <div className="flex items-center justify-between px-3 pt-3 pb-1">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <div className="flex items-center gap-2">
           <span className="w-[8px] h-[8px] rounded-full bg-[#EF4444] animate-pulse" />
           <span className="text-[13px] font-semibold text-[#B42318]">服务进行中</span>
@@ -172,38 +152,9 @@ function ActiveBanner({ task, recordingStartTime }: { task: ServiceTask | null; 
         </div>
       </div>
       {task && (
-        <div className="px-3 pb-1">
+        <div className="px-3 pb-3">
           <span className="text-[14px] font-bold text-[#191C1E]">{task.serviceType}</span>
           <span className="text-[13px] text-[#374151] ml-1">· {task.recipientName} · {task.locationShort}</span>
-        </div>
-      )}
-
-      <div className="mx-3 my-2 border-t border-[#EF4444]/15" />
-
-      {sopSteps.length > 0 && (
-        <div className="px-3 pb-2">
-          <div className="text-[11px] text-[#9CA3AF] font-medium mb-1.5">SOP 进度</div>
-          <div className="space-y-1">
-            {sopSteps.map((step, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px]">
-                {sopChecked[i] ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                ) : (
-                  <div className="w-[14px] h-[14px] rounded border border-[#D1D5DB]" />
-                )}
-                <span className={sopChecked[i] ? 'text-[#6B7280]' : 'text-[#191C1E]'}>{step}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {ctx.dietary && (
-        <div className="px-3 pb-3">
-          <div className="flex items-start gap-1.5 text-[12px] text-[#976000] bg-[#FFF1D6] rounded-md px-2 py-1.5">
-            <span className="flex-shrink-0">⚠</span>
-            <span>注意：{task?.recipientName}{ctx.dietary}饮食</span>
-          </div>
         </div>
       )}
     </div>
