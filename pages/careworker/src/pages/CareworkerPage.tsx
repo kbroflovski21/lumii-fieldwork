@@ -14,6 +14,7 @@ export function CareworkerPage() {
   const [activeTab, setActiveTab] = useState<Tab>('tasks')
   const [selectedTask, setSelectedTask] = useState<ServiceTask | null>(null)
   const [selectedSop, setSelectedSop] = useState<SopFolder | null>(null)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   if (!loggedIn) {
     return <LoginScreen onLogin={() => setLoggedIn(true)} />
@@ -32,9 +33,17 @@ export function CareworkerPage() {
             <div className="text-[11px] text-[#9CA3AF] leading-tight">{demoUser.region} · {demoUser.role}</div>
           </div>
         </div>
-        <div className="text-[12px] text-[#9CA3AF]">
-          {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
-        </div>
+        <button
+          onClick={() => setShowLogoutConfirm(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB]"
+          aria-label="退出登录"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </header>
 
       {/* Content */}
@@ -85,6 +94,31 @@ export function CareworkerPage() {
       )}
       {selectedSop && (
         <SopDetailDrawer sop={selectedSop} onClose={() => setSelectedSop(null)} />
+      )}
+
+      {/* Logout confirm */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowLogoutConfirm(false)} />
+          <div className="relative bg-white rounded-xl p-5 mx-6 w-full max-w-sm shadow-lg">
+            <h3 className="text-[16px] font-bold text-[#191C1E] text-center">退出登录</h3>
+            <p className="text-[13px] text-[#374151] text-center mt-2">确认要退出登录吗？</p>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 h-10 rounded-lg bg-[#F3F4F6] text-[13px] font-medium text-[#374151] active:bg-[#E5E7EB]"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => { setShowLogoutConfirm(false); setLoggedIn(false); setActiveTab('tasks') }}
+                className="flex-1 h-10 rounded-lg bg-[#EF4444] text-[13px] font-medium text-white active:bg-[#DC2626]"
+              >
+                确认退出
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

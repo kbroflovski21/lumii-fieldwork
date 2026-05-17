@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ServiceTask, TaskStatus, ServiceReport } from '../types'
 import { getStatusLabel, formatDateShort } from '../data/mock-data'
+import { MapActionSheet } from './MapActionSheet'
 
 interface Props {
   task: ServiceTask
@@ -78,6 +79,7 @@ function DetailView({ task, onClose, onViewReport }: {
 }) {
   const headerColor = HEADER_COLORS[task.status]
   const badge = BADGE_COLORS[task.status]
+  const [mapAddress, setMapAddress] = useState<string | null>(null)
 
   return (
     <>
@@ -140,8 +142,8 @@ function DetailView({ task, onClose, onViewReport }: {
                 </div>
               </div>
             </div>
-            <div className="flex items-start gap-2.5 p-3 rounded-lg border border-[#E5E7EB] bg-white">
-              <div>
+            <div className="flex items-start justify-between p-3 rounded-lg border border-[#E5E7EB] bg-white">
+              <div className="flex-1 min-w-0">
                 <div className="text-[10px] text-[#9CA3AF] mb-0.5">服务地点</div>
                 <div className="flex items-start gap-1.5">
                   <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -151,6 +153,7 @@ function DetailView({ task, onClose, onViewReport }: {
                   <span className="text-[13px] text-[#191C1E] leading-snug">{task.location}</span>
                 </div>
               </div>
+              <NavIcon onClick={() => setMapAddress(task.location)} />
             </div>
           </div>
         </div>
@@ -181,7 +184,12 @@ function DetailView({ task, onClose, onViewReport }: {
             </DetailField>
             <DetailField label="服务人员" value={task.workerName} />
             <DetailField label="服务对象" value={task.recipientName} />
-            <DetailField label="地址" value={task.location} fullWidth />
+            <DetailField label="地址" fullWidth>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[13px] text-[#191C1E]">{task.location}</span>
+                <NavIcon onClick={() => setMapAddress(task.location)} />
+              </div>
+            </DetailField>
             <DetailField label="备注" value={task.notes || '—'} />
 
             {/* 查看报告 — only for completed tasks */}
@@ -207,7 +215,25 @@ function DetailView({ task, onClose, onViewReport }: {
           </div>
         </div>
       </div>
+
+      {mapAddress && (
+        <MapActionSheet address={mapAddress} onClose={() => setMapAddress(null)} />
+      )}
     </>
+  )
+}
+
+function NavIcon({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick() }}
+      className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-[#EEF4FA] active:bg-[#D4E4F2]"
+      aria-label="导航"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0052CC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="3 11 22 2 13 21 11 13 3 11" />
+      </svg>
+    </button>
   )
 }
 
