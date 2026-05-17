@@ -56,7 +56,7 @@ export function AiAssistant() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+          className="fixed z-[70] w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
           style={{
             bottom: 'calc(68px + env(safe-area-inset-bottom))',
             right: 16,
@@ -73,7 +73,7 @@ export function AiAssistant() {
       {/* Chat panel */}
       {open && (
         <div
-          className="fixed z-40 flex flex-col bg-white rounded-t-xl shadow-2xl overflow-hidden animate-chat-up"
+          className="fixed z-[70] flex flex-col bg-white rounded-t-xl shadow-2xl overflow-hidden animate-chat-up"
           style={{
             bottom: 0,
             left: 0,

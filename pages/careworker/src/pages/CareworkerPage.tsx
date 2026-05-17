@@ -89,9 +89,6 @@ export function CareworkerPage() {
         </button>
       </nav>
 
-      {/* AI Assistant */}
-      <AiAssistant />
-
       {/* Drawers */}
       {selectedTask && (
         <TaskDetailDrawer task={selectedTask} onClose={() => setSelectedTask(null)} />
@@ -124,6 +121,9 @@ export function CareworkerPage() {
           </div>
         </div>
       )}
+
+      {/* AI Assistant — always on top, accessible from any page state */}
+      <AiAssistant />
     </div>
   )
 }
