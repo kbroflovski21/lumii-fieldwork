@@ -3,6 +3,21 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --app-height: 100dvh;
+  }
+
+  @supports not (height: 100dvh) {
+    :root {
+      --app-height: 100vh;
+    }
+  }
+
+  html, body, #root {
+    height: var(--app-height);
+    overflow: hidden;
+  }
+
   body {
     font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;

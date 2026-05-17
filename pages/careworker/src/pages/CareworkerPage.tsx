@@ -21,7 +21,7 @@ export function CareworkerPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#F7F9FB]">
+    <div className="flex flex-col bg-[#F7F9FB]" style={{ height: 'var(--app-height)' }}>
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between px-4 bg-white border-b border-[#E5E7EB]" style={{ height: 56 }}>
         <div className="flex items-center gap-3">
