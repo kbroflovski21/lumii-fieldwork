@@ -4,6 +4,7 @@ import { CalendarView } from '../components/CalendarView'
 import { ReferenceList } from '../components/ReferenceList'
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
 import { SopDetailDrawer } from '../components/SopDetailDrawer'
+import { AiAssistant } from '../components/AiAssistant'
 import { demoUser } from '../data/mock-data'
 import type { ServiceTask, SopFolder } from '../types'
 
@@ -87,6 +88,9 @@ export function CareworkerPage() {
           </span>
         </button>
       </nav>
+
+      {/* AI Assistant */}
+      <AiAssistant />
 
       {/* Drawers */}
       {selectedTask && (
