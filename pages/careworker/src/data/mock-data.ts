@@ -22,6 +22,21 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为陈阿姨提供助餐服务，准备了清淡午餐（蒸鱼、青菜豆腐汤、软米饭）。陈阿姨食欲良好，进食量约八成。',
+      sopCheck: [
+        { step: '到达确认', passed: true },
+        { step: '食材检查', passed: true },
+        { step: '烹饪/加热', passed: true },
+        { step: '摆餐与陪餐', passed: true },
+        { step: '餐后清理', passed: true },
+        { step: '记录', passed: true },
+      ],
+      concerns: [],
+      mood: '平稳',
+      healthObservations: ['食欲正常', '咀嚼功能良好'],
+      satisfaction: '陈阿姨表示饭菜合口味，很满意',
+    },
   },
   {
     id: 't2',
@@ -37,6 +52,19 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '血压偏高，已记录',
+    report: {
+      summary: '为李大爷进行常规健康监测。血压 152/95mmHg，偏高；血糖 6.8mmol/L，正常范围；心率 78次/分，正常。已建议李大爷按时服药并注意饮食。',
+      sopCheck: [
+        { step: '问候与身份确认', passed: true },
+        { step: '健康状况询问', passed: true },
+        { step: '生命体征检查', passed: true },
+        { step: '服务总结与满意度询问', passed: true },
+      ],
+      concerns: ['血压偏高（152/95mmHg），需持续关注', '近期睡眠质量下降'],
+      mood: '平稳',
+      healthObservations: ['血压偏高', '睡眠质量下降', '血糖正常', '心率正常'],
+      satisfaction: '李大爷对服务表示满意',
+    },
   },
   {
     id: 't3',
@@ -52,6 +80,20 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '临时派单',
     notes: '',
+    report: {
+      summary: '为张奶奶提供居家清洁服务，完成卧室、客厅打扫和厨房台面清洁。张奶奶精神状态良好。',
+      sopCheck: [
+        { step: '到达确认', passed: true },
+        { step: '清洁区域确认', passed: true },
+        { step: '清洁执行', passed: true },
+        { step: '物品归位', passed: true },
+        { step: '服务总结', passed: true },
+      ],
+      concerns: [],
+      mood: '开心',
+      healthObservations: ['行动较为缓慢，但精神状态良好'],
+      satisfaction: '张奶奶非常满意，表示家里干净多了',
+    },
   },
   // 5/13 周二
   {
@@ -68,6 +110,21 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '对赵叔叔进行常规探访。赵叔叔近期独居，精神状态一般，有轻微孤独感。饮食和睡眠基本正常，药物按时服用。居家环境整洁，无安全隐患。',
+      sopCheck: [
+        { step: '问候与身份确认', passed: true },
+        { step: '健康状况询问', passed: true },
+        { step: '生活环境检查', passed: true },
+        { step: '心理关怀', passed: true },
+        { step: '需求收集', passed: true },
+        { step: '服务总结', passed: true },
+      ],
+      concerns: ['赵叔叔表现出轻微孤独感，建议增加社交活动'],
+      mood: '略显低落',
+      healthObservations: ['饮食正常', '睡眠基本正常', '药物按时服用'],
+      satisfaction: '赵叔叔对探访表示感谢',
+    },
   },
   {
     id: 't5',
@@ -98,6 +155,20 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为陈阿姨进行上肢康复训练。完成肩关节活动度训练、握力训练和日常动作模拟。陈阿姨配合度高，疼痛等级2/10。',
+      sopCheck: [
+        { step: '评估', passed: true },
+        { step: '热身', passed: true },
+        { step: '训练执行', passed: true },
+        { step: '放松', passed: true },
+        { step: '记录', passed: true },
+      ],
+      concerns: [],
+      mood: '积极',
+      healthObservations: ['右肩活动度较上次改善约10度', '握力略有提升'],
+      satisfaction: '陈阿姨对训练效果满意',
+    },
   },
   // 5/14 周三
   {
@@ -114,6 +185,21 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为张奶奶提供助餐服务。准备了粥、蒸蛋和炒时蔬。张奶奶胃口一般，进食约六成。',
+      sopCheck: [
+        { step: '到达确认', passed: true },
+        { step: '食材检查', passed: true },
+        { step: '烹饪/加热', passed: true },
+        { step: '摆餐与陪餐', passed: true },
+        { step: '餐后清理', passed: true },
+        { step: '记录', passed: true },
+      ],
+      concerns: ['食欲较上次下降，需持续观察'],
+      mood: '平稳',
+      healthObservations: ['食欲一般，进食量偏少'],
+      satisfaction: '张奶奶表示满意',
+    },
   },
   {
     id: 't8',
@@ -129,6 +215,19 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为赵叔叔进行健康监测。血压128/82mmHg，正常；血糖5.9mmol/L，正常；心率72次/分，正常。各项指标稳定。',
+      sopCheck: [
+        { step: '问候与身份确认', passed: true },
+        { step: '健康状况询问', passed: true },
+        { step: '生命体征检查', passed: true },
+        { step: '服务总结与满意度询问', passed: true },
+      ],
+      concerns: [],
+      mood: '平稳',
+      healthObservations: ['各项指标正常', '精神状态较上次改善'],
+      satisfaction: '赵叔叔对服务表示满意',
+    },
   },
   // 5/15 周四
   {
@@ -145,6 +244,21 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '对李大爷进行常规探访。李大爷反映近期睡眠改善，但仍需注意血压。药物按时服用，居家环境良好。',
+      sopCheck: [
+        { step: '问候与身份确认', passed: true },
+        { step: '健康状况询问', passed: true },
+        { step: '生活环境检查', passed: true },
+        { step: '心理关怀', passed: true },
+        { step: '需求收集', passed: true },
+        { step: '服务总结', passed: true },
+      ],
+      concerns: ['血压仍需持续监测'],
+      mood: '平稳',
+      healthObservations: ['睡眠较上次改善', '药物按时服用'],
+      satisfaction: '李大爷表示满意',
+    },
   },
   {
     id: 't10',
@@ -160,6 +274,22 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '临时派单',
     notes: '',
+    report: {
+      summary: '为陈阿姨提供助浴服务。室温26℃，水温39℃。洗浴过程顺利，皮肤状况良好，未发现异常。洗浴时间约18分钟。',
+      sopCheck: [
+        { step: '身体状况评估', passed: true },
+        { step: '环境检查', passed: true },
+        { step: '准备', passed: true },
+        { step: '协助入浴', passed: true },
+        { step: '清洗', passed: true },
+        { step: '离浴与穿衣', passed: true },
+        { step: '记录', passed: true },
+      ],
+      concerns: [],
+      mood: '舒适',
+      healthObservations: ['皮肤状况良好，无红肿或破损'],
+      satisfaction: '陈阿姨表示很舒适',
+    },
   },
   // 5/16 周五
   {
@@ -176,6 +306,21 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为刘阿姨提供助餐服务。准备了面条和清炒蔬菜。刘阿姨食欲良好，全部吃完。',
+      sopCheck: [
+        { step: '到达确认', passed: true },
+        { step: '食材检查', passed: true },
+        { step: '烹饪/加热', passed: true },
+        { step: '摆餐与陪餐', passed: true },
+        { step: '餐后清理', passed: true },
+        { step: '记录', passed: true },
+      ],
+      concerns: [],
+      mood: '开心',
+      healthObservations: ['食欲良好', '身体恢复正常'],
+      satisfaction: '刘阿姨非常满意',
+    },
   },
   {
     id: 't12',
@@ -191,6 +336,20 @@ export const mockTasks: ServiceTask[] = [
     status: 'completed',
     source: '周期计划',
     notes: '',
+    report: {
+      summary: '为张奶奶进行下肢康复训练。完成站立平衡训练、步行辅助训练和坐立转换练习。张奶奶配合度一般，疼痛等级3/10。',
+      sopCheck: [
+        { step: '评估', passed: true },
+        { step: '热身', passed: true },
+        { step: '训练执行', passed: true },
+        { step: '放松', passed: true },
+        { step: '记录', passed: false },
+      ],
+      concerns: ['训练记录填写不完整，需补充'],
+      mood: '平稳',
+      healthObservations: ['左膝关节活动时有轻微疼痛', '平衡能力较上次有改善'],
+      satisfaction: '张奶奶表示还行',
+    },
   },
   // 5/17 周六（今天）
   {

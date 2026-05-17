@@ -5,7 +5,7 @@ interface Props {
 }
 
 export function LoginScreen({ onLogin }: Props) {
-  const [username] = useState('王建国')
+  const [username] = useState('王建国-余杭站-护理服务人员')
   const [password] = useState('demo1234')
   const [loading, setLoading] = useState(false)
 

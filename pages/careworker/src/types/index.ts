@@ -1,5 +1,14 @@
 export type TaskStatus = 'completed' | 'abnormal' | 'pending'
 
+export interface ServiceReport {
+  summary: string
+  sopCheck: { step: string; passed: boolean }[]
+  concerns: string[]
+  mood: string
+  healthObservations: string[]
+  satisfaction: string
+}
+
 export interface ServiceTask {
   id: string
   serviceType: string
@@ -14,6 +23,7 @@ export interface ServiceTask {
   status: TaskStatus
   source: string
   notes: string
+  report?: ServiceReport
 }
 
 export interface SopFolder {
