@@ -5,6 +5,9 @@ import { ReferenceList } from '../components/ReferenceList'
 import { TaskDetailDrawer } from '../components/TaskDetailDrawer'
 import { SopDetailDrawer } from '../components/SopDetailDrawer'
 import { AiAssistant } from '../components/AiAssistant'
+import { BadgeChip } from '../components/BadgeChip'
+import { CurrentServiceBanner } from '../components/CurrentServiceBanner'
+import { useBadge } from '../data/use-badge'
 import { demoUser } from '../data/mock-data'
 import type { ServiceTask, SopFolder } from '../types'
 
@@ -16,6 +19,7 @@ export function CareworkerPage() {
   const [selectedTask, setSelectedTask] = useState<ServiceTask | null>(null)
   const [selectedSop, setSelectedSop] = useState<SopFolder | null>(null)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const badge = useBadge()
 
   if (!loggedIn) {
     return <LoginScreen onLogin={() => setLoggedIn(true)} />
@@ -34,23 +38,35 @@ export function CareworkerPage() {
             <div className="text-[11px] text-[#9CA3AF] leading-tight">{demoUser.region} · {demoUser.role}</div>
           </div>
         </div>
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB]"
-          aria-label="退出登录"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <BadgeChip badgeState={badge.badgeState} recordingStartTime={badge.recordingStartTime} />
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB]"
+            aria-label="退出登录"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto">
         {activeTab === 'tasks' && (
-          <CalendarView onSelectTask={setSelectedTask} />
+          <>
+            <div className="pt-3">
+              <CurrentServiceBanner
+                servicePhase={badge.servicePhase}
+                recordingStartTime={badge.recordingStartTime}
+                recordingEndTime={badge.recordingEndTime}
+              />
+            </div>
+            <CalendarView onSelectTask={setSelectedTask} />
+          </>
         )}
         {activeTab === 'reference' && (
           <ReferenceList onSelectSop={setSelectedSop} />

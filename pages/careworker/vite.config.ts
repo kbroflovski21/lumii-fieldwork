@@ -12,6 +12,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         careworker: 'careworker.html',
+        hardware: 'careworkerhardware.html',
       },
     },
   },
