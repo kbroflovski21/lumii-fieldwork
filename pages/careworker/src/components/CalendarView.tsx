@@ -75,46 +75,52 @@ export function CalendarView({ onSelectTask }: Props) {
     setSelectedDate(toDateStr(d))
   }
 
+  const quickLabel = { day: '今天', week: '本周', month: '本月' }[viewMode]
+
   return (
     <div className="flex flex-col h-full">
-      {/* View mode toggle + navigation */}
+      {/* Navigation bar */}
       <div className="flex-shrink-0 px-4 pt-3 pb-2">
-        <div className="flex items-center justify-between mb-3">
-          <HeaderTitle viewMode={viewMode} currentDate={currentDate} />
-          {/* Segmented control */}
-          <div className="flex bg-[#F3F4F6] rounded-lg p-0.5">
-            {(['day', 'week', 'month'] as ViewMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => {
-                  setViewMode(mode)
-                  setSelectedDate(toDateStr(currentDate))
-                }}
-                className={`px-3 py-1 rounded-md text-[12px] font-medium transition-colors ${
-                  viewMode === mode
-                    ? 'bg-white text-[#191C1E] shadow-sm'
-                    : 'text-[#9CA3AF]'
-                }`}
-              >
-                {{ day: '日', week: '周', month: '月' }[mode]}
-              </button>
-            ))}
+        {/* Row 1: ← Title → | Segmented | Quick button */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Left: arrows + title */}
+          <div className="flex items-center gap-1">
+            <button onClick={() => navigate(-1)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#F3F4F6] active:bg-[#E5E7EB]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+            </button>
+            <HeaderTitle viewMode={viewMode} currentDate={currentDate} />
+            <button onClick={() => navigate(1)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#F3F4F6] active:bg-[#E5E7EB]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+            </button>
           </div>
-        </div>
-        {/* Navigation arrows */}
-        <div className="flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-          </button>
-          <button
-            onClick={() => { setCurrentDate(today); setSelectedDate(todayStr) }}
-            className="text-[12px] text-[#0052CC] font-medium px-3 py-1 rounded-md hover:bg-[rgba(0,82,204,0.08)]"
-          >
-            今天
-          </button>
-          <button onClick={() => navigate(1)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#F3F4F6] active:bg-[#E5E7EB]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          </button>
+
+          {/* Right: segmented + quick button */}
+          <div className="flex items-center gap-2">
+            <div className="flex bg-[#F3F4F6] rounded-lg p-0.5">
+              {(['day', 'week', 'month'] as ViewMode[]).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setViewMode(mode)
+                    setSelectedDate(toDateStr(currentDate))
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    viewMode === mode
+                      ? 'bg-white text-[#191C1E] shadow-sm'
+                      : 'text-[#9CA3AF]'
+                  }`}
+                >
+                  {{ day: '日', week: '周', month: '月' }[mode]}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setCurrentDate(today); setSelectedDate(todayStr) }}
+              className="px-2.5 py-1 rounded-md text-[11px] text-[#0052CC] font-medium bg-[rgba(0,82,204,0.06)] active:bg-[rgba(0,82,204,0.12)]"
+            >
+              {quickLabel}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -162,8 +168,8 @@ function HeaderTitle({ viewMode, currentDate }: { viewMode: ViewMode; currentDat
     const ws = getWeekStart(currentDate)
     const we = addDays(ws, 6)
     return (
-      <h2 className="text-[15px] font-bold text-[#191C1E]">
-        {ws.getMonth() + 1}月{ws.getDate()}日 - {we.getMonth() + 1}月{we.getDate()}日
+      <h2 className="text-[15px] font-bold text-[#191C1E] whitespace-nowrap">
+        {ws.getMonth() + 1}/{ws.getDate()} - {we.getMonth() + 1}/{we.getDate()}
       </h2>
     )
   }
