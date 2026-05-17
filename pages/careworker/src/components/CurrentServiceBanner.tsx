@@ -52,25 +52,22 @@ function findCurrentTask(): ServiceTask | null {
 }
 
 export function CurrentServiceBanner({ servicePhase, recordingStartTime, recordingEndTime }: Props) {
-  const [preTask, setPreTask] = useState<ServiceTask | null>(null)
-
-  useEffect(() => {
-    const check = () => setPreTask(findUpcomingTask())
-    check()
-    const timer = setInterval(check, 30000)
-    return () => clearInterval(timer)
+  const nextTask = useMemo(() => {
+    const real = findUpcomingTask()
+    if (real) return real
+    return mockTasks.find(t => t.status === 'pending') || null
   }, [])
 
   if (servicePhase === 'active') {
-    return <ActiveBanner task={findCurrentTask()} recordingStartTime={recordingStartTime} />
+    return <ActiveBanner task={nextTask || findCurrentTask()} recordingStartTime={recordingStartTime} />
   }
 
   if (servicePhase === 'post_service') {
-    return <PostBanner task={findCurrentTask()} recordingEndTime={recordingEndTime} />
+    return <PostBanner task={nextTask || findCurrentTask()} recordingEndTime={recordingEndTime} />
   }
 
-  if (preTask) {
-    return <PreServiceBanner task={preTask} />
+  if (nextTask) {
+    return <PreServiceBanner task={nextTask} />
   }
 
   return null
