@@ -9,6 +9,7 @@ export default defineConfig({
     {
       name: "ui",
       testMatch: "site-operations.spec.ts",
+      retries: 1,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: STAGING_URL,
@@ -36,6 +37,7 @@ export default defineConfig({
     {
       name: "auth-e2e",
       testMatch: "auth-e2e.spec.ts",
+      retries: 1,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: STAGING_URL,

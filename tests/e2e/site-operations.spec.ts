@@ -237,6 +237,22 @@ const serviceRecordsResponse = {
    API mock helper
    ────────────────────────────────────────────── */
 
+const BASE = process.env.E2E_BASE_URL ?? "http://124.221.48.52:3004";
+
+async function loginAsOperator(page: Page) {
+  const res = await page.request.post(`${BASE}/api/auth/login`, {
+    data: { username: "operator", password: "oper123" },
+  });
+  if (res.ok()) {
+    const { token } = await res.json();
+    await page.goto(BASE);
+    await page.evaluate((t: string) => {
+      localStorage.setItem("gy_auth_token", t);
+      localStorage.setItem("gy_chat_token", t);
+    }, token);
+  }
+}
+
 async function mockSiteOperationsApi(page: Page, overrides: Record<string, unknown> = {}) {
   const routes: Record<string, unknown> = {
     "/api/site-operations/home": homeResponse,
@@ -250,8 +266,7 @@ async function mockSiteOperationsApi(page: Page, overrides: Record<string, unkno
 
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
-    // Don't intercept WebSocket upgrade or chat endpoints
-    if (url.pathname.includes("/ws/")) {
+    if (url.pathname.includes("/ws/") || url.pathname.includes("/auth/")) {
       await route.fallback();
       return;
     }
@@ -269,6 +284,7 @@ async function mockSiteOperationsApi(page: Page, overrides: Record<string, unkno
    ────────────────────────────────────────────── */
 
 test.beforeEach(async ({ page }) => {
+  await loginAsOperator(page);
   await mockSiteOperationsApi(page);
 });
 
