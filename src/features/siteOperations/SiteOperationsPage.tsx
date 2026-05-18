@@ -9,6 +9,7 @@ import { SmartBadgesArea } from "./SmartBadgesArea";
 import { SocialWorkersArea } from "./SocialWorkersArea";
 import { useSiteOperationsData } from "./useSiteOperationsData";
 import "./siteOperations.css";
+import "../../shared/shell-profile.css";
 
 export function SiteOperationsPage() {
   const [activeArea, setActiveArea] = useState<WorkAreaId>("home");

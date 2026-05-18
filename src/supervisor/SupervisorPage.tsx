@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Bot } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import { ProfileMenu } from "../shared/ProfileMenu";
 import "./supervisor.css";
 
 /* ── Types ── */
@@ -166,27 +167,13 @@ function mockAiReply(text: string): string {
 
 /* ══════════════════════════════════════════════ */
 
-const SV_ROLE_MAP: Record<string, string> = {
-  org_admin: "集团管理",
-  site_operator: "站点运营",
-  service_supervisor: "服务主管",
-  careworker: "护理员",
-};
-
-function hashNameToColor(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-  const hue = ((h % 360) + 360) % 360;
-  return `hsl(${hue}, 55%, 48%)`;
-}
-
 let nextMsgId = 5000;
 function makeTimestamp(): string {
   return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
 export function SupervisorPage() {
-  const { user, token, logout } = useAuth();
+  const { user } = useAuth();
 
   /* ── State ── */
   const [folders, setFolders] = useState<StdFolder[]>(buildInitialFolders);
@@ -197,6 +184,7 @@ export function SupervisorPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [serviceCollapsed, setServiceCollapsed] = useState(false);
+  const [dirCollapsed, setDirCollapsed] = useState(false);
 
   /* Panel sizing */
   const [dirWidth, setDirWidth] = useState(250);
@@ -213,15 +201,7 @@ export function SupervisorPage() {
   /* Copilot */
   const [copilotOpen, setCopilotOpen] = useState(false);
 
-  /* Profile menu */
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [oldPwd, setOldPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmPwd, setConfirmPwd] = useState("");
-  const [pwdError, setPwdError] = useState("");
-  const [pwdSuccess, setPwdSuccess] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+  /* Profile menu handled by shared ProfileMenu component */
 
   /* Confirmation modal */
   const [confirmModal, setConfirmModal] = useState<{
@@ -245,40 +225,6 @@ export function SupervisorPage() {
   useEffect(() => {
     if (copilotOpen) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping, copilotOpen]);
-
-  /* Close profile menu on click outside */
-  useEffect(() => {
-    if (!profileOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [profileOpen]);
-
-  const handleChangePassword = async () => {
-    setPwdError("");
-    setPwdSuccess(false);
-    if (!oldPwd || !newPwd) { setPwdError("请填写所有字段"); return; }
-    if (newPwd.length < 6) { setPwdError("新密码至少6位"); return; }
-    if (newPwd !== confirmPwd) { setPwdError("两次输入的新密码不一致"); return; }
-    try {
-      const res = await fetch("/api/auth/change-password", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setPwdError(data.error ?? "修改失败"); return; }
-      setPwdSuccess(true);
-      setOldPwd(""); setNewPwd(""); setConfirmPwd("");
-      setTimeout(() => setShowPasswordModal(false), 1200);
-    } catch {
-      setPwdError("网络错误");
-    }
-  };
 
   /* ── Chat helpers ── */
   const pushChat = useCallback((role: "user" | "agent", content: string) => {
@@ -440,61 +386,63 @@ export function SupervisorPage() {
         <div className="sv-rail__logo">
           <DocIcon />
         </div>
-        <div className="so-shell__profile" ref={profileRef}>
-          <button
-            className="so-shell__avatar"
-            onClick={() => setProfileOpen(!profileOpen)}
-            aria-label="用户菜单"
-            style={{ background: hashNameToColor(user?.name ?? "") }}
-            type="button"
-          >
-            {(user?.name ?? "U")[0]}
-          </button>
-          {profileOpen && (
-            <div className="so-shell__profile-menu">
-              <div className="so-shell__profile-name">{user?.name}</div>
-              <div className="so-shell__profile-role">{SV_ROLE_MAP[user?.role ?? ""] ?? user?.role}</div>
-              <hr />
-              <button type="button" onClick={() => { setProfileOpen(false); setShowPasswordModal(true); setPwdError(""); setPwdSuccess(false); }}>修改密码</button>
-              <button type="button" onClick={() => { setProfileOpen(false); logout(); }}>退出登录</button>
-            </div>
-          )}
-        </div>
+        <ProfileMenu />
       </nav>
 
       {/* Main content — row 2, col 2: 3-panel SOP layout */}
       <main className="sv-main">
         {/* LEFT: Directory */}
-        <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
-          <div className="sv-panel-hdr">
-            <span className="sv-panel-hdr__title">目录</span>
+        {dirCollapsed ? (
+          <div className="sv-dir sv-dir--collapsed">
+            <button
+              className="sv-panel-hdr__toggle"
+              onClick={() => setDirCollapsed(false)}
+              aria-label="展开目录"
+              type="button"
+            >
+              <ChevronRightIcon />
+            </button>
           </div>
-          <div className="sv-dir__scroll">
-            <DirectorySection
-              title="通用规范"
-              folders={generalFolders}
-              collapsed={generalCollapsed}
-              onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
-              selectedFolder={selectedFolder}
-              selectedDoc={selectedDoc}
-              onSelect={selectFile}
-              onAdd={() => sendToLLM("我想添加一个新的通用规范")}
-              onFolderAction={handleFolderAction}
-            />
-            <div className="sv-dir__divider" />
-            <DirectorySection
-              title="服务项目规范"
-              folders={serviceFolders}
-              collapsed={serviceCollapsed}
-              onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
-              selectedFolder={selectedFolder}
-              selectedDoc={selectedDoc}
-              onSelect={selectFile}
-              onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
-              onFolderAction={handleFolderAction}
-            />
+        ) : (
+          <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
+            <div className="sv-panel-hdr">
+              <span className="sv-panel-hdr__title">目录</span>
+              <button
+                className="sv-panel-hdr__toggle"
+                onClick={() => setDirCollapsed(true)}
+                aria-label="折叠目录"
+                type="button"
+              >
+                <ChevronLeftIcon />
+              </button>
+            </div>
+            <div className="sv-dir__scroll">
+              <DirectorySection
+                title="通用规范"
+                folders={generalFolders}
+                collapsed={generalCollapsed}
+                onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
+                selectedFolder={selectedFolder}
+                selectedDoc={selectedDoc}
+                onSelect={selectFile}
+                onAdd={() => sendToLLM("我想添加一个新的通用规范")}
+                onFolderAction={handleFolderAction}
+              />
+              <div className="sv-dir__divider" />
+              <DirectorySection
+                title="服务项目规范"
+                folders={serviceFolders}
+                collapsed={serviceCollapsed}
+                onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
+                selectedFolder={selectedFolder}
+                selectedDoc={selectedDoc}
+                onSelect={selectFile}
+                onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
+                onFolderAction={handleFolderAction}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Drag handle left */}
         <div className="sv-drag-handle" onMouseDown={handleMouseDown("left")} />
@@ -616,7 +564,7 @@ export function SupervisorPage() {
               <div className="sv-doc__empty">在左侧目录中选择一个文件</div>
             )}
           </div>
-        ) : (
+
         {/* Drag handle right */}
         {copilotOpen && (
           <div className="sv-drag-handle" onMouseDown={handleMouseDown("right")} />
@@ -709,23 +657,6 @@ export function SupervisorPage() {
         </div>
       )}
 
-      {/* Password change modal */}
-      {showPasswordModal && (
-        <div className="so-shell__modal-scrim" onClick={() => setShowPasswordModal(false)}>
-          <div className="so-shell__modal" onClick={e => e.stopPropagation()}>
-            <h3>修改密码</h3>
-            {pwdError && <div className="so-shell__modal-error">{pwdError}</div>}
-            {pwdSuccess && <div className="so-shell__modal-success">密码修改成功</div>}
-            <input type="password" placeholder="当前密码" value={oldPwd} onChange={e => setOldPwd(e.target.value)} />
-            <input type="password" placeholder="新密码" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-            <input type="password" placeholder="确认新密码" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
-            <div className="so-shell__modal-actions">
-              <button type="button" onClick={() => setShowPasswordModal(false)}>取消</button>
-              <button type="button" onClick={handleChangePassword}>确认修改</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

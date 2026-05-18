@@ -59,7 +59,7 @@
   padding-top: 16px;
   gap: 4px;
   flex-shrink: 0;
-  overflow-y: auto;
+  overflow: visible;
   z-index: 20;
 }
 
@@ -102,6 +102,7 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  z-index: 1;
 }
 
 /* ── Header — row 1, spans all columns ── */

@@ -79,6 +79,9 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 if (existsSync(STATIC_ROOT)) {
   app.use(express.static(STATIC_ROOT));
   app.use((_req, res) => {
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
     res.sendFile(join(STATIC_ROOT, "index.html"));
   });
 }

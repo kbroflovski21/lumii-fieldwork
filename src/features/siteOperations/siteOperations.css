@@ -1,7 +1,17 @@
-.site-operations-root,
 html,
-body,
+body {
+  height: 100%;
+  margin: 0;
+}
+
 #root {
+  height: 100%;
+  margin: 0;
+  position: relative;
+  z-index: 0;
+}
+
+.site-operations-root {
   height: 100%;
   margin: 0;
   overflow: hidden;
@@ -120,154 +130,7 @@ body,
   margin-left: auto;
 }
 
-/* ── Sidebar bottom user profile ── */
-.so-shell__profile {
-  margin-top: auto;
-  padding: 12px 0;
-  display: flex;
-  justify-content: center;
-  position: relative;
-}
-
-.so-shell__avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s;
-}
-.so-shell__avatar:hover {
-  transform: scale(1.1);
-}
-
-.so-shell__profile-menu {
-  position: absolute;
-  bottom: 56px;
-  left: 8px;
-  width: 180px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
-  padding: 12px 0;
-  z-index: 100;
-}
-
-.so-shell__profile-name {
-  padding: 4px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #191C1E;
-}
-
-.so-shell__profile-role {
-  padding: 2px 16px 8px;
-  font-size: 12px;
-  color: #9CA3AF;
-}
-
-.so-shell__profile-menu hr {
-  border: none;
-  border-top: 1px solid #F3F4F6;
-  margin: 4px 0;
-}
-
-.so-shell__profile-menu button {
-  display: block;
-  width: 100%;
-  padding: 8px 16px;
-  text-align: left;
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-}
-.so-shell__profile-menu button:hover {
-  background: #F9FAFB;
-}
-.so-shell__profile-menu button:last-child {
-  color: #B42318;
-}
-.so-shell__profile-menu button:last-child:hover {
-  background: #FEF2F2;
-}
-
-/* Password change modal */
-.so-shell__modal-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.3);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.so-shell__modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  width: 360px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-}
-.so-shell__modal h3 {
-  margin: 0 0 16px;
-  font-size: 16px;
-}
-.so-shell__modal input {
-  display: block;
-  width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  margin-bottom: 10px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-.so-shell__modal-error {
-  background: #FEE2E2;
-  color: #B42318;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-.so-shell__modal-success {
-  background: #E0F4EC;
-  color: #116B4C;
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-.so-shell__modal-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-.so-shell__modal-actions button {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
-  font-size: 13px;
-  cursor: pointer;
-}
-.so-shell__modal-actions button:first-child {
-  background: #F3F4F6;
-  color: #374151;
-}
-.so-shell__modal-actions button:last-child {
-  background: #0052CC;
-  color: #fff;
-}
+/* Profile & modal styles are in ../../shared/shell-profile.css */
 
 .site-operations-rail {
   align-items: center;
@@ -281,18 +144,18 @@ body,
   padding-top: 16px;
   width: 56px;
   flex-shrink: 0;
-  overflow-y: auto;
+  overflow: visible;
   z-index: 20;
 }
 
-.site-operations-rail button,
+.site-operations-rail > button,
 .site-operations-mobile-nav button {
   background: transparent;
   border: 0;
   color: #667386;
 }
 
-.site-operations-rail button {
+.site-operations-rail > button {
   align-items: center;
   border-radius: 12px;
   display: flex;
@@ -302,12 +165,12 @@ body,
   width: 40px;
 }
 
-.site-operations-rail button[data-active="true"],
+.site-operations-rail > button[data-active="true"],
 .site-operations-mobile-nav button[data-active="true"] {
   color: var(--site-accent);
 }
 
-.site-operations-rail button[data-active="true"] {
+.site-operations-rail > button[data-active="true"] {
   background: var(--site-accent-soft);
 }
 
@@ -317,6 +180,7 @@ body,
   grid-row: 2;
   min-width: 0;
   overflow: hidden;
+  z-index: 1;
 }
 
 .site-operations-placeholder {
