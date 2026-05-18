@@ -2,7 +2,7 @@
 
 状态：分角色 UI 设计基线
 日期：2026-05-13
-仓库：`aro-network/lumii-fieldwork`
+仓库：`aro-network/lumii-goldenyears-dashboard`
 
 ## 1. UI 框架
 
