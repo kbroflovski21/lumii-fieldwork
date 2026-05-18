@@ -33,8 +33,9 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.sv-page[data-copilot-open="true"] {
-  grid-template-columns: 56px minmax(0, 1fr) auto;
+/* Chat panel hidden by default, shown via data-visible */
+.sv-chat[data-visible="false"] {
+  display: none;
 }
 
 .sv-page,
@@ -139,14 +140,6 @@
   overflow: hidden;
 }
 
-/* ── Copilot panel integration ── */
-.sv-page .copilot-panel {
-  grid-column: 3;
-  grid-row: 2;
-  border-left: 1px solid var(--sv-line);
-  background: var(--sv-surface);
-}
-
 .sv-copilot-toggle {
   margin-left: 0;
   border: 1px solid var(--sv-line);
@@ -191,57 +184,6 @@
   color: var(--sv-text);
 }
 
-.sv-panel-hdr__btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  color: var(--sv-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sv-panel-hdr__btn:hover {
-  background: var(--sv-line-subtle);
-}
-
-/* ── Collapsed tab ── */
-.sv-collapsed-tab {
-  width: 32px;
-  flex-shrink: 0;
-  background: var(--sv-surface);
-  border: none;
-  border-right: 2px solid #dde1e6;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: var(--sv-text-muted);
-}
-
-.sv-collapsed-tab:hover {
-  background: var(--sv-line-subtle);
-}
-
-.sv-collapsed-tab--chat {
-  border-right: none;
-  border-left: 2px solid var(--sv-line);
-  background: #fafbfc;
-  color: var(--sv-ai-accent);
-}
-
-.sv-collapsed-tab--chat:hover {
-  background: rgba(99, 102, 241, 0.04);
-}
-
-.sv-collapsed-tab__label {
-  font-size: 11px;
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
-}
 
 /* ── Drag handle ── */
 .sv-drag-handle {
@@ -1016,10 +958,6 @@
 /* ── Responsive: hide chat on narrow screens ── */
 @media (max-width: 768px) {
   .sv-chat {
-    display: none;
-  }
-
-  .sv-collapsed-tab--chat {
     display: none;
   }
 

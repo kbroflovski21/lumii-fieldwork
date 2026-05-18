@@ -282,6 +282,7 @@ body,
   width: 56px;
   flex-shrink: 0;
   overflow-y: auto;
+  z-index: 20;
 }
 
 .site-operations-rail button,

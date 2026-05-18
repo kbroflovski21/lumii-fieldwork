@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { Bot } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
-import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import "./supervisor.css";
 
 /* ── Types ── */
@@ -199,8 +198,7 @@ export function SupervisorPage() {
   const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [serviceCollapsed, setServiceCollapsed] = useState(false);
 
-  /* Panel visibility & sizing */
-  const [panels, setPanels] = useState<[boolean, boolean, boolean]>([true, true, true]);
+  /* Panel sizing */
   const [dirWidth, setDirWidth] = useState(250);
   const [chatWidth, setChatWidth] = useState(380);
   const draggingRef = useRef<"left" | "right" | null>(null);
@@ -232,19 +230,6 @@ export function SupervisorPage() {
     onConfirm: () => void;
   } | null>(null);
 
-  const [showDir, showDoc, showChat] = panels;
-
-  const togglePanel = (idx: number) => {
-    const next = [...panels] as [boolean, boolean, boolean];
-    if (next[idx]) {
-      if (next.filter(Boolean).length <= 1) return;
-      next[idx] = false;
-    } else {
-      next[idx] = true;
-    }
-    setPanels(next);
-  };
-
   /* Derived */
   const folder = folders.find((f) => f.id === selectedFolder);
   const doc = folder ? folder[selectedDoc] : null;
@@ -258,8 +243,8 @@ export function SupervisorPage() {
 
   /* Auto-scroll chat */
   useEffect(() => {
-    if (showChat) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping, showChat]);
+    if (copilotOpen) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping, copilotOpen]);
 
   /* Close profile menu on click outside */
   useEffect(() => {
@@ -307,7 +292,7 @@ export function SupervisorPage() {
     (userText: string) => {
       pushChat("user", userText);
       setIsTyping(true);
-      setPanels((p) => [p[0], p[1], true]);
+      setCopilotOpen(true);
 
       // Mock: simulate async reply
       setTimeout(() => {
@@ -370,7 +355,6 @@ export function SupervisorPage() {
   const selectFile = (folderId: string, docType: DocType) => {
     setSelectedFolder(folderId);
     setSelectedDoc(docType);
-    setPanels((p) => [p[0], true, p[2]]);
     setIsEditing(false);
     setViewingVersion(null);
     const target = folders.find((ff) => ff.id === folderId);
@@ -428,7 +412,7 @@ export function SupervisorPage() {
   /* ══════════════════════════════════════════════ */
 
   return (
-    <div className="sv-page" data-copilot-open={copilotOpen}>
+    <div className="sv-page">
       {/* Header — row 1, spans all columns */}
       <header className="sv-header">
         <div>
@@ -481,61 +465,45 @@ export function SupervisorPage() {
       {/* Main content — row 2, col 2: 3-panel SOP layout */}
       <main className="sv-main">
         {/* LEFT: Directory */}
-        {showDir ? (
-          <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
-            <div className="sv-panel-hdr">
-              <span className="sv-panel-hdr__title">目录</span>
-              <button onClick={() => togglePanel(0)} className="sv-panel-hdr__btn" aria-label="收起目录">
-                <ChevronLeftIcon />
-              </button>
-            </div>
-            <div className="sv-dir__scroll">
-              <DirectorySection
-                title="通用规范"
-                folders={generalFolders}
-                collapsed={generalCollapsed}
-                onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
-                selectedFolder={selectedFolder}
-                selectedDoc={selectedDoc}
-                onSelect={selectFile}
-                onAdd={() => sendToLLM("我想添加一个新的通用规范")}
-                onFolderAction={handleFolderAction}
-              />
-              <div className="sv-dir__divider" />
-              <DirectorySection
-                title="服务项目规范"
-                folders={serviceFolders}
-                collapsed={serviceCollapsed}
-                onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
-                selectedFolder={selectedFolder}
-                selectedDoc={selectedDoc}
-                onSelect={selectFile}
-                onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
-                onFolderAction={handleFolderAction}
-              />
-            </div>
+        <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
+          <div className="sv-panel-hdr">
+            <span className="sv-panel-hdr__title">目录</span>
           </div>
-        ) : (
-          <button onClick={() => togglePanel(0)} className="sv-collapsed-tab" aria-label="展开目录">
-            <ChevronRightIcon />
-            <span className="sv-collapsed-tab__label">目录</span>
-          </button>
-        )}
+          <div className="sv-dir__scroll">
+            <DirectorySection
+              title="通用规范"
+              folders={generalFolders}
+              collapsed={generalCollapsed}
+              onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
+              selectedFolder={selectedFolder}
+              selectedDoc={selectedDoc}
+              onSelect={selectFile}
+              onAdd={() => sendToLLM("我想添加一个新的通用规范")}
+              onFolderAction={handleFolderAction}
+            />
+            <div className="sv-dir__divider" />
+            <DirectorySection
+              title="服务项目规范"
+              folders={serviceFolders}
+              collapsed={serviceCollapsed}
+              onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
+              selectedFolder={selectedFolder}
+              selectedDoc={selectedDoc}
+              onSelect={selectFile}
+              onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
+              onFolderAction={handleFolderAction}
+            />
+          </div>
+        </div>
 
         {/* Drag handle left */}
-        {showDir && showDoc && (
-          <div className="sv-drag-handle" onMouseDown={handleMouseDown("left")} />
-        )}
+        <div className="sv-drag-handle" onMouseDown={handleMouseDown("left")} />
 
         {/* MIDDLE: Document view */}
-        {showDoc ? (
-          <div className="sv-doc">
-            <div className="sv-panel-hdr">
-              <span className="sv-panel-hdr__title">文档</span>
-              <button onClick={() => togglePanel(1)} className="sv-panel-hdr__btn" aria-label="收起文档">
-                <ChevronLeftIcon />
-              </button>
-            </div>
+        <div className="sv-doc">
+          <div className="sv-panel-hdr">
+            <span className="sv-panel-hdr__title">文档</span>
+          </div>
 
             {viewingVersion !== null && doc ? (
               /* Version history view */
@@ -649,104 +617,82 @@ export function SupervisorPage() {
             )}
           </div>
         ) : (
-          <button onClick={() => togglePanel(1)} className="sv-collapsed-tab" aria-label="展开文档">
-            <DocIcon />
-            <span className="sv-collapsed-tab__label">文档</span>
-          </button>
-        )}
-
         {/* Drag handle right */}
-        {showDoc && showChat && (
+        {copilotOpen && (
           <div className="sv-drag-handle" onMouseDown={handleMouseDown("right")} />
         )}
 
-        {/* RIGHT: Built-in SOP AI chat (separate from CopilotPanel) */}
-        {showChat ? (
-          <div
-            className="sv-chat"
-            style={{
-              width: showDoc ? chatWidth : undefined,
-              flex: showDoc ? "none" : 1,
-            }}
-          >
-            <div className="sv-chat__hdr">
-              <span className="sv-chat__hdr-title">AI 助手</span>
-              <button onClick={() => togglePanel(2)} className="sv-panel-hdr__btn" aria-label="收起对话">
-                <ChevronRightIcon />
-              </button>
-            </div>
-            <div className="sv-chat__scroll">
-              {messages.length === 0 && (
-                <div className="sv-chat__welcome">
-                  <AiAvatar />
-                  <div className="sv-chat__bubble sv-chat__bubble--agent">
-                    您好，我是规范管理助手。有什么可以帮您？
-                  </div>
-                </div>
-              )}
-              {messages.map((msg) => (
-                <div key={msg.id} className={`sv-chat__row ${msg.role === "user" ? "sv-chat__row--user" : ""}`}>
-                  {msg.role === "agent" && <AiAvatar />}
-                  <div className="sv-chat__msg-wrap">
-                    <div className={`sv-chat__bubble sv-chat__bubble--${msg.role}`}>
-                      <RenderContent content={msg.content} />
-                    </div>
-                    <div className={`sv-chat__ts ${msg.role === "user" ? "sv-chat__ts--right" : ""}`}>
-                      {msg.timestamp}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="sv-chat__row">
-                  <AiAvatar />
-                  <div className="sv-chat__bubble sv-chat__bubble--agent">
-                    <div className="sv-typing">
-                      <span className="sv-typing__dot" />
-                      <span className="sv-typing__dot" style={{ animationDelay: "150ms" }} />
-                      <span className="sv-typing__dot" style={{ animationDelay: "300ms" }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-            <div className="sv-chat__input-bar">
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt,.md,.doc,.docx,.pdf" hidden />
-              <button onClick={() => fileInputRef.current?.click()} className="sv-chat__attach-btn" aria-label="上传文件">
-                <PaperclipIcon />
-              </button>
-              <input
-                className="sv-chat__input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } }}
-                placeholder="输入指令..."
-              />
-              <button
-                onClick={handleSubmit}
-                disabled={!input.trim()}
-                className="sv-chat__send-btn"
-                aria-label="发送"
-              >
-                <SendIcon />
-              </button>
-            </div>
+        {/* RIGHT: Built-in SOP AI chat */}
+        <div
+          className="sv-chat"
+          data-visible={copilotOpen}
+          style={{
+            width: chatWidth,
+            flexShrink: 0,
+          }}
+        >
+          <div className="sv-chat__hdr">
+            <span className="sv-chat__hdr-title">AI 助手</span>
           </div>
-        ) : (
-          <button onClick={() => togglePanel(2)} className="sv-collapsed-tab sv-collapsed-tab--chat" aria-label="展开对话">
-            <ChevronLeftIcon />
-            <span className="sv-collapsed-tab__label">对话</span>
-          </button>
-        )}
+          <div className="sv-chat__scroll">
+            {messages.length === 0 && (
+              <div className="sv-chat__welcome">
+                <AiAvatar />
+                <div className="sv-chat__bubble sv-chat__bubble--agent">
+                  您好，我是规范管理助手。有什么可以帮您？
+                </div>
+              </div>
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className={`sv-chat__row ${msg.role === "user" ? "sv-chat__row--user" : ""}`}>
+                {msg.role === "agent" && <AiAvatar />}
+                <div className="sv-chat__msg-wrap">
+                  <div className={`sv-chat__bubble sv-chat__bubble--${msg.role}`}>
+                    <RenderContent content={msg.content} />
+                  </div>
+                  <div className={`sv-chat__ts ${msg.role === "user" ? "sv-chat__ts--right" : ""}`}>
+                    {msg.timestamp}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="sv-chat__row">
+                <AiAvatar />
+                <div className="sv-chat__bubble sv-chat__bubble--agent">
+                  <div className="sv-typing">
+                    <span className="sv-typing__dot" />
+                    <span className="sv-typing__dot" style={{ animationDelay: "150ms" }} />
+                    <span className="sv-typing__dot" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <div className="sv-chat__input-bar">
+            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt,.md,.doc,.docx,.pdf" hidden />
+            <button onClick={() => fileInputRef.current?.click()} className="sv-chat__attach-btn" aria-label="上传文件">
+              <PaperclipIcon />
+            </button>
+            <input
+              className="sv-chat__input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } }}
+              placeholder="输入指令..."
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim()}
+              className="sv-chat__send-btn"
+              aria-label="发送"
+            >
+              <SendIcon />
+            </button>
+          </div>
+        </div>
       </main>
-
-      {/* CopilotPanel — row 2, col 3 */}
-      <CopilotPanel
-        workAreaId="supervisor"
-        isOpen={copilotOpen}
-        onClose={() => setCopilotOpen(false)}
-      />
 
       {/* Confirmation modal */}
       {confirmModal && (
