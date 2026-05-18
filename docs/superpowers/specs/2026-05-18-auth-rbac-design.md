@@ -304,3 +304,8 @@ WebSocket 连接使用用户 JWT（包含 role + siteIds），lak 通过 agent s
 - 描述: logout 按钮从顶部栏移到左侧栏底部头像菜单后，E2E 测试找不到 `.so-shell__logout` 选择器
 - 原因: 用户档案 UI 重构，logout 按钮不再是独立元素，而是头像下拉菜单的最后一个按钮
 - 修复: E2E 选择器改为 `.so-shell__avatar` (点击头像) → `.so-shell__profile-menu button:last-child` (点击退出)
+
+**Bug #5: 用户管理交互使用浏览器原生对话框**
+- 描述: prompt() 用于重置密码输入、alert() 用于操作成功反馈、禁用按钮无确认
+- 原因: 初期快速实现未设计自定义 UI 组件
+- 修复: 替换为自定义 Modal 系统（quality-modal）：创建用户 Modal + 重置密码 Modal + 禁用确认 Modal（2-step, danger 按钮）+ Toast 成功提示

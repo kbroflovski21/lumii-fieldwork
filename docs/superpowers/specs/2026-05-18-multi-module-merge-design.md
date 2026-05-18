@@ -127,6 +127,26 @@ Badge 状态机（useBadge.ts）：
 - 原因: 顶部栏空间有限，用户操作按钮与业务导航混在一起
 - 修复: 在左侧导航栏底部添加头像圆形按钮 + 向上弹出菜单（用户名/角色/修改密码/退出），删除顶部栏的用户区域
 
+**Bug #7: Quality 页面 Copilot 面板覆盖顶栏**
+- 描述: 打开 Copilot 面板后，面板从页面顶部到底部全高度显示，把顶栏也挤压了
+- 原因: quality-page 的 CSS grid 没有定义 grid-template-rows，所有元素在单行中排列
+- 修复: 添加 `grid-template-rows: 64px minmax(0, 1fr)`，header 用 `grid-column: 1 / -1; grid-row: 1`，copilot 用 `grid-row: 2`
+
+**Bug #8: Quality 页面用户头像菜单被内容区遮挡**
+- 描述: 左侧栏底部的用户头像点击后，弹出的下拉菜单被右侧内容区覆盖
+- 原因: quality-rail 没有设置 z-index，内容区作为相邻 grid 单元格自然覆盖
+- 修复: `.quality-rail` 添加 `z-index: 20`
+
+**Bug #9: 站点运营与质量管理页面布局不一致**
+- 描述: 两个页面的顶栏高度、侧栏宽度、背景色、Logo 尺寸等视觉参数不同
+- 原因: 两个页面独立开发，未建立统一的 shell 布局规范
+- 修复: 统一为 56px 侧栏、64px 顶栏、纯白背景 + #E5E7EB 实线边框、36px Logo
+
+**Bug #10: 用户管理页面使用浏览器原生 prompt/alert/confirm**
+- 描述: 新增用户、重置密码、禁用用户使用浏览器自带的对话框，样式不一致且丑陋
+- 原因: 初始实现为快速原型，未设计自定义交互组件
+- 修复: 全部替换为自定义 Modal（质量-modal 设计系统）：新增用户 Modal、重置密码 Modal、禁用确认 Modal + 绿色 Toast 反馈
+
 ## 7. 测试覆盖
 
 | 模块 | 单元测试 | E2E 测试 |
