@@ -312,6 +312,36 @@ npx playwright test --project=real-lak --reporter=line
 
 **注意:** 当 API 服务地址变更时，需同步更新 skill 文件中的 URL。未来可改为从环境变量读取。
 
+### Bug #4: E2E 测试在 auth-required dashboard 下全部失败 (2026-05-18)
+
+**描述:** 仓库迁移到 `lumii-goldenyears-dashboard` 后，`site-operations.spec.ts` 的 11 个 UI 测试、`chat.spec.ts` 和 `crud-chat.spec.ts` 的 chat 测试全部失败，报 `waitForSelector(".chat-stream")` 超时。
+
+**原因:** Dashboard 新增了认证系统（`AuthContext` + `gy_auth_token`），所有路由需要登录。旧测试直接 `goto("/site-operations")` 但未设置 auth token，页面被重定向到登录表单，`.chat-stream` 等选择器不存在。
+
+**影响的测试:**
+- `site-operations.spec.ts`: 使用 `page.route()` mock API，但 mock 也拦截了 `/api/auth/login`，需要放行 `/auth/` 路径
+- `chat.spec.ts` 的 `setupAuthenticatedPage()`: 只设了 `gy_chat_token`，未设 `gy_auth_token`
+- `crud-chat.spec.ts` 的 `setupPage()`: 同上
+
+**修复:** dashboard commits `79b4a28` + `a290619`。
+1. `site-operations.spec.ts`: `beforeEach` 先调 `POST /api/auth/login` 登录为 operator，获取 auth token 存入 localStorage，mock route 放行 `/auth/` 路径。
+2. `chat.spec.ts`: `setupAuthenticatedPage()` 先登录获取 `gy_auth_token`，同时设置 `gy_chat_token`。
+3. `crud-chat.spec.ts`: `setupPage()` 同样先登录。
+
+### Bug #5: SQLite DB 部署后报 SQLITE_CORRUPT (2026-05-18)
+
+**描述:** 将 `deploy/fieldwork.db` rsync 到 staging 后，服务启动报 `SqliteError: database disk image is malformed`。
+
+**原因:** 上一次运行遗留了 WAL 模式的日志文件（`fieldwork.db-wal` + `fieldwork.db-shm`）。rsync 覆盖了主 DB 文件但 WAL/SHM 文件来自旧版 schema，导致 SQLite 合并时 corruption。
+
+**修复:** 部署 DB 前先删除 WAL 和 SHM 文件：
+```bash
+ssh staging 'rm -f data/fieldwork.db-wal data/fieldwork.db-shm'
+rsync -az deploy/fieldwork.db staging:data/fieldwork.db
+```
+
+**预防:** 部署脚本应始终在停止服务后、替换 DB 前清理 WAL 文件。
+
 ## 9. Copilot UI 架构
 
 ### 从 Drawer 到右侧面板 (2026-05-17)

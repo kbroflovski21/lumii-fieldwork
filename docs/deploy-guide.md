@@ -32,6 +32,20 @@ rsync -az deploy/site-operations-api-fixture.mjs ubuntu@124.221.48.52:/home/ubun
 
 默认部署方式是从本地工作区使用 `rsync` 同步。需要主机侧拉取仓库时，再配置部署密钥。
 
+## 替换 SQLite 数据库
+
+**重要：** 替换 DB 前必须先停止服务并删除 WAL 文件，否则会导致 `SQLITE_CORRUPT`。
+
+```bash
+# 1. 停止服务
+ssh ubuntu@124.221.48.52 'fuser -k 3004/tcp 2>/dev/null || true; sleep 1'
+# 2. 删除 WAL 文件
+ssh ubuntu@124.221.48.52 'rm -f /home/ubuntu/lumii-fieldwork/data/fieldwork.db-wal /home/ubuntu/lumii-fieldwork/data/fieldwork.db-shm'
+# 3. 同步新 DB
+rsync -az deploy/fieldwork.db ubuntu@124.221.48.52:/home/ubuntu/lumii-fieldwork/data/fieldwork.db
+# 4. 重启服务
+```
+
 ## 启动或重启服务
 
 服务脚本位于仓库内的 `deploy/server.mjs`。
