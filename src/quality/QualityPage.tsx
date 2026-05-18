@@ -174,7 +174,34 @@ export function QualityPage() {
 
   return (
     <div className="quality-page" data-copilot-open={copilotOpen}>
-      {/* Left Icon Rail */}
+      {/* Header — row 1, spans all columns */}
+      <header className="quality-header">
+        <div>
+          <h1 className="quality-header__title">金色年华 · 集团质量管理</h1>
+          <div className="quality-header__status">
+            <span className="quality-header__dot" />
+            运行中 · 4 个站点 · 本周 168 单
+          </div>
+        </div>
+        <div className="quality-header__actions">
+          {user?.role === "org_admin" && (
+            <a href="/site-operations" className="quality-header__nav-link">
+              进入站点运营
+            </a>
+          )}
+          <button
+            className="copilot-toggle"
+            data-active={copilotOpen}
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            type="button"
+            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+          >
+            <Bot size={18} />
+          </button>
+        </div>
+      </header>
+
+      {/* Left Icon Rail — row 2, col 1 */}
       <div className="quality-rail">
         <div className="quality-rail__logo">
           <IconShield size={18} stroke="white" />
@@ -212,36 +239,8 @@ export function QualityPage() {
         </div>
       </div>
 
-      {/* Main Area */}
+      {/* Main content — row 2, col 2 */}
       <div className="quality-main">
-        {/* Header */}
-        <header className="quality-header">
-          <div>
-            <h1 className="quality-header__title">金色年华 · 集团质量管理</h1>
-            <div className="quality-header__status">
-              <span className="quality-header__dot" />
-              运行中 · 4 个站点 · 本周 168 单
-            </div>
-          </div>
-          <div className="quality-header__actions">
-            {user?.role === "org_admin" && (
-              <a href="/site-operations" className="quality-header__nav-link">
-                进入站点运营
-              </a>
-            )}
-            <button
-              className="copilot-toggle"
-              data-active={copilotOpen}
-              onClick={() => setCopilotOpen((prev) => !prev)}
-              type="button"
-              aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-            >
-              <Bot size={18} />
-            </button>
-          </div>
-        </header>
-
-        {/* Content */}
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
           {view === "records" && <RecordsView />}
@@ -249,7 +248,7 @@ export function QualityPage() {
         </div>
       </div>
 
-      {/* CopilotPanel replaces old FAB + drawer */}
+      {/* CopilotPanel — row 2, col 3 */}
       <CopilotPanel
         workAreaId="quality"
         isOpen={copilotOpen}
