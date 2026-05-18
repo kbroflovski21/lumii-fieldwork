@@ -1,0 +1,23 @@
+data_dir = "/tmp/lak-fieldwork-test"
+language = "zh"
+
+[[projects]]
+  name = "lumii-goldenyears"
+  admin_from = "user-001"
+
+  [projects.agent]
+    type = "claudecode"
+    [projects.agent.options]
+      work_dir = "/home/ubuntu/lumii-goldenyears-agent"
+      mode = "default"
+
+  [[projects.platforms]]
+    type = "dashboard"
+    [projects.platforms.options]
+      url = "ws://localhost:3098/api/ws/agent"
+      agent_id = "lumii-goldenyears"
+
+  [[projects.platforms]]
+    type = "http-forward"
+    url = "http://127.0.0.1:4072/ingest"
+    accept_passive = true

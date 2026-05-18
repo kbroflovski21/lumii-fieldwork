@@ -1,0 +1,346 @@
+/* ── Family Page (Mobile H5) ── */
+
+.family-page {
+  --family-bg: #F7F9FB;
+  --family-surface: #FFFFFF;
+  --family-surface-subtle: #F9FAFB;
+  --family-line: #E5E7EB;
+  --family-line-subtle: #F3F4F6;
+  --family-text: #191C1E;
+  --family-text-sec: #374151;
+  --family-text-muted: #9CA3AF;
+  --family-accent: #0052CC;
+  --family-accent-soft: rgba(0, 82, 204, 0.08);
+  --family-ai-accent: #6366F1;
+  --family-success-bg: #E0F4EC;
+  --family-success-text: #116B4C;
+  --family-warning-bg: #FFF1D6;
+  --family-warning-text: #976000;
+  --family-muted-bg: #F3F4F6;
+  --family-muted-text: #6B7280;
+
+  background: var(--family-bg);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  color: var(--family-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.family-page,
+.family-page * {
+  box-sizing: border-box;
+}
+
+/* ── Header ── */
+
+.family-header {
+  background: var(--family-surface);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--family-line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.family-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.family-header__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--family-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.family-header__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--family-text);
+  margin: 0;
+}
+
+.family-header__sub {
+  font-size: 12px;
+  color: var(--family-text-muted);
+  margin: 0;
+}
+
+/* ── Content area ── */
+
+.family-content {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 60px;
+}
+
+/* ── Bottom Nav ── */
+
+.family-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--family-surface);
+  border-top: 1px solid var(--family-line);
+  display: flex;
+  height: 52px;
+  z-index: 10;
+}
+
+.family-nav__btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+
+.family-nav__btn--active {
+  color: var(--family-accent);
+  font-weight: 600;
+}
+
+.family-nav__btn--inactive {
+  color: var(--family-text-muted);
+  font-weight: 400;
+}
+
+.family-nav__icon {
+  font-size: 18px;
+}
+
+/* ── Feed Tab ── */
+
+.family-feed {
+  padding: 12px 16px;
+}
+
+.family-feed-card {
+  background: var(--family-surface);
+  border-radius: 12px;
+  border: 1px solid var(--family-line);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.family-feed-card__header {
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.family-feed-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.family-feed-card__tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.family-feed-card__tag--report {
+  background: var(--family-accent-soft);
+  color: var(--family-accent);
+}
+
+.family-feed-card__tag--health {
+  background: var(--family-success-bg);
+  color: var(--family-success-text);
+}
+
+.family-feed-card__tag--notice {
+  background: var(--family-warning-bg);
+  color: var(--family-warning-text);
+}
+
+.family-feed-card__tag--summary {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--family-ai-accent);
+}
+
+.family-feed-card__date {
+  font-size: 12px;
+  color: var(--family-text-muted);
+}
+
+.family-feed-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--family-text);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.family-feed-card__preview {
+  font-size: 13px;
+  color: var(--family-text-muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.family-feed-card__body {
+  padding: 0 16px 16px;
+  font-size: 14px;
+  color: var(--family-text-sec);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* ── Feedback Tab (Chat) ── */
+
+.family-feedback {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 52px - 56px);
+}
+
+.family-feedback__messages {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 16px;
+}
+
+.family-chat-msg {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.family-chat-msg--user {
+  justify-content: flex-end;
+}
+
+.family-chat-msg--agent {
+  justify-content: flex-start;
+}
+
+.family-chat-msg__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--family-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.family-chat-msg__body {
+  max-width: 80%;
+}
+
+.family-chat-msg__bubble {
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.family-chat-msg__bubble--user {
+  background: var(--family-accent);
+  color: #fff;
+  border-radius: 14px 14px 2px 14px;
+}
+
+.family-chat-msg__bubble--agent {
+  background: var(--family-surface);
+  color: var(--family-text-sec);
+  border: 1px solid var(--family-line);
+  border-radius: 2px 14px 14px 14px;
+}
+
+.family-chat-msg__time {
+  font-size: 11px;
+  color: #B0B8C4;
+  margin-top: 3px;
+}
+
+.family-chat-msg__time--user {
+  text-align: right;
+}
+
+.family-chat-msg__time--agent {
+  text-align: left;
+}
+
+/* Chat input */
+
+.family-chat-input {
+  padding: 10px 16px;
+  border-top: 1px solid var(--family-line);
+  background: var(--family-surface);
+}
+
+.family-chat-input__row {
+  display: flex;
+  gap: 8px;
+}
+
+.family-chat-input__field {
+  flex: 1;
+  height: 40px;
+  border-radius: 20px;
+  border: 1px solid var(--family-line);
+  padding: 0 16px;
+  font-size: 14px;
+  color: var(--family-text);
+  background: var(--family-surface-subtle);
+  outline: none;
+  font-family: inherit;
+}
+
+.family-chat-input__send {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.family-chat-input__send--active {
+  background: var(--family-accent);
+}
+
+.family-chat-input__send--disabled {
+  background: var(--family-muted-bg);
+  cursor: default;
+}
