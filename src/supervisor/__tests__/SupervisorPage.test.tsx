@@ -20,6 +20,13 @@ vi.mock("../../auth/AuthContext", () => ({
   }),
 }));
 
+// Mock CopilotPanel to avoid WebSocket dependencies in unit tests
+vi.mock("../../features/siteOperations/CopilotPanel", () => ({
+  CopilotPanel: ({ isOpen }: { workAreaId: string; isOpen: boolean; onClose: () => void }) => (
+    <aside className="copilot-panel" data-open={isOpen} aria-label="AI 助手面板" />
+  ),
+}));
+
 import { SupervisorPage } from "../SupervisorPage";
 
 describe("SupervisorPage", () => {
@@ -40,10 +47,19 @@ describe("SupervisorPage", () => {
     expect(screen.getByText("AI 就绪")).toBeInTheDocument();
   });
 
-  it("shows user name and logout button", () => {
+  it("shows user avatar in rail and profile menu on click", async () => {
     render(<SupervisorPage />);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    // Avatar shows first character of user name
+    const avatar = screen.getByLabelText("用户菜单");
+    expect(avatar).toBeInTheDocument();
+    expect(avatar.textContent).toBe("主");
+
+    // Click avatar to open profile menu
+    await user.click(avatar);
     expect(screen.getByText("主管")).toBeInTheDocument();
-    expect(screen.getByText("退出")).toBeInTheDocument();
+    expect(screen.getByText("退出登录")).toBeInTheDocument();
   });
 
   it("shows directory panel with title", () => {
@@ -232,7 +248,9 @@ describe("SupervisorPage", () => {
     render(<SupervisorPage />);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-    const input = screen.getByPlaceholderText("输入指令...");
+    // Use the SOP chat input (inside .sv-chat__input-bar)
+    const input = document.querySelector(".sv-chat__input") as HTMLInputElement;
+    expect(input).toBeTruthy();
     await user.type(input, "我想添加一个新规范");
 
     // Click send button
@@ -279,11 +297,14 @@ describe("SupervisorPage", () => {
     expect(screen.getByText("添加服务项目规范")).toBeInTheDocument();
   });
 
-  it("has back link in header", () => {
+  it("has rail with logo and copilot toggle in header", () => {
     render(<SupervisorPage />);
-    const backLink = screen.getByLabelText("返回");
-    expect(backLink).toBeInTheDocument();
-    expect(backLink.closest("a")).toHaveAttribute("href", "/");
+    // Rail logo exists
+    const logo = document.querySelector(".sv-rail__logo");
+    expect(logo).toBeTruthy();
+    // Copilot toggle exists in header
+    const toggle = screen.getByLabelText("打开 AI 助手");
+    expect(toggle).toBeInTheDocument();
   });
 
   it("has file upload button in chat", () => {

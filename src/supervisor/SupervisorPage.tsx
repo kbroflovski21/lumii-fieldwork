@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { Bot } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import "./supervisor.css";
 
 /* ── Types ── */
@@ -165,13 +167,27 @@ function mockAiReply(text: string): string {
 
 /* ══════════════════════════════════════════════ */
 
+const SV_ROLE_MAP: Record<string, string> = {
+  org_admin: "集团管理",
+  site_operator: "站点运营",
+  service_supervisor: "服务主管",
+  careworker: "护理员",
+};
+
+function hashNameToColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  const hue = ((h % 360) + 360) % 360;
+  return `hsl(${hue}, 55%, 48%)`;
+}
+
 let nextMsgId = 5000;
 function makeTimestamp(): string {
   return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
 export function SupervisorPage() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
 
   /* ── State ── */
   const [folders, setFolders] = useState<StdFolder[]>(buildInitialFolders);
@@ -195,6 +211,19 @@ export function SupervisorPage() {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* Copilot */
+  const [copilotOpen, setCopilotOpen] = useState(false);
+
+  /* Profile menu */
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPwd, setOldPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   /* Confirmation modal */
   const [confirmModal, setConfirmModal] = useState<{
@@ -231,6 +260,40 @@ export function SupervisorPage() {
   useEffect(() => {
     if (showChat) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping, showChat]);
+
+  /* Close profile menu on click outside */
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileOpen]);
+
+  const handleChangePassword = async () => {
+    setPwdError("");
+    setPwdSuccess(false);
+    if (!oldPwd || !newPwd) { setPwdError("请填写所有字段"); return; }
+    if (newPwd.length < 6) { setPwdError("新密码至少6位"); return; }
+    if (newPwd !== confirmPwd) { setPwdError("两次输入的新密码不一致"); return; }
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwdError(data.error ?? "修改失败"); return; }
+      setPwdSuccess(true);
+      setOldPwd(""); setNewPwd(""); setConfirmPwd("");
+      setTimeout(() => setShowPasswordModal(false), 1200);
+    } catch {
+      setPwdError("网络错误");
+    }
+  };
 
   /* ── Chat helpers ── */
   const pushChat = useCallback((role: "user" | "agent", content: string) => {
@@ -365,29 +428,58 @@ export function SupervisorPage() {
   /* ══════════════════════════════════════════════ */
 
   return (
-    <div className="sv-root">
-      {/* Header */}
+    <div className="sv-page" data-copilot-open={copilotOpen}>
+      {/* Header — row 1, spans all columns */}
       <header className="sv-header">
-        <a href="/" className="sv-header__back" aria-label="返回">
-          <ChevronLeftIcon />
-        </a>
-        <div className="sv-header__sep" />
-        <div className="sv-header__logo">
-          <DocIcon />
+        <div>
+          <h1 className="sv-header__title">服务主管 · 规范管理</h1>
+          <div className="sv-header__status">
+            <span className="sv-header__status-dot" />
+            AI 就绪
+          </div>
         </div>
-        <div className="sv-header__title">服务主管 · 规范管理</div>
-        <div className="sv-header__spacer" />
-        <div className="sv-header__status">
-          <span className="sv-header__status-dot" />
-          <span>AI 就绪</span>
-        </div>
-        <div className="sv-header__user">
-          <span>{user?.name}</span>
-          <button onClick={logout} className="sv-header__logout">退出</button>
+        <div className="sv-header__actions">
+          <button
+            className="sv-copilot-toggle"
+            data-active={copilotOpen}
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            type="button"
+            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+          >
+            <Bot size={18} />
+          </button>
         </div>
       </header>
 
-      <div className="sv-body">
+      {/* Left Icon Rail — row 2, col 1 */}
+      <nav className="sv-rail">
+        <div className="sv-rail__logo">
+          <DocIcon />
+        </div>
+        <div className="so-shell__profile" ref={profileRef}>
+          <button
+            className="so-shell__avatar"
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-label="用户菜单"
+            style={{ background: hashNameToColor(user?.name ?? "") }}
+            type="button"
+          >
+            {(user?.name ?? "U")[0]}
+          </button>
+          {profileOpen && (
+            <div className="so-shell__profile-menu">
+              <div className="so-shell__profile-name">{user?.name}</div>
+              <div className="so-shell__profile-role">{SV_ROLE_MAP[user?.role ?? ""] ?? user?.role}</div>
+              <hr />
+              <button type="button" onClick={() => { setProfileOpen(false); setShowPasswordModal(true); setPwdError(""); setPwdSuccess(false); }}>修改密码</button>
+              <button type="button" onClick={() => { setProfileOpen(false); logout(); }}>退出登录</button>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* Main content — row 2, col 2: 3-panel SOP layout */}
+      <main className="sv-main">
         {/* LEFT: Directory */}
         {showDir ? (
           <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
@@ -568,7 +660,7 @@ export function SupervisorPage() {
           <div className="sv-drag-handle" onMouseDown={handleMouseDown("right")} />
         )}
 
-        {/* RIGHT: AI chat */}
+        {/* RIGHT: Built-in SOP AI chat (separate from CopilotPanel) */}
         {showChat ? (
           <div
             className="sv-chat"
@@ -647,7 +739,14 @@ export function SupervisorPage() {
             <span className="sv-collapsed-tab__label">对话</span>
           </button>
         )}
-      </div>
+      </main>
+
+      {/* CopilotPanel — row 2, col 3 */}
+      <CopilotPanel
+        workAreaId="supervisor"
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+      />
 
       {/* Confirmation modal */}
       {confirmModal && (
@@ -659,6 +758,24 @@ export function SupervisorPage() {
             <div className="sv-modal__actions">
               <button onClick={() => setConfirmModal(null)} className="sv-btn sv-btn--muted">取消</button>
               <button onClick={confirmModal.onConfirm} className="sv-btn sv-btn--danger">确认删除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password change modal */}
+      {showPasswordModal && (
+        <div className="so-shell__modal-scrim" onClick={() => setShowPasswordModal(false)}>
+          <div className="so-shell__modal" onClick={e => e.stopPropagation()}>
+            <h3>修改密码</h3>
+            {pwdError && <div className="so-shell__modal-error">{pwdError}</div>}
+            {pwdSuccess && <div className="so-shell__modal-success">密码修改成功</div>}
+            <input type="password" placeholder="当前密码" value={oldPwd} onChange={e => setOldPwd(e.target.value)} />
+            <input type="password" placeholder="新密码" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+            <input type="password" placeholder="确认新密码" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
+            <div className="so-shell__modal-actions">
+              <button type="button" onClick={() => setShowPasswordModal(false)}>取消</button>
+              <button type="button" onClick={handleChangePassword}>确认修改</button>
             </div>
           </div>
         </div>
