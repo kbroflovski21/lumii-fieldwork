@@ -187,9 +187,20 @@ class SmartMockAgent {
 
 async function setupPage(page: Page, userId?: string) {
   const uid = userId ?? `crud-${Date.now()}`;
-  const token = signTestJwt(uid);
+  const chatToken = signTestJwt(uid);
+  const res = await page.request.post(`${BASE}/api/auth/login`, {
+    data: { username: "operator", password: "oper123" },
+  });
+  let authToken = chatToken;
+  if (res.ok()) {
+    const data = await res.json();
+    authToken = data.token;
+  }
   await page.goto(`${BASE}/site-operations`);
-  await page.evaluate((t: string) => localStorage.setItem("gy_chat_token", t), token);
+  await page.evaluate(({ auth, chat }: { auth: string; chat: string }) => {
+    localStorage.setItem("gy_auth_token", auth);
+    localStorage.setItem("gy_chat_token", chat);
+  }, { auth: authToken, chat: chatToken });
   await page.reload();
 }
 
