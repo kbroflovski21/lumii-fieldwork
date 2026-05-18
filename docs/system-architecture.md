@@ -205,6 +205,7 @@ Web 端角色（本次实现）：
 | 集团管理 | `org_admin` | `/admin` + `/site-operations` |
 | 站点运营 | `site_operator` | `/site-operations` |
 | 服务主管 | `service_supervisor` | `/sop-management`（开发中） |
+| 服务人员 | `careworker` | `/careworker`（H5 页面） |
 
 用户管理由集团管理员在 `/admin` 页面完成。
 密码使用 bcrypt 哈希存储。

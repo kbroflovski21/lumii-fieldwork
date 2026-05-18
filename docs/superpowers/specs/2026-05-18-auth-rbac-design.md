@@ -10,7 +10,7 @@
 替代当前的 dev-token 机制，实现完整的用户认证和角色权限控制：
 
 1. 账号密码登录 UI
-2. 3 个 Web 端角色：集团管理（org_admin）、站点运营（site_operator）、服务主管（service_supervisor）
+2. 4 个 Web 端角色：集团管理（org_admin）、站点运营（site_operator）、服务主管（service_supervisor）、服务人员（careworker）
 3. 管理后台（/admin）：集团管理员创建和管理用户
 4. 前端路由守卫和权限体现
 5. API 层按角色和站点过滤数据
@@ -23,8 +23,9 @@
 | 集团管理 | `org_admin` | `/admin` + `/site-operations` | 机构下所有站点，全操作 |
 | 站点运营 | `site_operator` | `/site-operations` | 本站点全操作 |
 | 服务主管 | `service_supervisor` | `/sop-management`（同事开发，占位） | 机构级 SOP 管理 |
+| 服务人员 | `careworker` | `/careworker` (H5) | 本人任务和服务记录 |
 
-服务人员和家属不在 Web 端登录，不在本次实现范围。
+家属不在 Web 端登录，不在本次实现范围。
 
 ## 3. 路由与访问控制
 
@@ -298,3 +299,8 @@ WebSocket 连接使用用户 JWT（包含 role + siteIds），lak 通过 agent s
   4. 删除 `HomeArea.tsx` 和 `CopilotPanel.tsx` 中 `?? "dev-token"` fallback，改为 `?? ""`
   5. 删除 `server/index.ts` 中未使用的 `signJwt` import
   6. 测试 `beforeEach` 中通过 `localStorage.setItem` 注入 mock token
+
+**Bug #4: E2E 测试中 logout 按钮选择器失效**
+- 描述: logout 按钮从顶部栏移到左侧栏底部头像菜单后，E2E 测试找不到 `.so-shell__logout` 选择器
+- 原因: 用户档案 UI 重构，logout 按钮不再是独立元素，而是头像下拉菜单的最后一个按钮
+- 修复: E2E 选择器改为 `.so-shell__avatar` (点击头像) → `.so-shell__profile-menu button:last-child` (点击退出)

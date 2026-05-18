@@ -112,6 +112,21 @@ Badge 状态机（useBadge.ts）：
 - 实际: 原始代码 2,789 行（13 个文件），重写后 4,559 行（含 CSS 1,145 行）
 - 影响: 功能覆盖已完整，无遗漏
 
+**Bug #4: Careworker 登录从 demo 切换为 JWT 后测试需要 mock fetch**
+- 描述: CareworkerPage 改用真实 JWT 登录后，单元测试因无 API 服务而失败
+- 原因: 原 demo 登录无需网络请求，新登录调用 `POST /api/auth/login`
+- 修复: 测试中 mock `globalThis.fetch` 返回预设的 token 和 user 数据
+
+**Bug #5: Quality 页面 AI 聊天从 drawer 改为 CopilotPanel**
+- 描述: Quality 页面的 AI 聊天从右下角 FAB + 抽屉改为右侧 CopilotPanel
+- 原因: 与站点运营页面保持一致的交互模式
+- 修复: 删除 ChatDrawer 组件（~200 行），导入 CopilotPanel，CSS grid 布局支持 copilot 列
+
+**Bug #6: 用户档案从顶部栏移到侧栏底部**
+- 描述: 用户名和退出按钮在顶部栏右侧显示不协调
+- 原因: 顶部栏空间有限，用户操作按钮与业务导航混在一起
+- 修复: 在左侧导航栏底部添加头像圆形按钮 + 向上弹出菜单（用户名/角色/修改密码/退出），删除顶部栏的用户区域
+
 ## 7. 测试覆盖
 
 | 模块 | 单元测试 | E2E 测试 |

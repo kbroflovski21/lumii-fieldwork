@@ -387,6 +387,16 @@ Copilot 从 overlay drawer 模式重构为右侧面板模式：
 | `/api/admin/users/:id` | PATCH | 更新用户 |
 | `/api/admin/users/:id/reset-password` | POST | 重置密码 |
 
+### 8.4 服务人员账号
+
+服务人员账号由站点运营在"服务人员"tab 的 Modal 中生成：
+- 用户名: 手机号
+- 密码: 随机 8 位
+- 角色: careworker
+- API: `POST /api/auth/create-careworker-account`
+
+服务人员通过 `/careworker` H5 页面登录（手机号 + 密码）。
+
 ### 8.3 部署注意
 
 - 生产环境必须修改默认密码
@@ -429,6 +439,15 @@ lak (内网)
 | 用户 JWT | `POST /api/auth/login` | 浏览器 REST + WSS 认证 | 24h | optionalAuth / requireAuth / pool.ts |
 | ws_token | 静态配置 (env + config.toml) | lak WSS 注册认证 | 永久 | pool.ts verifyWsToken |
 | GY_API_TOKEN | agent prepare_session (HS256) | CC session curl API | 30min | optionalAuth (verifyGyToken) |
+| 服务人员 JWT | `POST /api/auth/login` (phone+pwd) | Careworker H5 认证 | 24h | optionalAuth |
+
+### 9.4 修改密码
+
+`PATCH /api/auth/change-password`
+- Header: `Authorization: Bearer <JWT>`
+- Body: `{ oldPassword, newPassword }`
+- 验证旧密码 + 新密码至少 6 位
+- 所有角色均可使用
 
 ### 9.3 安全要求
 
