@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   name TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('org_admin', 'site_operator', 'service_supervisor')),
+  role TEXT NOT NULL CHECK(role IN ('org_admin', 'site_operator', 'service_supervisor', 'careworker')),
   org_id TEXT NOT NULL DEFAULT 'org-001',
   site_ids TEXT NOT NULL DEFAULT '[]',
   phone TEXT DEFAULT '',

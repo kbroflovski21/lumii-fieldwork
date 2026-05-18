@@ -471,7 +471,35 @@ function ViewModal({
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showBadgeSelect, setShowBadgeSelect] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState(worker.preferredBadge?.badgeId ?? "");
+  const [accountInfo, setAccountInfo] = useState<{ username: string; password: string } | null>(null);
+  const [accountError, setAccountError] = useState("");
+  const [accountLoading, setAccountLoading] = useState(false);
   const color = avatarColor(worker.name);
+
+  const handleCreateAccount = async () => {
+    setAccountLoading(true);
+    setAccountError("");
+    setAccountInfo(null);
+    try {
+      const token = localStorage.getItem("gy_auth_token");
+      const res = await fetch("/api/auth/create-careworker-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone: worker.phone, name: worker.name, siteId: "site-001" }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        setAccountError("该人员已有登录账号");
+      } else if (!res.ok) {
+        setAccountError(data.error ?? "创建失败");
+      } else {
+        setAccountInfo({ username: data.username, password: data.password });
+      }
+    } catch {
+      setAccountError("网络错误");
+    }
+    setAccountLoading(false);
+  };
 
   const tabs: Array<{ id: ViewTab; label: string }> = [
     { id: "overview", label: "档案概览" },
@@ -590,6 +618,28 @@ function ViewModal({
         )}
       </div>
 
+      {/* Account Info Card */}
+      {accountInfo && (
+        <div style={{ margin: "0 16px 12px", padding: 14, background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: "#166534" }}>登录账号已生成</div>
+          <div style={{ fontSize: 13, color: "#374151", marginBottom: 4 }}>登录账号：<strong>{accountInfo.username}</strong></div>
+          <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 8 }}>
+            初始密码：<strong>{accountInfo.password}</strong>
+            <button
+              className="sw-btn sw-btn--secondary"
+              style={{ height: 26, fontSize: 11, padding: "0 8px" }}
+              type="button"
+              onClick={() => { navigator.clipboard.writeText(accountInfo.password); }}
+            >复制</button>
+          </div>
+        </div>
+      )}
+      {accountError && (
+        <div style={{ margin: "0 16px 12px", padding: 10, background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 10, fontSize: 13, color: "#B42318" }}>
+          {accountError}
+        </div>
+      )}
+
       {/* Footer */}
       <div className="so-modal__footer">
         <div>
@@ -600,6 +650,9 @@ function ViewModal({
           )}
         </div>
         <div className="so-modal__footer-right">
+          <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled || accountLoading} onClick={handleCreateAccount} type="button">
+            <UserRound size={14} /> {accountLoading ? "生成中..." : "生成登录账号"}
+          </button>
           <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled} onClick={() => { setActiveTab("overview"); setShowBadgeSelect(true); }} type="button">
             <Shield size={14} /> 更新常用工牌
           </button>

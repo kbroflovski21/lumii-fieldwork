@@ -1144,17 +1144,42 @@ function SopDetailDrawer({ sop, onClose }: { sop: SopFolder; onClose: () => void
 
 /** Login screen */
 function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
-  const [selected, setSelected] = useState<string>(DEMO_WORKERS[0].id);
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = () => {
-    const worker = DEMO_WORKERS.find(w => w.id === selected);
-    if (!worker) return;
+  const handleLogin = async () => {
+    if (!phone.trim() || !password.trim()) {
+      setError("请输入手机号和密码");
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onLogin(worker);
-    }, 400);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: phone.trim(), password: password.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "登录失败");
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem("gy_careworker_token", data.token);
+      const u = data.user;
+      onLogin({
+        id: u.id,
+        name: u.name,
+        phone: u.phone || phone.trim(),
+        site: (u.siteIds && u.siteIds[0]) || "site-001",
+      });
+    } catch {
+      setError("网络错误，请重试");
+    }
+    setLoading(false);
   };
 
   return (
@@ -1172,24 +1197,28 @@ function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
         </div>
 
         <div className="cw-login__form">
-          <div className="cw-login__workers">
-            {DEMO_WORKERS.map(w => (
-              <div
-                key={w.id}
-                className={`cw-login__worker ${selected === w.id ? "cw-login__worker--selected" : ""}`}
-                onClick={() => setSelected(w.id)}
-              >
-                <div className="cw-login__worker-avatar">{w.name[0]}</div>
-                <div className="cw-login__worker-info">
-                  <div className="cw-login__worker-name">{w.name}</div>
-                  <div className="cw-login__worker-detail">{w.phone} · {w.site}</div>
-                </div>
-                <div className="cw-login__worker-check">
-                  {selected === w.id && <IconCheck />}
-                </div>
-              </div>
-            ))}
-          </div>
+          {error && <div className="cw-login__error">{error}</div>}
+          <label className="cw-login__field">
+            <span>手机号</span>
+            <input
+              type="tel"
+              placeholder="请输入手机号"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
+            />
+          </label>
+          <label className="cw-login__field">
+            <span>密码</span>
+            <input
+              type="password"
+              placeholder="请输入密码"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleLogin(); }}
+              autoComplete="current-password"
+            />
+          </label>
           <button className="cw-login__btn" onClick={handleLogin} disabled={loading}>
             {loading ? "登录中..." : "进入工作台"}
           </button>
@@ -1598,6 +1627,26 @@ export function CareworkerPage() {
   const [showLogout, setShowLogout] = useState(false);
   const [servicingTaskId, setServicingTaskId] = useState<string | null>(null);
   const [mapAddress, setMapAddress] = useState<string | null>(null);
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const token = localStorage.getItem("gy_careworker_token");
+    if (!token) return;
+    fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        const u = data.user;
+        setWorker({
+          id: u.id,
+          name: u.name,
+          phone: u.phone || "",
+          site: (u.siteIds && u.siteIds[0]) || "site-001",
+        });
+      })
+      .catch(() => {
+        localStorage.removeItem("gy_careworker_token");
+      });
+  }, []);
   // Find the next pending task's start time for pre-service detection
   const nextPendingStart = useMemo(() => {
     const now = new Date();
@@ -1658,6 +1707,7 @@ export function CareworkerPage() {
     setWorker(null);
     setActiveTab("tasks");
     setServicingTaskId(null);
+    localStorage.removeItem("gy_careworker_token");
   }, []);
 
   // Login screen

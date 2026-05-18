@@ -1,7 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CareworkerPage } from "../CareworkerPage";
+
+// Mock fetch for login API
+const mockFetch = vi.fn();
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", mockFetch);
+  localStorage.clear();
+  mockFetch.mockReset();
+  // Default: /api/auth/me returns 401 (no stored session)
+  mockFetch.mockImplementation((url: string) => {
+    if (url === "/api/auth/me") {
+      return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: "未登录" }) });
+    }
+    return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
 
 describe("CareworkerPage - Login Screen", () => {
   it("shows login screen initially with app title", () => {
@@ -10,16 +31,12 @@ describe("CareworkerPage - Login Screen", () => {
     expect(screen.getByText("养老智慧服务平台")).toBeInTheDocument();
   });
 
-  it("shows worker options", () => {
+  it("shows phone and password input fields", () => {
     render(<CareworkerPage />);
-    expect(screen.getByText("王建国")).toBeInTheDocument();
-    expect(screen.getByText("张敏")).toBeInTheDocument();
-  });
-
-  it("shows worker details (phone and site)", () => {
-    render(<CareworkerPage />);
-    expect(screen.getByText("138****1234 · 红培社区站")).toBeInTheDocument();
-    expect(screen.getByText("138****5678 · 红培社区站")).toBeInTheDocument();
+    expect(screen.getByText("手机号")).toBeInTheDocument();
+    expect(screen.getByText("密码")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("请输入手机号")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("请输入密码")).toBeInTheDocument();
   });
 
   it("has enter button", () => {
@@ -27,30 +44,63 @@ describe("CareworkerPage - Login Screen", () => {
     expect(screen.getByText("进入工作台")).toBeInTheDocument();
   });
 
-  it("first worker is selected by default (shows avatar initial)", () => {
-    render(<CareworkerPage />);
-    // Worker avatar shows first character of name
-    const avatars = screen.getAllByText("王");
-    expect(avatars.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("can select a different worker", async () => {
+  it("shows error when submitting empty form", async () => {
     render(<CareworkerPage />);
     const user = userEvent.setup();
+    await user.click(screen.getByText("进入工作台"));
+    expect(screen.getByText("请输入手机号和密码")).toBeInTheDocument();
+  });
 
-    // Click on 张敏's entry
-    const zhangEntry = screen.getByText("138****5678 · 红培社区站").closest(".cw-login__worker")!;
-    await user.click(zhangEntry);
+  it("shows error from API on wrong credentials", async () => {
+    mockFetch.mockImplementation((url: string, opts?: any) => {
+      if (url === "/api/auth/login") {
+        return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: "用户名或密码错误" }) });
+      }
+      return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: "未登录" }) });
+    });
 
-    // 张敏 should now be selected (the class changes)
-    expect(zhangEntry).toHaveClass("cw-login__worker--selected");
+    render(<CareworkerPage />);
+    const user = userEvent.setup();
+    await user.type(screen.getByPlaceholderText("请输入手机号"), "13800001111");
+    await user.type(screen.getByPlaceholderText("请输入密码"), "wrongpwd");
+    await user.click(screen.getByText("进入工作台"));
+
+    await waitFor(() => {
+      expect(screen.getByText("用户名或密码错误")).toBeInTheDocument();
+    });
   });
 });
 
 describe("CareworkerPage - Main Interface", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockFetch.mockImplementation((url: string, opts?: any) => {
+      if (url === "/api/auth/login") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            token: "test-jwt-token",
+            user: {
+              id: "w1",
+              username: "13800001234",
+              name: "王建国",
+              role: "careworker",
+              orgId: "org-001",
+              siteIds: ["红培社区站"],
+              phone: "138****1234",
+              status: "active",
+            },
+          }),
+        });
+      }
+      if (url === "/api/auth/me") {
+        return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({ error: "未登录" }) });
+      }
+      return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    });
   });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -59,12 +109,21 @@ describe("CareworkerPage - Main Interface", () => {
     render(<CareworkerPage />);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
+    // Fill in phone and password
+    await user.type(screen.getByPlaceholderText("请输入手机号"), "13800001234");
+    await user.type(screen.getByPlaceholderText("请输入密码"), "testpass");
+
     // Click the login button
     await user.click(screen.getByText("进入工作台"));
 
-    // Wait for login animation
+    // Wait for login to complete
     await act(async () => {
       vi.advanceTimersByTime(500);
+    });
+
+    // Wait for the worker state to be set
+    await waitFor(() => {
+      expect(screen.getByText("王建国")).toBeInTheDocument();
     });
 
     return user;

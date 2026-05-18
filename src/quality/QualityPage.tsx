@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import React, { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useAuth } from "../auth/AuthContext";
 import "./quality.css";
 
@@ -94,9 +94,17 @@ function IconSend() {
   );
 }
 
+function IconUsers({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+    </svg>
+  );
+}
+
 /* ── Helpers ── */
 
-type View = "dashboard" | "records";
+type View = "dashboard" | "records" | "users";
 
 function rateClass(value: number, thresholds: [number, number]): string {
   if (value >= thresholds[0]) return "quality-table__value--success";
@@ -125,6 +133,7 @@ export function QualityPage() {
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
     { key: "records", label: "服务记录", icon: <IconDocument /> },
+    { key: "users", label: "用户管理", icon: <IconUsers /> },
   ];
 
   return (
@@ -175,6 +184,7 @@ export function QualityPage() {
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
           {view === "records" && <RecordsView />}
+          {view === "users" && <UsersView />}
         </div>
       </div>
 
@@ -379,6 +389,191 @@ function RecordsView() {
             ))}
           </tbody>
         </table>
+      </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Users View
+   ═══════════════════════════════════════════════ */
+
+interface QualityUser {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  orgId: string;
+  siteIds: string[];
+  phone: string;
+  status: string;
+  createdAt: string;
+}
+
+const QUALITY_ROLE_LABELS: Record<string, string> = {
+  org_admin: "集团管理",
+  site_operator: "站点运营",
+  service_supervisor: "服务主管",
+  careworker: "护理员",
+};
+
+function UsersView() {
+  const { token } = useAuth();
+  const [users, setUsers] = useState<QualityUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
+  const [formError, setFormError] = useState("");
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users);
+      }
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, [token]);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...formData, siteIds: formData.siteIds.split(",").map(s => s.trim()).filter(Boolean) }),
+      });
+      if (res.ok) {
+        setShowForm(false);
+        setFormData({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setFormError(data.error ?? "创建失败");
+      }
+    } catch {
+      setFormError("网络错误");
+    }
+  };
+
+  const handleToggleStatus = async (u: QualityUser) => {
+    const newStatus = u.status === "active" ? "disabled" : "active";
+    await fetch(`/api/admin/users/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    fetchUsers();
+  };
+
+  const handleResetPassword = async (u: QualityUser) => {
+    const pwd = prompt(`重置「${u.name}」的密码为：`);
+    if (!pwd || pwd.length < 6) { alert("密码至少6位"); return; }
+    await fetch(`/api/admin/users/${u.id}/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ password: pwd }),
+    });
+    alert("密码已重置");
+  };
+
+  return (
+    <>
+      <div className="quality-records__header">
+        <div>
+          <div className="quality-records__title">用户管理</div>
+          <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
+        </div>
+        <button className="quality-users__add-btn" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "取消" : "新增用户"}
+        </button>
+      </div>
+
+      {showForm && (
+        <form className="quality-users__form" onSubmit={handleCreate}>
+          {formError && <div className="quality-users__form-error">{formError}</div>}
+          <div className="quality-users__form-grid">
+            <label className="quality-users__form-field">
+              <span>用户名</span>
+              <input value={formData.username} onChange={e => setFormData(d => ({ ...d, username: e.target.value }))} required />
+            </label>
+            <label className="quality-users__form-field">
+              <span>密码</span>
+              <input type="password" value={formData.password} onChange={e => setFormData(d => ({ ...d, password: e.target.value }))} required minLength={6} />
+            </label>
+            <label className="quality-users__form-field">
+              <span>姓名</span>
+              <input value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} required />
+            </label>
+            <label className="quality-users__form-field">
+              <span>角色</span>
+              <select value={formData.role} onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
+                <option value="site_operator">站点运营</option>
+                <option value="service_supervisor">服务主管</option>
+                <option value="org_admin">集团管理</option>
+                <option value="careworker">护理员</option>
+              </select>
+            </label>
+            <label className="quality-users__form-field">
+              <span>手机号</span>
+              <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))} />
+            </label>
+            <label className="quality-users__form-field">
+              <span>站点ID</span>
+              <input value={formData.siteIds} onChange={e => setFormData(d => ({ ...d, siteIds: e.target.value }))} placeholder="site-001,site-002" />
+            </label>
+          </div>
+          <button type="submit" className="quality-users__add-btn">创建</button>
+        </form>
+      )}
+
+      <div className="quality-table-wrap">
+        {loading ? (
+          <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
+        ) : (
+          <table className="quality-records-table">
+            <thead>
+              <tr>
+                {["姓名", "用户名", "角色", "站点", "手机", "状态", "操作"].map(h => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 && (
+                <tr><td colSpan={7} className="quality-records-table__empty">暂无用户</td></tr>
+              )}
+              {users.map(u => (
+                <tr key={u.id}>
+                  <td className="quality-records-table__worker">{u.name}</td>
+                  <td><code style={{ fontSize: 12, background: "#F3F4F6", padding: "2px 6px", borderRadius: 4 }}>{u.username}</code></td>
+                  <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
+                  <td>{u.siteIds.join(", ")}</td>
+                  <td>{u.phone || "—"}</td>
+                  <td>
+                    <span className={`quality-status-badge quality-status-badge--${u.status === "active" ? "normal" : "anomaly"}`}>
+                      {u.status === "active" ? "正常" : "已禁用"}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="quality-users__action-btn" onClick={() => handleToggleStatus(u)}>
+                        {u.status === "active" ? "禁用" : "启用"}
+                      </button>
+                      <button className="quality-users__action-btn" onClick={() => handleResetPassword(u)}>
+                        重置密码
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );

@@ -101,5 +101,43 @@ export function authRoutes(jwtSecret: string) {
     });
   });
 
+  r.post("/auth/create-careworker-account", (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const payload = verifyJwt(authHeader.slice(7), jwtSecret) as any;
+    if (!payload || (payload.role !== "site_operator" && payload.role !== "org_admin")) {
+      res.status(403).json({ error: "无权限" });
+      return;
+    }
+
+    const { phone, name, siteId } = req.body ?? {};
+    if (!phone || !name) {
+      res.status(400).json({ error: "手机号和姓名为必填" });
+      return;
+    }
+
+    const db = getDb();
+    // Check if account already exists for this phone
+    const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(phone);
+    if (existing) {
+      res.status(409).json({ error: "该手机号已有账号" });
+      return;
+    }
+
+    // Generate random 8-char password
+    const password = Math.random().toString(36).slice(2, 10);
+    const hash = bcrypt.hashSync(password, 10);
+    const id = `user-cw-${Date.now().toString(36)}`;
+
+    db.prepare(
+      `INSERT INTO users (id, username, password_hash, name, role, org_id, site_ids, phone) VALUES (?, ?, ?, ?, 'careworker', ?, ?, ?)`
+    ).run(id, phone, hash, name, payload.orgId ?? "org-001", JSON.stringify([siteId ?? "site-001"]), phone);
+
+    res.status(201).json({ id, username: phone, password, name, role: "careworker" });
+  });
+
   return r;
 }
