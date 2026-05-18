@@ -50,8 +50,9 @@ test.describe("Login Flow", () => {
     await page.locator(".login-form__submit").click();
     await expect(page.locator("text=Lumii 站点运营助手")).toBeVisible({ timeout: 10000 });
 
-    // Logout
-    await page.locator(".so-shell__logout").click();
+    // Logout via sidebar avatar menu
+    await page.locator(".so-shell__avatar").click();
+    await page.locator(".so-shell__profile-menu button:last-child").click();
     await expect(page.locator(".login-form__title")).toContainText("金色年华", { timeout: 5000 });
   });
 });

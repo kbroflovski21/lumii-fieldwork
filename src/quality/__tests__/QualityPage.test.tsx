@@ -20,6 +20,13 @@ vi.mock("../../auth/AuthContext", () => ({
   }),
 }));
 
+// Mock CopilotPanel to avoid WebSocket dependencies in unit tests
+vi.mock("../../features/siteOperations/CopilotPanel", () => ({
+  CopilotPanel: ({ isOpen }: { workAreaId: string; isOpen: boolean; onClose: () => void }) => (
+    <aside className="copilot-panel" data-open={isOpen} aria-label="AI 助手" />
+  ),
+}));
+
 import { QualityPage } from "../QualityPage";
 
 describe("QualityPage", () => {
@@ -86,14 +93,24 @@ describe("QualityPage", () => {
     expect(screen.getByText("助餐")).toBeInTheDocument();
   });
 
-  it("shows user name from auth context", () => {
+  it("shows user avatar in sidebar with first character of name", () => {
     render(<QualityPage />);
-    expect(screen.getByText("管理员")).toBeInTheDocument();
+    const avatar = screen.getByLabelText("用户菜单");
+    expect(avatar).toBeInTheDocument();
+    expect(avatar.textContent).toBe("管");
   });
 
-  it("shows logout button", () => {
+  it("shows user name and logout in profile dropdown", async () => {
     render(<QualityPage />);
-    expect(screen.getByText("退出")).toBeInTheDocument();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    // Click avatar to open profile menu
+    const avatar = screen.getByLabelText("用户菜单");
+    await user.click(avatar);
+
+    // Profile menu should show user name and logout
+    expect(screen.getByText("管理员")).toBeInTheDocument();
+    expect(screen.getByText("退出登录")).toBeInTheDocument();
   });
 
   it("shows 'enter site operations' link for org_admin role", () => {
@@ -213,59 +230,38 @@ describe("QualityPage", () => {
     expect(screen.getByText("跨站点服务质量监测与分析")).toBeInTheDocument();
   });
 
-  it("opens AI chat drawer when FAB is clicked", async () => {
+  it("has a copilot toggle button in the header", () => {
     render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    // Click AI FAB
-    const fab = document.querySelector(".quality-ai-fab") as HTMLElement;
-    expect(fab).toBeTruthy();
-    await user.click(fab);
-
-    // Chat drawer should appear
-    expect(screen.getByText("AI 质量助手")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("输入问题...")).toBeInTheDocument();
+    const toggle = screen.getByLabelText("打开 AI 助手");
+    expect(toggle).toBeInTheDocument();
   });
 
-  it("AI chat responds to user message", async () => {
+  it("renders CopilotPanel component", () => {
     render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    // Open chat
-    const fab = document.querySelector(".quality-ai-fab") as HTMLElement;
-    await user.click(fab);
-
-    // Type and send message
-    const input = screen.getByPlaceholderText("输入问题...");
-    await user.type(input, "文新站怎么样");
-
-    const sendBtn = document.querySelector(".quality-chat-input__send--active") as HTMLElement;
-    await user.click(sendBtn);
-
-    // Wait for mock response
-    await act(async () => {
-      vi.advanceTimersByTime(700);
-    });
-
-    // Should show AI response about 文新站
-    expect(screen.getByText(/文新站目前是异常率最高的站点/)).toBeInTheDocument();
+    // CopilotPanel is rendered (initially closed)
+    const panel = document.querySelector(".copilot-panel");
+    expect(panel).toBeTruthy();
   });
 
-  it("can close AI chat drawer", async () => {
+  it("toggles copilot panel open and closed", async () => {
     render(<QualityPage />);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-    // Open chat
-    const fab = document.querySelector(".quality-ai-fab") as HTMLElement;
-    await user.click(fab);
-    expect(screen.getByText("AI 质量助手")).toBeInTheDocument();
+    // Initially copilot is closed
+    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("false");
 
-    // Close chat
-    const closeBtn = document.querySelector(".quality-chat-drawer__close") as HTMLElement;
-    await user.click(closeBtn);
+    // Click to open
+    const toggle = screen.getByLabelText("打开 AI 助手");
+    await user.click(toggle);
 
-    // Chat should be gone, FAB should be back
-    expect(screen.queryByText("AI 质量助手")).not.toBeInTheDocument();
+    // Now copilot should be open
+    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("true");
+
+    // Click to close
+    const closeToggle = screen.getByLabelText("关闭 AI 助手");
+    await user.click(closeToggle);
+
+    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("false");
   });
 });
 

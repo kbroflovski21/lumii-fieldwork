@@ -334,7 +334,8 @@ describe("SiteOperationsPage", () => {
       "设备",
       "服务对象",
       "服务排期",
-      "服务记录"
+      "服务记录",
+      "用户菜单"
     ]);
     expect(screen.getByLabelText("站点运营移动工作区")).toBeInTheDocument();
 

@@ -1,9 +1,14 @@
 /* ── Quality Manager Page ── */
 
 .quality-page {
-  display: flex;
+  display: grid;
+  grid-template-columns: 56px 1fr;
   height: 100vh;
   background: var(--quality-bg);
+}
+
+.quality-page[data-copilot-open="true"] {
+  grid-template-columns: 56px 1fr auto;
 }
 
 .quality-page,
@@ -86,10 +91,10 @@
 /* ── Main area ── */
 
 .quality-main {
-  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* ── Header ── */
@@ -136,11 +141,6 @@
   margin-left: auto;
 }
 
-.quality-header__user {
-  font-size: 13px;
-  color: var(--quality-text-muted);
-}
-
 .quality-header__nav-link {
   padding: 6px 12px;
   background: var(--quality-muted-bg);
@@ -155,21 +155,6 @@
 
 .quality-header__nav-link:hover {
   background: var(--quality-line);
-}
-
-.quality-header__logout {
-  padding: 6px 12px;
-  background: transparent;
-  border: 1px solid var(--quality-line);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--quality-text-muted);
-  cursor: pointer;
-}
-
-.quality-header__logout:hover {
-  color: var(--quality-danger-text);
-  border-color: #FCA5A5;
 }
 
 /* ── Content scroll area ── */
@@ -569,225 +554,39 @@
   color: var(--quality-danger-text);
 }
 
-/* ── AI Chat ── */
+/* ── Copilot panel integration (reuses .copilot-* from siteOperations.css) ── */
 
-.quality-ai-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--quality-ai-accent);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: 0;
-}
-
-.quality-chat-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.15);
-  z-index: 50;
-}
-
-.quality-chat-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 420px;
-  max-width: 100vw;
-  height: 100vh;
-  background: #FAFBFC;
+.quality-page .copilot-panel {
+  grid-column: 3;
+  grid-row: 1;
   border-left: 1px solid var(--quality-line);
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.1);
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
+  background: var(--quality-surface);
 }
 
-.quality-chat-drawer__header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--quality-line);
-  background: rgba(99, 102, 241, 0.03);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.quality-chat-drawer__header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.quality-chat-drawer__avatar {
-  background: var(--quality-ai-avatar-bg);
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.quality-chat-drawer__title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--quality-ai-accent);
-}
-
-.quality-chat-drawer__close {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+.quality-page .copilot-toggle {
+  margin-left: 0;
+  border: 1px solid var(--quality-line);
+  border-radius: 10px;
+  color: var(--quality-text-muted);
   background: transparent;
-  border: none;
-  color: var(--quality-text-muted);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-
-.quality-chat-drawer__messages {
-  flex: 1;
-  overflow: auto;
-  padding: 12px 16px;
+.quality-page .copilot-toggle:hover {
+  background: var(--quality-accent-soft);
+  border-color: var(--quality-accent);
+  color: var(--quality-accent);
 }
-
-.quality-chat-msg {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.quality-chat-msg--user {
-  justify-content: flex-end;
-}
-
-.quality-chat-msg--agent {
-  justify-content: flex-start;
-}
-
-.quality-chat-msg__avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--quality-ai-avatar-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.quality-chat-msg__body {
-  max-width: 82%;
-}
-
-.quality-chat-msg__bubble {
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-
-.quality-chat-msg__bubble--user {
+.quality-page .copilot-toggle[data-active="true"] {
   background: var(--quality-accent);
+  border-color: var(--quality-accent);
   color: #fff;
-  border-radius: 12px 12px 2px 12px;
-}
-
-.quality-chat-msg__bubble--agent {
-  background: var(--quality-surface);
-  color: var(--quality-text-sec);
-  border: 1px solid var(--quality-line);
-  border-radius: 2px 12px 12px 12px;
-}
-
-.quality-chat-msg__time {
-  font-size: 11px;
-  color: #B0B8C4;
-  margin-top: 2px;
-}
-
-.quality-chat-msg__time--user {
-  text-align: right;
-}
-
-.quality-chat-msg__time--agent {
-  text-align: left;
-}
-
-/* Typing indicator */
-.quality-chat-typing {
-  display: flex;
-  gap: 8px;
-}
-
-.quality-chat-typing__bubble {
-  background: var(--quality-surface);
-  border: 1px solid var(--quality-line);
-  border-radius: 2px 12px 12px 12px;
-  padding: 10px 14px;
-  color: var(--quality-text-muted);
-  font-size: 13px;
-}
-
-/* Chat input */
-.quality-chat-input {
-  padding: 10px 16px;
-  border-top: 1px solid var(--quality-line);
-  flex-shrink: 0;
-}
-
-.quality-chat-input__row {
-  display: flex;
-  gap: 8px;
-}
-
-.quality-chat-input__field {
-  flex: 1;
-  height: 40px;
-  border-radius: 20px;
-  border: 1px solid var(--quality-line);
-  padding: 0 16px;
-  font-size: 14px;
-  color: var(--quality-text);
-  background: var(--quality-surface);
-  outline: none;
-  font-family: inherit;
-}
-
-.quality-chat-input__send {
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.quality-chat-input__send--active {
-  background: var(--quality-ai-accent);
-}
-
-.quality-chat-input__send--disabled {
-  background: var(--quality-muted-bg);
-  cursor: default;
 }
 
 /* ── Users View ── */

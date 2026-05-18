@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { Bot } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import "./quality.css";
 
 /* ── Mock data ── */
@@ -61,35 +63,11 @@ function IconDocument({ size = 20 }: { size?: number }) {
   );
 }
 
-function IconChat({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-    </svg>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
 function IconSearch() {
   return (
     <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <circle cx="11" cy="11" r="8" />
       <path d="M21 21l-4.35-4.35" />
-    </svg>
-  );
-}
-
-function IconSend() {
-  return (
-    <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
     </svg>
   );
 }
@@ -125,10 +103,68 @@ function trendClass(label: string, up: boolean | null): string {
    Main Page
    ═══════════════════════════════════════════════ */
 
+const QUALITY_ROLE_MAP: Record<string, string> = {
+  org_admin: "集团管理",
+  site_operator: "站点运营",
+  service_supervisor: "服务主管",
+  careworker: "护理员",
+};
+
+function hashNameToColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  const hue = ((h % 360) + 360) % 360;
+  return `hsl(${hue}, 55%, 48%)`;
+}
+
 export function QualityPage() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const [view, setView] = useState<View>("dashboard");
-  const [chatOpen, setChatOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+
+  // Profile menu state
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPwd, setOldPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Close profile menu on click outside
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileOpen]);
+
+  const handleChangePassword = async () => {
+    setPwdError("");
+    setPwdSuccess(false);
+    if (!oldPwd || !newPwd) { setPwdError("请填写所有字段"); return; }
+    if (newPwd.length < 6) { setPwdError("新密码至少6位"); return; }
+    if (newPwd !== confirmPwd) { setPwdError("两次输入的新密码不一致"); return; }
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwdError(data.error ?? "修改失败"); return; }
+      setPwdSuccess(true);
+      setOldPwd(""); setNewPwd(""); setConfirmPwd("");
+      setTimeout(() => setShowPasswordModal(false), 1200);
+    } catch {
+      setPwdError("网络错误");
+    }
+  };
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
@@ -137,7 +173,7 @@ export function QualityPage() {
   ];
 
   return (
-    <div className="quality-page">
+    <div className="quality-page" data-copilot-open={copilotOpen}>
       {/* Left Icon Rail */}
       <div className="quality-rail">
         <div className="quality-rail__logo">
@@ -154,6 +190,26 @@ export function QualityPage() {
             {n.icon}
           </button>
         ))}
+        <div className="so-shell__profile" ref={profileRef}>
+          <button
+            className="so-shell__avatar"
+            onClick={() => setProfileOpen(!profileOpen)}
+            aria-label="用户菜单"
+            style={{ background: hashNameToColor(user?.name ?? "") }}
+            type="button"
+          >
+            {(user?.name ?? "U")[0]}
+          </button>
+          {profileOpen && (
+            <div className="so-shell__profile-menu">
+              <div className="so-shell__profile-name">{user?.name}</div>
+              <div className="so-shell__profile-role">{QUALITY_ROLE_MAP[user?.role ?? ""] ?? user?.role}</div>
+              <hr />
+              <button type="button" onClick={() => { setProfileOpen(false); setShowPasswordModal(true); setPwdError(""); setPwdSuccess(false); }}>修改密码</button>
+              <button type="button" onClick={() => { setProfileOpen(false); logout(); }}>退出登录</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Area */}
@@ -168,14 +224,19 @@ export function QualityPage() {
             </div>
           </div>
           <div className="quality-header__actions">
-            <span className="quality-header__user">{user?.name}</span>
             {user?.role === "org_admin" && (
               <a href="/site-operations" className="quality-header__nav-link">
                 进入站点运营
               </a>
             )}
-            <button className="quality-header__logout" onClick={logout}>
-              退出
+            <button
+              className="copilot-toggle"
+              data-active={copilotOpen}
+              onClick={() => setCopilotOpen((prev) => !prev)}
+              type="button"
+              aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+            >
+              <Bot size={18} />
             </button>
           </div>
         </header>
@@ -188,13 +249,30 @@ export function QualityPage() {
         </div>
       </div>
 
-      {/* AI Floating Button */}
-      {!chatOpen && (
-        <button className="quality-ai-fab" onClick={() => setChatOpen(true)}>
-          <IconChat />
-        </button>
+      {/* CopilotPanel replaces old FAB + drawer */}
+      <CopilotPanel
+        workAreaId="quality"
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+      />
+
+      {/* Password change modal */}
+      {showPasswordModal && (
+        <div className="so-shell__modal-scrim" onClick={() => setShowPasswordModal(false)}>
+          <div className="so-shell__modal" onClick={e => e.stopPropagation()}>
+            <h3>修改密码</h3>
+            {pwdError && <div className="so-shell__modal-error">{pwdError}</div>}
+            {pwdSuccess && <div className="so-shell__modal-success">密码修改成功</div>}
+            <input type="password" placeholder="当前密码" value={oldPwd} onChange={e => setOldPwd(e.target.value)} />
+            <input type="password" placeholder="新密码" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+            <input type="password" placeholder="确认新密码" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
+            <div className="so-shell__modal-actions">
+              <button type="button" onClick={() => setShowPasswordModal(false)}>取消</button>
+              <button type="button" onClick={handleChangePassword}>确认修改</button>
+            </div>
+          </div>
+        </div>
       )}
-      {chatOpen && <ChatDrawer onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
@@ -579,151 +657,3 @@ function UsersView() {
   );
 }
 
-/* ═══════════════════════════════════════════════
-   Chat Drawer (AI chat — mock response, no API key)
-   ═══════════════════════════════════════════════ */
-
-interface ChatMsg {
-  id: string;
-  role: "agent" | "user";
-  content: string;
-  time: string;
-}
-
-/*
- * TODO: Replace mock response with real AI API call.
- * The original used DashScope (qwen3-max) — re-enable when API key
- * is available via server-side proxy to avoid exposing secrets in the client.
- */
-function getMockAIResponse(userMessage: string): string {
-  if (userMessage.includes("文新") || userMessage.includes("异常")) {
-    return "文新站目前是异常率最高的站点（9.1%），主要问题集中在：\n\n1. SOP 完成率偏低（81%），尤其是探访关爱的安全检查步骤\n2. 服务完成率 88%，低于集团平均 93%\n3. 满意度 4.3，为四站最低\n\n建议：安排针对性培训，重点加强 SOP 执行监督，可参考古荡站的管理经验（异常率仅 4.2%）。";
-  }
-  if (userMessage.includes("古荡") || userMessage.includes("最好")) {
-    return "古荡站是目前表现最优秀的站点：\n\n- 服务量最高：52 次\n- 完成率：96%（最高）\n- SOP 完成率：92%（最高）\n- 满意度：4.8（最高）\n- 异常率：4.2%（最低）\n\n古荡站的经验可以作为其他站点的标杆，建议组织经验分享会。";
-  }
-  if (userMessage.includes("助浴") || userMessage.includes("SOP")) {
-    return "助浴服务的 SOP 完成率为 84%，在四项服务中最低。主要问题：\n\n- 皮肤检查步骤遗漏率较高\n- 水温确认步骤执行不规范\n\n共 36 次服务中约有 6 次存在关键步骤缺失。建议：\n1. 制作助浴 SOP 执行清单卡片\n2. 加强入户前检查培训\n3. 考虑增加助浴服务的督导频次";
-  }
-  return "根据当前数据分析：\n\n- 本周总服务 168 次，整体 SOP 完成率 87%，满意度 4.6/5\n- 古荡站表现最优，文新站需重点关注\n- 助浴服务 SOP 完成率最低（84%），建议加强培训\n\n您可以问我具体站点或服务项目的详细分析。";
-}
-
-function ChatDrawer({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      id: "w",
-      role: "agent",
-      content:
-        "您好，我是质量管理 AI 助手。\n\n我可以帮您：\n· 分析某个站点的质量趋势\n· 对比不同站点的表现\n· 查看某项服务的 SOP 执行情况\n· 解释异常原因和改进建议\n\n请问有什么需要了解的？",
-      time: "",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
-
-  const handleSend = () => {
-    const text = input.trim();
-    if (!text) return;
-    const time = new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", content: text, time }]);
-    setInput("");
-    setIsTyping(true);
-
-    // Mock AI response with a slight delay
-    setTimeout(() => {
-      const reply = getMockAIResponse(text);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: "agent",
-          content: reply,
-          time: new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-      setIsTyping(false);
-    }, 600);
-  };
-
-  return (
-    <>
-      <div className="quality-chat-overlay" onClick={onClose} />
-      <div className="quality-chat-drawer">
-        {/* Header */}
-        <div className="quality-chat-drawer__header">
-          <div className="quality-chat-drawer__header-left">
-            <div className="quality-chat-drawer__avatar">
-              <IconChat size={14} />
-            </div>
-            <span className="quality-chat-drawer__title">AI 质量助手</span>
-          </div>
-          <button className="quality-chat-drawer__close" onClick={onClose}>
-            <IconClose />
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div className="quality-chat-drawer__messages">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`quality-chat-msg quality-chat-msg--${msg.role}`}>
-              {msg.role === "agent" && (
-                <div className="quality-chat-msg__avatar">
-                  <IconChat size={12} />
-                </div>
-              )}
-              <div className="quality-chat-msg__body">
-                <div className={`quality-chat-msg__bubble quality-chat-msg__bubble--${msg.role}`}>
-                  {msg.content}
-                </div>
-                {msg.time && (
-                  <div className={`quality-chat-msg__time quality-chat-msg__time--${msg.role}`}>
-                    {msg.time}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="quality-chat-typing">
-              <div className="quality-chat-msg__avatar">
-                <IconChat size={12} />
-              </div>
-              <div className="quality-chat-typing__bubble">正在思考...</div>
-            </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Input */}
-        <div className="quality-chat-input">
-          <div className="quality-chat-input__row">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="输入问题..."
-              className="quality-chat-input__field"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className={`quality-chat-input__send ${input.trim() ? "quality-chat-input__send--active" : "quality-chat-input__send--disabled"}`}
-            >
-              <IconSend />
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}

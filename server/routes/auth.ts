@@ -139,5 +139,35 @@ export function authRoutes(jwtSecret: string) {
     res.status(201).json({ id, username: phone, password, name, role: "careworker" });
   });
 
+  r.patch("/auth/change-password", (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const payload = verifyJwt(authHeader.slice(7), jwtSecret) as any;
+    if (!payload) {
+      res.status(401).json({ error: "token 无效" });
+      return;
+    }
+
+    const { oldPassword, newPassword } = req.body ?? {};
+    if (!oldPassword || !newPassword || newPassword.length < 6) {
+      res.status(400).json({ error: "密码至少6位" });
+      return;
+    }
+
+    const db = getDb();
+    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(payload.sub ?? payload.userId) as any;
+    if (!user || !bcrypt.compareSync(oldPassword, user.password_hash)) {
+      res.status(400).json({ error: "当前密码错误" });
+      return;
+    }
+
+    const hash = bcrypt.hashSync(newPassword, 10);
+    db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hash, user.id);
+    res.json({ ok: true });
+  });
+
   return r;
 }
