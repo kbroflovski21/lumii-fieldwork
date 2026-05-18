@@ -92,7 +92,7 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
       >
         <header className="site-operations-header">
           <div className="site-operations-header__logo">
-            <ClipboardList size={19} />
+            <ClipboardList size={18} />
           </div>
           <div>
             <h1>Lumii 站点运营助手</h1>
@@ -101,17 +101,19 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
               运行中 · 今日服务 18 单
             </p>
           </div>
-          {showCopilot ? (
-            <button
-              className="copilot-toggle"
-              data-active={copilotOpen}
-              onClick={() => setCopilotOpen((prev) => !prev)}
-              type="button"
-              aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-            >
-              <Bot size={18} />
-            </button>
-          ) : null}
+          <div className="site-operations-header__actions">
+            {showCopilot ? (
+              <button
+                className="copilot-toggle"
+                data-active={copilotOpen}
+                onClick={() => setCopilotOpen((prev) => !prev)}
+                type="button"
+                aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+              >
+                <Bot size={18} />
+              </button>
+            ) : null}
+          </div>
         </header>
         <AreaNav
           activeArea={activeArea}
