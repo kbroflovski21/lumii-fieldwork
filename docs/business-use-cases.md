@@ -2,7 +2,7 @@
 
 状态：Business use case baseline
 日期：2026-05-11
-仓库：`aro-network/lumii-fieldwork`
+仓库：`aro-network/lumii-goldenyears-dashboard`
 
 ## 0. 参考源与产品边界
 

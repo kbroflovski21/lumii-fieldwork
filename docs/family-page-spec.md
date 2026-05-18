@@ -2,7 +2,7 @@
 
 状态：v1 设计定稿
 日期：2026-05-18
-仓库：`aro-network/lumii-fieldwork`
+仓库：`aro-network/lumii-goldenyears-dashboard`
 视觉规范：`docs/global-ui-guidance.md`
 部署：`https://kbroflovski21.github.io/lumii-fieldwork/pages/family/`
 

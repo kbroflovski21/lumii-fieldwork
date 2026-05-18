@@ -2,7 +2,7 @@
 
 **日期：** 2026-05-13
 **状态：** Approved v3
-**仓库：** `aro-network/lumii-fieldwork`
+**仓库：** `aro-network/lumii-goldenyears-dashboard`
 
 ## 1. 系统概述
 
