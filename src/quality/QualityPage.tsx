@@ -499,9 +499,31 @@ function UsersView() {
   const { token } = useAuth();
   const [users, setUsers] = useState<QualityUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+
+  // Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
+  const [toggleTarget, setToggleTarget] = useState<QualityUser | null>(null);
+  const [toast, setToast] = useState("");
+
+  // Create-user form state
   const [formData, setFormData] = useState({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
   const [formError, setFormError] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
+  // Reset-password form state
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwdConfirm, setResetPwdConfirm] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+
+  // Toggle submitting state
+  const [toggleSubmitting, setToggleSubmitting] = useState(false);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2000);
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -519,6 +541,7 @@ function UsersView() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
+    setFormSubmitting(true);
     try {
       const res = await fetch("/api/admin/users", {
         method: "POST",
@@ -526,9 +549,10 @@ function UsersView() {
         body: JSON.stringify({ ...formData, siteIds: formData.siteIds.split(",").map(s => s.trim()).filter(Boolean) }),
       });
       if (res.ok) {
-        setShowForm(false);
+        setShowCreateModal(false);
         setFormData({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
         fetchUsers();
+        showToast("用户创建成功");
       } else {
         const data = await res.json();
         setFormError(data.error ?? "创建失败");
@@ -536,78 +560,80 @@ function UsersView() {
     } catch {
       setFormError("网络错误");
     }
+    setFormSubmitting(false);
   };
 
-  const handleToggleStatus = async (u: QualityUser) => {
-    const newStatus = u.status === "active" ? "disabled" : "active";
-    await fetch(`/api/admin/users/${u.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    fetchUsers();
+  const handleToggleStatus = async () => {
+    if (!toggleTarget) return;
+    setToggleSubmitting(true);
+    const newStatus = toggleTarget.status === "active" ? "disabled" : "active";
+    try {
+      await fetch(`/api/admin/users/${toggleTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      fetchUsers();
+      showToast(newStatus === "disabled" ? "用户已禁用" : "用户已启用");
+    } catch { /* ignore */ }
+    setToggleTarget(null);
+    setToggleSubmitting(false);
   };
 
-  const handleResetPassword = async (u: QualityUser) => {
-    const pwd = prompt(`重置「${u.name}」的密码为：`);
-    if (!pwd || pwd.length < 6) { alert("密码至少6位"); return; }
-    await fetch(`/api/admin/users/${u.id}/reset-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ password: pwd }),
-    });
-    alert("密码已重置");
+  const handleResetPassword = async () => {
+    if (!resetTarget) return;
+    setResetError("");
+    if (!resetPwd || resetPwd.length < 6) { setResetError("密码至少6位"); return; }
+    if (resetPwd !== resetPwdConfirm) { setResetError("两次密码输入不一致"); return; }
+    setResetSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${resetTarget.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: resetPwd }),
+      });
+      if (res.ok) {
+        setResetTarget(null);
+        setResetPwd("");
+        setResetPwdConfirm("");
+        showToast("密码已重置");
+      } else {
+        const data = await res.json();
+        setResetError(data.error ?? "重置失败");
+      }
+    } catch {
+      setResetError("网络错误");
+    }
+    setResetSubmitting(false);
+  };
+
+  const openCreateModal = () => {
+    setFormData({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
+    setFormError("");
+    setShowCreateModal(true);
+  };
+
+  const openResetModal = (u: QualityUser) => {
+    setResetPwd("");
+    setResetPwdConfirm("");
+    setResetError("");
+    setResetTarget(u);
   };
 
   return (
     <>
+      {/* Toast */}
+      {toast && <div className="quality-toast">{toast}</div>}
+
       <div className="quality-records__header">
         <div>
           <div className="quality-records__title">用户管理</div>
           <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
         </div>
-        <button className="quality-users__add-btn" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "取消" : "新增用户"}
+        <button className="quality-users__add-btn" onClick={openCreateModal}>
+          新增用户
         </button>
       </div>
-
-      {showForm && (
-        <form className="quality-users__form" onSubmit={handleCreate}>
-          {formError && <div className="quality-users__form-error">{formError}</div>}
-          <div className="quality-users__form-grid">
-            <label className="quality-users__form-field">
-              <span>用户名</span>
-              <input value={formData.username} onChange={e => setFormData(d => ({ ...d, username: e.target.value }))} required />
-            </label>
-            <label className="quality-users__form-field">
-              <span>密码</span>
-              <input type="password" value={formData.password} onChange={e => setFormData(d => ({ ...d, password: e.target.value }))} required minLength={6} />
-            </label>
-            <label className="quality-users__form-field">
-              <span>姓名</span>
-              <input value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} required />
-            </label>
-            <label className="quality-users__form-field">
-              <span>角色</span>
-              <select value={formData.role} onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
-                <option value="site_operator">站点运营</option>
-                <option value="service_supervisor">服务主管</option>
-                <option value="org_admin">集团管理</option>
-                <option value="careworker">护理员</option>
-              </select>
-            </label>
-            <label className="quality-users__form-field">
-              <span>手机号</span>
-              <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))} />
-            </label>
-            <label className="quality-users__form-field">
-              <span>站点ID</span>
-              <input value={formData.siteIds} onChange={e => setFormData(d => ({ ...d, siteIds: e.target.value }))} placeholder="site-001,site-002" />
-            </label>
-          </div>
-          <button type="submit" className="quality-users__add-btn">创建</button>
-        </form>
-      )}
 
       <div className="quality-table-wrap">
         {loading ? (
@@ -639,10 +665,10 @@ function UsersView() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={() => handleToggleStatus(u)}>
+                      <button className="quality-users__action-btn" onClick={() => setToggleTarget(u)}>
                         {u.status === "active" ? "禁用" : "启用"}
                       </button>
-                      <button className="quality-users__action-btn" onClick={() => handleResetPassword(u)}>
+                      <button className="quality-users__action-btn" onClick={() => openResetModal(u)}>
                         重置密码
                       </button>
                     </div>
@@ -653,6 +679,130 @@ function UsersView() {
           </table>
         )}
       </div>
+
+      {/* ── Create User Modal ── */}
+      {showCreateModal && (
+        <div className="quality-modal-scrim" onClick={() => setShowCreateModal(false)}>
+          <div className="quality-modal" onClick={e => e.stopPropagation()}>
+            <div className="quality-modal__header">
+              <span>新增用户</span>
+              <button onClick={() => setShowCreateModal(false)}>&times;</button>
+            </div>
+            <form onSubmit={handleCreate}>
+              <div className="quality-modal__body">
+                {formError && <div className="quality-modal__error">{formError}</div>}
+                <div className="quality-modal__field">
+                  <label>用户名</label>
+                  <input value={formData.username} onChange={e => setFormData(d => ({ ...d, username: e.target.value }))} required />
+                </div>
+                <div className="quality-modal__field">
+                  <label>密码</label>
+                  <input type="password" value={formData.password} onChange={e => setFormData(d => ({ ...d, password: e.target.value }))} required minLength={6} />
+                </div>
+                <div className="quality-modal__field">
+                  <label>姓名</label>
+                  <input value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} required />
+                </div>
+                <div className="quality-modal__field">
+                  <label>角色</label>
+                  <select value={formData.role} onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
+                    <option value="site_operator">站点运营</option>
+                    <option value="service_supervisor">服务主管</option>
+                    <option value="org_admin">集团管理</option>
+                    <option value="careworker">护理员</option>
+                  </select>
+                </div>
+                <div className="quality-modal__field">
+                  <label>手机号</label>
+                  <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))} />
+                </div>
+                <div className="quality-modal__field">
+                  <label>站点ID</label>
+                  <input value={formData.siteIds} onChange={e => setFormData(d => ({ ...d, siteIds: e.target.value }))} placeholder="site-001,site-002" />
+                </div>
+              </div>
+              <div className="quality-modal__footer">
+                <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setShowCreateModal(false)}>取消</button>
+                <button type="submit" className="quality-modal__btn quality-modal__btn--primary" disabled={formSubmitting}>
+                  {formSubmitting ? "创建中..." : "创建用户"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reset Password Modal ── */}
+      {resetTarget && (
+        <div className="quality-modal-scrim" onClick={() => setResetTarget(null)}>
+          <div className="quality-modal" onClick={e => e.stopPropagation()}>
+            <div className="quality-modal__header">
+              <span>重置密码</span>
+              <button onClick={() => setResetTarget(null)}>&times;</button>
+            </div>
+            <div className="quality-modal__body">
+              <p>{`为「${resetTarget.name}」重置密码`}</p>
+              {resetError && <div className="quality-modal__error">{resetError}</div>}
+              <div className="quality-modal__field">
+                <label>新密码</label>
+                <input type="password" value={resetPwd} onChange={e => setResetPwd(e.target.value)} placeholder="至少6位" />
+              </div>
+              <div className="quality-modal__field">
+                <label>确认密码</label>
+                <input type="password" value={resetPwdConfirm} onChange={e => setResetPwdConfirm(e.target.value)} placeholder="再次输入新密码" />
+              </div>
+            </div>
+            <div className="quality-modal__footer">
+              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setResetTarget(null)}>取消</button>
+              <button type="button" className="quality-modal__btn quality-modal__btn--primary" disabled={resetSubmitting} onClick={handleResetPassword}>
+                {resetSubmitting ? "重置中..." : "确认重置"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toggle Status Confirmation Modal ── */}
+      {toggleTarget && (
+        <div className="quality-modal-scrim" onClick={() => setToggleTarget(null)}>
+          <div className="quality-modal" onClick={e => e.stopPropagation()}>
+            <div className="quality-modal__header">
+              <span>{toggleTarget.status === "active" ? "确认禁用" : "确认启用"}</span>
+              <button onClick={() => setToggleTarget(null)}>&times;</button>
+            </div>
+            <div className="quality-modal__body">
+              <div className="quality-modal__warning">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6v4m0 4h.01M3.07 16.5h13.86c1.1 0 1.79-1.19 1.24-2.14L11.24 3.14a1.43 1.43 0 0 0-2.48 0L1.83 14.36c-.55.95.14 2.14 1.24 2.14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div>
+                  <p style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {toggleTarget.status === "active"
+                      ? `确定要禁用用户「${toggleTarget.name}」吗？`
+                      : `确定要启用用户「${toggleTarget.name}」吗？`}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13 }}>
+                    {toggleTarget.status === "active"
+                      ? "禁用后该用户将无法登录系统。"
+                      : "启用后该用户将恢复登录权限。"}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="quality-modal__footer">
+              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setToggleTarget(null)}>取消</button>
+              <button
+                type="button"
+                className={`quality-modal__btn ${toggleTarget.status === "active" ? "quality-modal__btn--danger" : "quality-modal__btn--primary"}`}
+                disabled={toggleSubmitting}
+                onClick={handleToggleStatus}
+              >
+                {toggleSubmitting
+                  ? (toggleTarget.status === "active" ? "禁用中..." : "启用中...")
+                  : (toggleTarget.status === "active" ? "确认禁用" : "确认启用")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
