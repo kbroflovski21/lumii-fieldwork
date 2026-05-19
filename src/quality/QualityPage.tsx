@@ -299,6 +299,14 @@ function SitesView() {
 
   useEffect(() => { fetchSites(); }, [fetchSites]);
 
+  // Sync detailSite with refreshed sites data
+  useEffect(() => {
+    if (detailSite) {
+      const fresh = sites.find(s => s.id === detailSite.id);
+      if (fresh && fresh !== detailSite) setDetailSite(fresh);
+    }
+  }, [sites]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleDelete = async () => {
     if (!confirmAction) return;
     setConfirmSubmitting(true);
@@ -712,6 +720,14 @@ function UsersView() {
   }, [token]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  // Sync detailUser with refreshed users data
+  useEffect(() => {
+    if (detailUser) {
+      const fresh = users.find(u => u.id === detailUser.id);
+      if (fresh && fresh !== detailUser) setDetailUser(fresh);
+    }
+  }, [users]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openDetail = (u: QualityUser, editMode = false) => { setInitialEditing(editMode); setDetailUser(u); };
   const closeDetail = () => { setDetailUser(null); setInitialEditing(false); };
