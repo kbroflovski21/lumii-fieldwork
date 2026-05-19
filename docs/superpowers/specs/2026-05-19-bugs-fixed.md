@@ -39,3 +39,15 @@
   Expires: 0
   ```
   确保每次请求 index.html 都获取最新版本。静态资源（JS/CSS，带 hash 文件名）仍然使用长期缓存。
+
+## Bug 6: 站点数据未隔离（数据安全漏洞）
+
+- **描述：** ServiceObject、ServiceSchedule、ServiceRecord、HomeSummary 等业务模型缺少 `siteId` 字段，GET 路由未按站点过滤数据，所有站点的运营人员看到全部数据。
+- **影响：** 站点 A 的运营人员可以看到站点 B 的服务对象、服务计划、服务记录等数据，存在数据泄露风险。多站点场景下数据混在一起，运营人员无法区分本站数据。
+- **修复：** 所有业务模型添加 `siteId` 字段；GET 路由增加 `?siteId=` 查询过滤；POST 路由从 body 中写入 `siteId`；前端 API 层从 SiteContext 自动附加 `siteId`。
+
+## Bug 7: 编辑按钮打开查看模式
+
+- **描述：** 站点管理和用户管理的"编辑"按钮点击后打开详情 modal，但 modal 默认进入查看模式而非编辑模式，用户需要再次点击 modal 内的编辑按钮才能修改。
+- **影响：** 用户体验不直观，"编辑"按钮行为与预期不符。
+- **修复：** SiteDetailModal 和 UserDetailModal 新增 `initialEditing` prop；列表中的"编辑"按钮传入 `initialEditing=true`，直接进入编辑模式。

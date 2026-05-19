@@ -3,7 +3,7 @@
 **日期：** 2026-05-19
 **状态：** Implemented
 **实现日期：** 2026-05-19
-**范围：** 站点 CRUD、运营人员分配、多站点切换、站点上下文管理
+**范围：** 站点 CRUD、运营人员分配、多站点切换、站点上下文管理、站点数据隔离、管理端 UX 优化
 
 ## 1. 目标
 
@@ -138,3 +138,94 @@ SiteOperationsShell header 区域的站点切换下拉菜单：
 | `src/auth/SiteContext.tsx` | 新文件，SiteProvider + useSite hook |
 | `src/App.tsx` | 包裹 SiteProvider |
 | `src/features/siteOperations/SiteOperationsShell.tsx` | 添加站点切换下拉 |
+
+## 8. 站点数据隔离（Site-based Data Isolation）
+
+### 8.1 数据模型变更
+
+以下模型新增 `siteId` 字段：
+
+| 模型 | 字段 | 说明 |
+|------|------|------|
+| ServiceObject | siteId | 服务对象归属站点 |
+| ServiceSchedule | siteId | 服务计划归属站点 |
+| ServiceRecord | siteId | 服务记录归属站点 |
+| HomeSummary | siteId | 居家概况归属站点 |
+
+### 8.2 后端路由过滤
+
+所有 GET 路由通过 `?siteId=xxx` query param 过滤数据，只返回该站点的数据。
+所有 POST 路由从 request body 中读取 `siteId` 并写入记录。
+
+### 8.3 前端 API 层
+
+`src/api/api.ts` 中所有 API 调用从 SiteContext 获取当前 `siteId`，自动附加到请求参数中。
+`useSiteOperationsData` hook 接受 `siteId` 参数，数据刷新时按站点过滤。
+
+## 9. 无站点权限错误页面（No-site-assigned Error）
+
+### 9.1 SiteContext 变更
+
+`SiteContext` 新增 `noSiteAssigned: boolean` 标志位。当 `site_operator` 角色用户通过 `/api/auth/my-sites` 查询返回 0 个站点时设为 `true`。
+
+### 9.2 错误页面
+
+`App.tsx` 检测到 `noSiteAssigned=true` 时，显示错误页面：
+- 标题："暂无站点权限"
+- 说明文字：提示联系管理员分配站点
+- 操作：退出登录按钮
+
+## 10. 管理端站点入口重设计（Admin Site Entry）
+
+### 10.1 移除全局入口
+
+移除 `org_admin` header 中的"进入站点运营"按钮。
+
+### 10.2 站点列表内嵌入口
+
+在站点管理（站点管理 tab）的站点列表表格中，每行添加"进入站点"按钮：
+- 点击后在新标签页中打开 `/site-operations?siteId=xxx`
+- `App.tsx` 检测 URL 中的 `?siteId=` 参数，为 `org_admin` 自动选中对应站点
+
+### 10.3 org_admin 站点上下文
+
+`org_admin` 通过 URL 参数进入站点运营时，SiteContext 根据 `?siteId=` 自动设置 `currentSite`，无需手动选择弹窗。
+
+## 11. 管理端搜索与筛选（Search/Filter in Admin Views）
+
+### 11.1 站点管理搜索
+
+SitesView 支持按以下字段搜索（前端过滤）：
+- 站点名称（name）
+- 地址（address）
+- 联系人（contactName）
+
+### 11.2 用户管理搜索与筛选
+
+UsersView 支持：
+- 搜索：按用户名（username）、姓名（name）过滤
+- 角色筛选：下拉菜单按角色（org_admin / site_operator / careworker）过滤
+
+## 12. 编辑模式修复（Edit Mode Fixes）
+
+站点管理和用户管理的"编辑"按钮现在正确打开 modal 进入编辑模式：
+- SiteDetailModal 接受 `initialEditing` prop，编辑按钮传入 `true`
+- UserDetailModal 接受 `initialEditing` prop，编辑按钮传入 `true`
+- 之前：编辑按钮打开 modal 后默认为查看模式，用户需再次点击编辑
+
+## 13. 用户列表列序修复（Column Order Fix）
+
+用户管理表格列顺序调整为：用户名 → 姓名 → 手机号 → 角色 → 状态 → 操作
+
+## 14. 内联运营人员分配（Inline Operator Assignment）
+
+### 14.1 移除独立分配弹窗
+
+移除站点列表中的"分配人员"按钮和独立的人员分配 modal。
+
+### 14.2 站点详情 modal 内联分配
+
+站点详情 modal 在编辑模式下包含运营人员分配区域：
+- 显示所有 `site_operator` 角色用户的 checkbox 列表
+- 勾选/取消勾选即可添加/移除运营人员
+- 保存时调用 `PUT /api/admin/sites/:id/operators` 更新分配关系
