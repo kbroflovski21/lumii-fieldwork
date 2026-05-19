@@ -2154,7 +2154,7 @@ body {
 }
 
 .sw-btn--primary {
-  background: var(--site-accent);
+  background: #0052CC;
   color: #fff;
 }
 
@@ -2173,15 +2173,19 @@ body {
 }
 
 .sw-btn--danger {
-  background: var(--site-danger-bg);
-  border: 1px solid var(--site-danger-text);
-  color: var(--site-danger-text);
+  background: #FEE2E2;
+  border: 1px solid #B42318;
+  color: #B42318;
+}
+
+.sw-btn--danger:hover:not(:disabled) {
+  background: #FECACA;
 }
 
 .sw-btn--danger-ghost {
   background: transparent;
   border: 1px solid #FCA5A5;
-  color: var(--site-danger-text);
+  color: #B42318;
 }
 
 .sw-btn--danger-ghost:hover:not(:disabled) {
