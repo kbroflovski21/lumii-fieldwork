@@ -874,20 +874,26 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
   const [familyName, setFamilyName] = useState(obj.familyContacts[0]?.name ?? "");
   const [familyRelation, setFamilyRelation] = useState(obj.familyContacts[0]?.relation ?? "");
   const [familyPhone, setFamilyPhone] = useState(obj.familyContacts[0]?.phone ?? "");
+  const [familyWechat, setFamilyWechat] = useState(obj.familyContacts[0]?.wechatId ?? "");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const handleSave = async () => {
+    setSaveError("");
     setSaving(true);
     try {
       await siteOperationsApi.updateServiceObject(obj.id, {
-        name: name.trim(), idNumber: idNumber.trim() || undefined, age: age ? Number(age) : undefined, address: address.trim(),
+        name: name.trim(), phone: phone.trim() || undefined, idNumber: idNumber.trim() || undefined, age: age ? Number(age) : undefined, address: address.trim(),
         eligibilityType: eligibility as ServiceEligibilityType,
         serviceProjects: projects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         riskTags: riskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         careNotes: careNotes.split("\n").map(s => s.trim()).filter(Boolean),
       });
       onSaved();
-    } catch { setSaving(false); }
+    } catch (e: any) {
+      setSaveError(e?.message ?? "保存失败");
+      setSaving(false);
+    }
   };
 
   return (
@@ -897,12 +903,14 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
+        {saveError && <div style={{ margin: "0 0 12px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{saveError}</div>}
         <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
           riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
           familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
-          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone} />
+          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
+          familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
       </div>
       <div className="so-modal__footer">
         <div />
@@ -932,6 +940,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [familyName, setFamilyName] = useState("");
   const [familyRelation, setFamilyRelation] = useState("");
   const [familyPhone, setFamilyPhone] = useState("");
+  const [familyWechat, setFamilyWechat] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -966,7 +975,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
           riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
           familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
-          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone} />
+          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
+          familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
       </div>
       <div className="so-modal__footer">
         <div />
@@ -984,7 +994,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNumberChange, age, onAgeChange, gender, onGenderChange, address, onAddressChange,
   eligibility, onEligibilityChange, projects, onProjectsChange, frequency, onFrequencyChange,
   riskTags, onRiskTagsChange, careNotes, onCareNotesChange,
-  familyName, onFamilyNameChange, familyRelation, onFamilyRelationChange, familyPhone, onFamilyPhoneChange }: {
+  familyName, onFamilyNameChange, familyRelation, onFamilyRelationChange, familyPhone, onFamilyPhoneChange,
+  familyWechat, onFamilyWechatChange }: {
   name: string; onNameChange: (v: string) => void; phone: string; onPhoneChange: (v: string) => void;
   idNumber: string; onIdNumberChange: (v: string) => void;
   age: string; onAgeChange: (v: string) => void;
@@ -994,6 +1005,7 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
   riskTags: string; onRiskTagsChange: (v: string) => void; careNotes: string; onCareNotesChange: (v: string) => void;
   familyName: string; onFamilyNameChange: (v: string) => void; familyRelation: string; onFamilyRelationChange: (v: string) => void;
   familyPhone: string; onFamilyPhoneChange: (v: string) => void;
+  familyWechat: string; onFamilyWechatChange: (v: string) => void;
 }) {
   return (
     <div className="so-form-cards">
@@ -1037,7 +1049,10 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
           <label className="sw-field"><span>家属姓名</span><input onChange={(e) => onFamilyNameChange(e.target.value)} placeholder="如：陈女士" value={familyName} /></label>
           <label className="sw-field"><span>关系</span><input onChange={(e) => onFamilyRelationChange(e.target.value)} placeholder="如：女儿" value={familyRelation} /></label>
         </div>
-        <label className="sw-field"><span>家属电话</span><input onChange={(e) => onFamilyPhoneChange(e.target.value)} placeholder="输入家属手机号" value={familyPhone} /></label>
+        <div className="so-form-card__row">
+          <label className="sw-field"><span>家属电话</span><input onChange={(e) => onFamilyPhoneChange(e.target.value)} placeholder="输入家属手机号" value={familyPhone} /></label>
+          <label className="sw-field"><span>微信号</span><input onChange={(e) => onFamilyWechatChange(e.target.value)} placeholder="输入微信号" value={familyWechat} /></label>
+        </div>
       </div>
     </div>
   );

@@ -263,6 +263,7 @@ export type ServiceObject = {
 
 export type CreateServiceObjectRequest = {
   name: string;
+  phone?: string;
   idNumber: string;
   age?: number;
   address: string;
