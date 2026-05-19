@@ -48,7 +48,12 @@ export class SiteOperationsApiError extends Error {
 
 async function parseJson<T>(response: Response, path: string): Promise<T> {
   if (!response.ok) {
-    throw new SiteOperationsApiError(response.status, `Request failed: ${path}`);
+    let message = `请求失败 (${response.status})`;
+    try {
+      const body = await response.json();
+      if (body?.error) message = body.error;
+    } catch { /* non-JSON response */ }
+    throw new SiteOperationsApiError(response.status, message);
   }
 
   return response.json() as Promise<T>;

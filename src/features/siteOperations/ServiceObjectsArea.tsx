@@ -903,7 +903,6 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
-        {saveError && <div style={{ margin: "0 0 12px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{saveError}</div>}
         <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
@@ -912,6 +911,7 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
           familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
           familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
       </div>
+      {saveError && <div style={{ margin: "0 16px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{saveError}</div>}
       <div className="so-modal__footer">
         <div />
         <div className="so-modal__footer-right">
@@ -969,7 +969,6 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
-        {error && <div style={{ margin: "0 0 12px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{error}</div>}
         <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
@@ -978,6 +977,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
           familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
       </div>
+      {error && <div style={{ margin: "0 16px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{error}</div>}
       <div className="so-modal__footer">
         <div />
         <div className="so-modal__footer-right">
