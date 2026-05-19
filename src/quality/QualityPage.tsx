@@ -401,17 +401,14 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
   careworker: "护理员",
 };
 
-type UserModalMode = "view" | "create" | "edit";
-
 function UsersView() {
   const { token } = useAuth();
   const [users, setUsers] = useState<QualityUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
 
-  const [modalUser, setModalUser] = useState<QualityUser | null>(null);
-  const [modalMode, setModalMode] = useState<UserModalMode>("view");
-
+  const [detailUser, setDetailUser] = useState<QualityUser | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
@@ -434,10 +431,8 @@ function UsersView() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const openView = (u: QualityUser) => { setModalUser(u); setModalMode("view"); };
-  const openCreate = () => { setModalUser(null); setModalMode("create"); };
-  const openEdit = (u: QualityUser) => { setModalUser(u); setModalMode("edit"); };
-  const closeModal = () => { setModalUser(null); setModalMode("view"); };
+  const openDetail = (u: QualityUser) => setDetailUser(u);
+  const closeDetail = () => setDetailUser(null);
 
   const handleConfirm = async () => {
     if (!confirmAction) return;
@@ -457,7 +452,7 @@ function UsersView() {
           headers: { Authorization: `Bearer ${token}` },
         });
         showToast("用户已删除");
-        if (modalUser?.id === confirmAction.user.id) closeModal();
+        if (detailUser?.id === confirmAction.user.id) closeDetail();
       }
       fetchUsers();
     } catch { /* ignore */ }
@@ -474,7 +469,7 @@ function UsersView() {
           <div className="quality-records__title">用户管理</div>
           <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
         </div>
-        <button className="quality-users__add-btn" onClick={openCreate}>新增用户</button>
+        <button className="quality-users__add-btn" onClick={() => setShowCreate(true)}>新增用户</button>
       </div>
 
       <div className="quality-table-wrap">
@@ -494,9 +489,9 @@ function UsersView() {
                 <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
               )}
               {users.map(u => (
-                <tr key={u.id} onDoubleClick={() => openView(u)} style={{ cursor: "pointer" }}>
+                <tr key={u.id} onDoubleClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
                   <td>
-                    <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openView(u); }} href="#">
+                    <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openDetail(u); }} href="#">
                       {u.username}
                     </a>
                   </td>
@@ -510,7 +505,7 @@ function UsersView() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openDetail(u); }}>编辑</button>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setResetTarget(u); }}>重置密码</button>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
                     </div>
@@ -522,17 +517,24 @@ function UsersView() {
         )}
       </div>
 
-      {/* ── User Detail/Edit/Create Modal (so-modal style) ── */}
-      {(modalUser || modalMode === "create") && (
-        <UserModal
-          mode={modalMode}
-          user={modalUser}
+      {/* ── User Detail Modal (inline edit) ── */}
+      {detailUser && (
+        <UserDetailModal
+          user={detailUser}
           token={token!}
-          onClose={closeModal}
-          onSaved={() => { fetchUsers(); showToast(modalMode === "create" ? "用户创建成功" : "用户信息已更新"); closeModal(); }}
-          onEdit={() => setModalMode("edit")}
+          onClose={closeDetail}
+          onSaved={() => { fetchUsers(); showToast("用户信息已更新"); }}
           onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
           onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
+        />
+      )}
+
+      {/* ── Create User Modal ── */}
+      {showCreate && (
+        <CreateUserModal
+          token={token!}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => { fetchUsers(); showToast("用户创建成功"); setShowCreate(false); }}
         />
       )}
 
@@ -548,216 +550,100 @@ function UsersView() {
 
       {/* ── Confirm Dialog (delete/toggle) ── */}
       {confirmAction && (
-        <div className="sw-scrim" onClick={() => setConfirmAction(null)}>
-          <div className="quality-modal" onClick={e => e.stopPropagation()} style={{ zIndex: 32 }}>
-            <div className="quality-modal__header">
-              <span>{confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}</span>
-              <button onClick={() => setConfirmAction(null)}>&times;</button>
-            </div>
-            <div className="quality-modal__body">
-              <div className="quality-modal__warning">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6v4m0 4h.01M3.07 16.5h13.86c1.1 0 1.79-1.19 1.24-2.14L11.24 3.14a1.43 1.43 0 0 0-2.48 0L1.83 14.36c-.55.95.14 2.14 1.24 2.14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <div>
-                  <p style={{ fontWeight: 600, marginBottom: 4 }}>
-                    {confirmAction.type === "delete"
-                      ? `确定要删除用户「${confirmAction.user.name}」吗？`
-                      : confirmAction.user.status === "active"
-                        ? `确定要禁用用户「${confirmAction.user.name}」吗？`
-                        : `确定要启用用户「${confirmAction.user.name}」吗？`}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 13 }}>
-                    {confirmAction.type === "delete"
-                      ? "删除后该用户数据将无法恢复。"
-                      : confirmAction.user.status === "active"
-                        ? "禁用后该用户将无法登录系统。"
-                        : "启用后该用户将恢复登录权限。"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="quality-modal__footer">
-              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setConfirmAction(null)}>取消</button>
-              <button type="button" className="quality-modal__btn quality-modal__btn--danger" disabled={confirmSubmitting} onClick={handleConfirm}>
-                {confirmSubmitting ? "处理中..." : confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}
+          message={confirmAction.type === "delete"
+            ? `确定要删除用户「${confirmAction.user.name}」吗？删除后数据无法恢复。`
+            : confirmAction.user.status === "active"
+              ? `确定要禁用用户「${confirmAction.user.name}」吗？禁用后该用户将无法登录。`
+              : `确定要启用用户「${confirmAction.user.name}」吗？`}
+          confirmLabel={confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}
+          danger={confirmAction.type === "delete" || confirmAction.user.status === "active"}
+          submitting={confirmSubmitting}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmAction(null)}
+        />
       )}
     </>
   );
 }
 
-/* ── User Modal Component (so-modal design) ── */
+/* ── Shared close button ── */
+function CloseBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button className="so-modal__close" aria-label="关闭" onClick={onClick} type="button">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+  );
+}
 
-function UserModal({ mode, user, token, onClose, onSaved, onEdit, onToggle, onDelete }: {
-  mode: UserModalMode;
-  user: QualityUser | null;
-  token: string;
-  onClose: () => void;
-  onSaved: () => void;
-  onEdit: () => void;
-  onToggle: (u: QualityUser) => void;
-  onDelete: (u: QualityUser) => void;
+/* ── User Detail Modal with inline edit ── */
+function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete }: {
+  user: QualityUser; token: string; onClose: () => void; onSaved: () => void;
+  onToggle: (u: QualityUser) => void; onDelete: (u: QualityUser) => void;
 }) {
-  const isCreate = mode === "create";
-  const isEdit = mode === "edit";
-  const isView = mode === "view";
-
-  const [form, setForm] = useState({
-    username: user?.username ?? "",
-    password: "",
-    name: user?.name ?? "",
-    role: user?.role ?? "site_operator",
-    phone: user?.phone ?? "",
-  });
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name);
+  const [phone, setPhone] = useState(user.phone);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    setForm({
-      username: user?.username ?? "",
-      password: "",
-      name: user?.name ?? "",
-      role: user?.role ?? "site_operator",
-      phone: user?.phone ?? "",
-    });
-    setError("");
-  }, [user, mode]);
+  useEffect(() => { setName(user.name); setPhone(user.phone); setEditing(false); setError(""); }, [user]);
 
-  const handleSubmit = async () => {
-    setError("");
-    if (isCreate && (!form.username || !form.password || !form.name)) {
-      setError("用户名、密码和姓名为必填");
-      return;
-    }
-    if (isEdit && !form.name) {
-      setError("姓名为必填");
-      return;
-    }
-    setSubmitting(true);
+  const handleSave = async () => {
+    if (!name.trim()) { setError("姓名不能为空"); return; }
+    setError(""); setSubmitting(true);
     try {
-      if (isCreate) {
-        const res = await fetch("/api/admin/users", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ username: form.username, password: form.password, name: form.name, role: form.role, phone: form.phone, siteIds: [] }),
-        });
-        if (!res.ok) { const d = await res.json(); setError(d.error ?? "创建失败"); setSubmitting(false); return; }
-      } else {
-        const res = await fetch(`/api/admin/users/${user!.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: form.name, phone: form.phone }),
-        });
-        if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); setSubmitting(false); return; }
-      }
-      onSaved();
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
+      });
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); } else { onSaved(); setEditing(false); }
     } catch { setError("网络错误"); }
     setSubmitting(false);
   };
 
-  /* View mode: so-modal--view (summary header + content + footer) */
-  if (isView && user) {
-    return (
-      <>
-        <div className="sw-scrim" onClick={onClose} />
-        <div className="so-modal so-modal--view" role="dialog" aria-label={user.name}>
-          <div className="so-modal__summary">
-            <div className="so-modal__summary-main">
-              <div className="so-modal__summary-name">
-                <h3>{user.name}</h3>
-                <span className="so-modal__summary-demo">{user.username}</span>
-              </div>
-              <div className="so-modal__summary-actions">
-                <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-            </div>
-            <div className="so-modal__summary-tags">
-              <span className="so-modal__chip">{QUALITY_ROLE_LABELS[user.role] ?? user.role}</span>
-              <span className={`so-modal__chip ${user.status === "active" ? "" : "so-modal__chip--danger"}`}>
-                {user.status === "active" ? "正常" : "已禁用"}
-              </span>
-            </div>
-          </div>
-          <div className="so-modal__content">
-            <div className="so-overview-grid">
-              <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
-              <dl className="so-overview-item"><dt>姓名</dt><dd>{user.name}</dd></dl>
-              <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
-              <dl className="so-overview-item"><dt>手机号</dt><dd>{user.phone || "—"}</dd></dl>
-              <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
-              <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
-            </div>
-          </div>
-          <div className="so-modal__footer">
-            <div>
-              <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
-              <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button" style={{ marginLeft: 8 }}>
-                {user.status === "active" ? "禁用" : "启用"}
-              </button>
-            </div>
-            <div className="so-modal__footer-right">
-              <button className="sw-btn sw-btn--primary" onClick={onEdit} type="button">编辑</button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const handleCancel = () => { setName(user.name); setPhone(user.phone); setEditing(false); setError(""); };
 
-  /* Create / Edit mode: so-modal--form (form header + content + footer) */
   return (
     <>
       <div className="sw-scrim" onClick={onClose} />
-      <div className="so-modal so-modal--form" role="dialog" aria-label={isCreate ? "新增用户" : "编辑用户"}>
-        <div className="so-modal__form-header">
-          <h3>{isCreate ? "新增用户" : `编辑 · ${user?.name}`}</h3>
-          <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-        <div className="so-modal__content">
-          <div className="so-form-cards">
-            <div className="so-form-card">
-              <h4 className="so-form-card__title">账号信息</h4>
-              {error && <div className="quality-modal__error">{error}</div>}
-              {isCreate && (
-                <div className="so-form-card__row">
-                  <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
-                  <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
-                </div>
-              )}
-              <div className="so-form-card__row">
-                <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
-                <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
-              </div>
-              {isCreate && (
-                <div className="so-form-card__row">
-                  <div className="sw-field">
-                    <span>角色</span>
-                    <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                      <option value="site_operator">站点运营</option>
-                      <option value="service_supervisor">服务主管</option>
-                      <option value="org_admin">集团管理</option>
-                      <option value="careworker">护理员</option>
-                    </select>
-                  </div>
-                  <div />
-                </div>
-              )}
+      <div className="quality-user-modal" role="dialog" aria-label={user.name}>
+        <div className="quality-user-modal__header">
+          <div>
+            <div className="quality-user-modal__title">{user.name}<span className="quality-user-modal__sub">{user.username}</span></div>
+            <div className="quality-user-modal__tags">
+              <span className="so-modal__chip">{QUALITY_ROLE_LABELS[user.role] ?? user.role}</span>
+              <span className={`so-modal__chip ${user.status !== "active" ? "so-modal__chip--danger" : ""}`}>{user.status === "active" ? "正常" : "已禁用"}</span>
             </div>
           </div>
+          <CloseBtn onClick={onClose} />
         </div>
-        <div className="so-modal__footer">
-          <div />
-          <div className="so-modal__footer-right">
-            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
-              {submitting ? "保存中..." : (isCreate ? "创建用户" : "保存修改")}
-            </button>
+        <div className="quality-user-modal__body">
+          {error && <div className="quality-modal__error">{error}</div>}
+          <div className="so-overview-grid">
+            <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
+            <dl className="so-overview-item"><dt>姓名</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : user.name}</dd></dl>
+            <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
+            <dl className="so-overview-item"><dt>手机号</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /> : (user.phone || "—")}</dd></dl>
+            <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
+            <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
+          </div>
+        </div>
+        <div className="quality-user-modal__footer">
+          <div className="quality-user-modal__footer-left">
+            <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
+            <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button">{user.status === "active" ? "禁用" : "启用"}</button>
+          </div>
+          <div className="quality-user-modal__footer-right">
+            {editing ? (
+              <>
+                <button className="sw-btn sw-btn--secondary" onClick={handleCancel} type="button">取消</button>
+                <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
+              </>
+            ) : (
+              <button className="sw-btn sw-btn--primary" onClick={() => setEditing(true)} type="button">编辑</button>
+            )}
           </div>
         </div>
       </div>
@@ -765,34 +651,21 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onToggle, onDe
   );
 }
 
-/* ── Reset Password Modal ── */
-
-function ResetPasswordModal({ user, token, onClose, onSuccess }: {
-  user: QualityUser;
-  token: string;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [pwd, setPwd] = useState("");
-  const [confirm, setConfirm] = useState("");
+/* ── Create User Modal ── */
+function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
+  const [form, setForm] = useState({ username: "", password: "", name: "", role: "site_operator", phone: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    setError("");
-    if (!pwd || pwd.length < 6) { setError("密码至少6位"); return; }
-    if (pwd !== confirm) { setError("两次密码输入不一致"); return; }
-    setSubmitting(true);
+    if (!form.username || !form.password || !form.name) { setError("用户名、密码和姓名为必填"); return; }
+    setError(""); setSubmitting(true);
     try {
-      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: pwd }),
+      const res = await fetch("/api/admin/users", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form, siteIds: [] }),
       });
-      if (res.ok) { onSuccess(); } else {
-        const d = await res.json();
-        setError(d.error ?? "重置失败");
-      }
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "创建失败"); } else { onCreated(); }
     } catch { setError("网络错误"); }
     setSubmitting(false);
   };
@@ -800,29 +673,119 @@ function ResetPasswordModal({ user, token, onClose, onSuccess }: {
   return (
     <>
       <div className="sw-scrim" onClick={onClose} />
-      <div className="so-modal so-modal--form" role="dialog" aria-label="重置密码" style={{ height: "auto", maxHeight: "60vh" }}>
-        <div className="so-modal__form-header">
-          <h3>重置密码 · {user.name}</h3>
-          <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+      <div className="quality-user-modal" role="dialog" aria-label="新增用户">
+        <div className="quality-user-modal__header">
+          <div className="quality-user-modal__title">新增用户</div>
+          <CloseBtn onClick={onClose} />
         </div>
-        <div className="so-modal__content">
+        <div className="quality-user-modal__body">
+          {error && <div className="quality-modal__error">{error}</div>}
           <div className="so-form-cards">
             <div className="so-form-card">
-              <h4 className="so-form-card__title">新密码</h4>
-              {error && <div className="quality-modal__error">{error}</div>}
-              <div className="sw-field"><span>新密码</span><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="至少6位" /></div>
-              <div className="sw-field"><span>确认密码</span><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="再次输入新密码" /></div>
+              <h4 className="so-form-card__title">账号信息</h4>
+              <div className="so-form-card__row">
+                <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
+                <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
+              </div>
+              <div className="so-form-card__row">
+                <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+                <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
+              </div>
+              <div className="so-form-card__row">
+                <div className="sw-field">
+                  <span>角色</span>
+                  <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                    <option value="site_operator">站点运营</option>
+                    <option value="service_supervisor">服务主管</option>
+                    <option value="org_admin">集团管理</option>
+                    <option value="careworker">护理员</option>
+                  </select>
+                </div>
+                <div />
+              </div>
             </div>
           </div>
         </div>
-        <div className="so-modal__footer">
+        <div className="quality-user-modal__footer">
           <div />
-          <div className="so-modal__footer-right">
+          <div className="quality-user-modal__footer-right">
             <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
-              {submitting ? "重置中..." : "确认重置"}
+            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "创建中..." : "创建用户"}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Reset Password Modal (compact) ── */
+function ResetPasswordModal({ user, token, onClose, onSuccess }: { user: QualityUser; token: string; onClose: () => void; onSuccess: () => void }) {
+  const [pwd, setPwd] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!pwd || pwd.length < 6) { setError("密码至少6位"); return; }
+    if (pwd !== confirm) { setError("两次密码输入不一致"); return; }
+    setError(""); setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: pwd }),
+      });
+      if (res.ok) { onSuccess(); } else { const d = await res.json(); setError(d.error ?? "重置失败"); }
+    } catch { setError("网络错误"); }
+    setSubmitting(false);
+  };
+
+  return (
+    <>
+      <div className="sw-scrim" onClick={onClose} />
+      <div className="quality-user-modal quality-user-modal--sm" role="dialog" aria-label="重置密码">
+        <div className="quality-user-modal__header">
+          <div className="quality-user-modal__title">重置密码<span className="quality-user-modal__sub">{user.name}</span></div>
+          <CloseBtn onClick={onClose} />
+        </div>
+        <div className="quality-user-modal__body">
+          {error && <div className="quality-modal__error">{error}</div>}
+          <div className="sw-field"><span>新密码</span><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="至少6位" /></div>
+          <div className="sw-field" style={{ marginTop: 14 }}><span>确认密码</span><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="再次输入新密码" /></div>
+        </div>
+        <div className="quality-user-modal__footer">
+          <div />
+          <div className="quality-user-modal__footer-right">
+            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "重置中..." : "确认重置"}</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Confirm Dialog (centered, compact) ── */
+function ConfirmDialog({ title, message, confirmLabel, danger, submitting, onConfirm, onCancel }: {
+  title: string; message: string; confirmLabel: string; danger: boolean;
+  submitting: boolean; onConfirm: () => void; onCancel: () => void;
+}) {
+  return (
+    <>
+      <div className="sw-scrim" style={{ zIndex: 40 }} onClick={onCancel} />
+      <div className="quality-user-modal quality-user-modal--sm" style={{ zIndex: 41 }} role="alertdialog">
+        <div className="quality-user-modal__header">
+          <div className="quality-user-modal__title">{title}</div>
+          <CloseBtn onClick={onCancel} />
+        </div>
+        <div className="quality-user-modal__body">
+          <p style={{ margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.6 }}>{message}</p>
+        </div>
+        <div className="quality-user-modal__footer">
+          <div />
+          <div className="quality-user-modal__footer-right">
+            <button className="sw-btn sw-btn--secondary" onClick={onCancel} type="button">取消</button>
+            <button className={`sw-btn ${danger ? "sw-btn--danger" : "sw-btn--primary"}`} disabled={submitting} onClick={onConfirm} type="button">
+              {submitting ? "处理中..." : confirmLabel}
             </button>
           </div>
         </div>
