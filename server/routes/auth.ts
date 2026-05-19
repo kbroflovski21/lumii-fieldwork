@@ -119,7 +119,11 @@ export function authRoutes(jwtSecret: string) {
     }
 
     const user = await prisma.user.findFirst({ where: { id: payload.sub ?? payload.userId } });
-    if (!user || !bcrypt.compareSync(oldPassword, user.passwordHash)) {
+    if (!user) { res.status(400).json({ error: "用户不存在" }); return; }
+
+    if (user.mustChangePassword) {
+      // First login forced change — skip old password check
+    } else if (!bcrypt.compareSync(oldPassword, user.passwordHash)) {
       res.status(400).json({ error: "当前密码错误" });
       return;
     }

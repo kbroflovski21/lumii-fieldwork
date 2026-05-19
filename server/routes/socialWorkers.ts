@@ -90,7 +90,7 @@ export function socialWorkersRoutes() {
       where: { id },
       include: { user: { select: { username: true, mustChangePassword: true, initialPassword: true } } },
     });
-    res.json({ ...toApi(row), account: { username, initialPassword: password } });
+    res.status(201).json({ ...toApi(row), account: { username, initialPassword: password } });
   });
 
   r.patch("/social-workers/:id", async (req, res) => {

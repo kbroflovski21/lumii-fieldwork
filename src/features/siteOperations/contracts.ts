@@ -93,6 +93,12 @@ export type SiteOperationsHomeResponse = {
 
 export type SocialWorkerStatus = "active" | "disabled" | "incomplete_profile";
 
+export type WorkerAccount = {
+  username: string;
+  mustChangePassword: boolean;
+  initialPassword: string | null;
+};
+
 export type SocialWorker = {
   id: string;
   userId: string;
@@ -104,6 +110,7 @@ export type SocialWorker = {
   status: SocialWorkerStatus;
   preferredBadge?: BadgeBindingSummary;
   praiseSummary: WorkerPraiseSummary;
+  account?: WorkerAccount;
 };
 
 export type CreateSocialWorkerRequest = {

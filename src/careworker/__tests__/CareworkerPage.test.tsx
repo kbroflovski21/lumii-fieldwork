@@ -33,9 +33,9 @@ describe("CareworkerPage - Login Screen", () => {
 
   it("shows phone and password input fields", () => {
     render(<CareworkerPage />);
-    expect(screen.getByText("手机号")).toBeInTheDocument();
+    expect(screen.getByText("账号")).toBeInTheDocument();
     expect(screen.getByText("密码")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("请输入手机号")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("请输入账号")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("请输入密码")).toBeInTheDocument();
   });
 
@@ -48,7 +48,7 @@ describe("CareworkerPage - Login Screen", () => {
     render(<CareworkerPage />);
     const user = userEvent.setup();
     await user.click(screen.getByText("进入工作台"));
-    expect(screen.getByText("请输入手机号和密码")).toBeInTheDocument();
+    expect(screen.getByText("请输入账号和密码")).toBeInTheDocument();
   });
 
   it("shows error from API on wrong credentials", async () => {
@@ -61,7 +61,7 @@ describe("CareworkerPage - Login Screen", () => {
 
     render(<CareworkerPage />);
     const user = userEvent.setup();
-    await user.type(screen.getByPlaceholderText("请输入手机号"), "13800001111");
+    await user.type(screen.getByPlaceholderText("请输入账号"), "13800001111");
     await user.type(screen.getByPlaceholderText("请输入密码"), "wrongpwd");
     await user.click(screen.getByText("进入工作台"));
 
@@ -110,7 +110,7 @@ describe("CareworkerPage - Main Interface", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     // Fill in phone and password
-    await user.type(screen.getByPlaceholderText("请输入手机号"), "13800001234");
+    await user.type(screen.getByPlaceholderText("请输入账号"), "13800001234");
     await user.type(screen.getByPlaceholderText("请输入密码"), "testpass");
 
     // Click the login button

@@ -3,6 +3,9 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
+import { socialWorkersRoutes } from "../../server/routes/socialWorkers";
+import { requireAuth } from "../../server/middleware/requireAuth";
+import { optionalAuth } from "../../server/middleware/optionalAuth";
 import { prisma } from "../../server/db/prisma";
 
 const JWT_SECRET = "test-cw-secret";
@@ -11,89 +14,107 @@ function createApp() {
   const app = express();
   app.use(express.json());
   app.use("/api", authRoutes(JWT_SECRET));
+  const authMw = requireAuth(JWT_SECRET);
+  const optAuth = optionalAuth(JWT_SECRET);
+  app.use("/api", optAuth, socialWorkersRoutes());
   return app;
 }
 
-describe("POST /api/auth/create-careworker-account", () => {
+describe("Careworker auto-account creation via POST /social-workers", () => {
   let app: express.Express;
   let operatorToken: string;
-  let adminToken: string;
-  const createdPhones: string[] = [];
+  const createdWorkerIds: string[] = [];
 
   beforeAll(async () => {
     app = createApp();
     operatorToken = (await request(app).post("/api/auth/login").send({ username: "operator", password: "oper123" })).body.token;
-    adminToken = (await request(app).post("/api/auth/login").send({ username: "admin", password: "admin123" })).body.token;
   });
 
   afterAll(async () => {
-    // Clean up created careworker accounts so other tests are not affected
-    for (const phone of createdPhones) {
-      await prisma.user.deleteMany({ where: { username: phone } });
+    for (const id of createdWorkerIds) {
+      const worker = await prisma.socialWorker.findUnique({ where: { id } });
+      if (worker) {
+        await prisma.user.deleteMany({ where: { id: worker.userId } });
+        await prisma.socialWorker.delete({ where: { id } });
+      }
     }
   });
 
-  it("site_operator can create careworker account", async () => {
-    const phone = `138${Date.now().toString().slice(-8)}`;
-    createdPhones.push(phone);
+  it("creating a social worker auto-creates CW account", async () => {
     const res = await request(app)
-      .post("/api/auth/create-careworker-account")
+      .post("/api/social-workers")
       .set("Authorization", `Bearer ${operatorToken}`)
-      .send({ phone, name: "测试服务员", siteId: "site-001" });
+      .send({ name: "测试自动账号", phone: "13800009001", workerType: "service_personnel" });
     expect(res.status).toBe(201);
-    expect(res.body.username).toBe(phone);
-    expect(res.body.password).toBeDefined();
-    expect(res.body.password.length).toBeGreaterThanOrEqual(6);
-    expect(res.body.role).toBe("careworker");
+    createdWorkerIds.push(res.body.id);
+
+    expect(res.body.account).toBeDefined();
+    expect(res.body.account.username).toMatch(/^CW\d{6}$/);
+    expect(res.body.account.initialPassword).toBeDefined();
+    expect(res.body.account.initialPassword.length).toBeGreaterThanOrEqual(6);
   });
 
-  it("org_admin can also create careworker account", async () => {
-    const phone = `139${Date.now().toString().slice(-8)}`;
-    createdPhones.push(phone);
+  it("CW account has mustChangePassword=true", async () => {
     const res = await request(app)
-      .post("/api/auth/create-careworker-account")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ phone, name: "管理员创建的服务员" });
-    expect(res.status).toBe(201);
+      .post("/api/social-workers")
+      .set("Authorization", `Bearer ${operatorToken}`)
+      .send({ name: "测试改密标记", phone: "13800009002" });
+    createdWorkerIds.push(res.body.id);
+
+    const user = await prisma.user.findFirst({ where: { username: res.body.account.username } });
+    expect(user!.mustChangePassword).toBe(true);
+    expect(user!.initialPassword).toBe(res.body.account.initialPassword);
   });
 
-  it("rejects duplicate phone", async () => {
-    const phone = `137${Date.now().toString().slice(-8)}`;
-    createdPhones.push(phone);
-    await request(app).post("/api/auth/create-careworker-account")
+  it("CW can login and gets mustChangePassword flag", async () => {
+    const createRes = await request(app)
+      .post("/api/social-workers")
       .set("Authorization", `Bearer ${operatorToken}`)
-      .send({ phone, name: "第一个" });
-
-    const res = await request(app).post("/api/auth/create-careworker-account")
-      .set("Authorization", `Bearer ${operatorToken}`)
-      .send({ phone, name: "重复的" });
-    expect(res.status).toBe(409);
-  });
-
-  it("careworker can login with generated credentials", async () => {
-    const phone = `136${Date.now().toString().slice(-8)}`;
-    createdPhones.push(phone);
-    const createRes = await request(app).post("/api/auth/create-careworker-account")
-      .set("Authorization", `Bearer ${operatorToken}`)
-      .send({ phone, name: "可登录服务员" });
+      .send({ name: "测试登录", phone: "13800009003" });
+    createdWorkerIds.push(createRes.body.id);
 
     const loginRes = await request(app).post("/api/auth/login")
-      .send({ username: phone, password: createRes.body.password });
+      .send({ username: createRes.body.account.username, password: createRes.body.account.initialPassword });
     expect(loginRes.status).toBe(200);
+    expect(loginRes.body.mustChangePassword).toBe(true);
     expect(loginRes.body.user.role).toBe("careworker");
   });
 
-  it("unauthenticated request rejected", async () => {
-    const res = await request(app).post("/api/auth/create-careworker-account")
-      .send({ phone: "13800000000", name: "test" });
-    expect(res.status).toBe(401);
+  it("forced password change clears mustChangePassword", async () => {
+    const createRes = await request(app)
+      .post("/api/social-workers")
+      .set("Authorization", `Bearer ${operatorToken}`)
+      .send({ name: "测试改密", phone: "13800009004" });
+    createdWorkerIds.push(createRes.body.id);
+
+    const loginRes = await request(app).post("/api/auth/login")
+      .send({ username: createRes.body.account.username, password: createRes.body.account.initialPassword });
+    const cwToken = loginRes.body.token;
+
+    const changeRes = await request(app).patch("/api/auth/change-password")
+      .set("Authorization", `Bearer ${cwToken}`)
+      .send({ oldPassword: "__force_change__", newPassword: "newpass123" });
+    expect(changeRes.status).toBe(200);
+
+    const user = await prisma.user.findFirst({ where: { username: createRes.body.account.username } });
+    expect(user!.mustChangePassword).toBe(false);
+    expect(user!.initialPassword).toBeNull();
+
+    // Can login with new password
+    const reloginRes = await request(app).post("/api/auth/login")
+      .send({ username: createRes.body.account.username, password: "newpass123" });
+    expect(reloginRes.status).toBe(200);
+    expect(reloginRes.body.mustChangePassword).toBe(false);
   });
 
-  it("supervisor cannot create careworker account", async () => {
-    const supToken = (await request(app).post("/api/auth/login").send({ username: "supervisor", password: "super123" })).body.token;
-    const res = await request(app).post("/api/auth/create-careworker-account")
-      .set("Authorization", `Bearer ${supToken}`)
-      .send({ phone: "13800009999", name: "test" });
-    expect(res.status).toBe(403);
+  it("GET /social-workers includes account info", async () => {
+    const res = await request(app)
+      .get("/api/social-workers")
+      .set("Authorization", `Bearer ${operatorToken}`);
+    expect(res.status).toBe(200);
+
+    const withAccount = res.body.socialWorkers.find((w: any) => w.account?.username?.startsWith("CW"));
+    expect(withAccount).toBeDefined();
+    expect(withAccount.account.username).toMatch(/^CW\d{6}$/);
   });
 });

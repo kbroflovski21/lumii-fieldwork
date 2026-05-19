@@ -1143,15 +1143,72 @@ function SopDetailDrawer({ sop, onClose }: { sop: SopFolder; onClose: () => void
 }
 
 /** Login screen */
+function ChangePasswordScreen({ token, onDone }: { token: string; onDone: () => void }) {
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!newPwd || newPwd.length < 6) { setError("新密码至少6位"); return; }
+    if (newPwd !== confirmPwd) { setError("两次密码不一致"); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword: "__force_change__", newPassword: newPwd }),
+      });
+      if (res.ok) { onDone(); } else {
+        const data = await res.json();
+        setError(data.error ?? "修改失败");
+      }
+    } catch { setError("网络错误"); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="cw-login">
+      <div className="cw-login__card">
+        <div className="cw-login__logo">
+          <div className="cw-login__icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h1 className="cw-login__title">首次登录</h1>
+          <p className="cw-login__subtitle">请设置您的新密码</p>
+        </div>
+        <div className="cw-login__form">
+          {error && <div className="cw-login__error">{error}</div>}
+          <label className="cw-login__field">
+            <span>新密码</span>
+            <input type="password" placeholder="至少6位" value={newPwd} onChange={e => setNewPwd(e.target.value)} />
+          </label>
+          <label className="cw-login__field">
+            <span>确认密码</span>
+            <input type="password" placeholder="再次输入新密码" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSubmit(); }} />
+          </label>
+          <button className="cw-login__btn" onClick={handleSubmit} disabled={loading}>
+            {loading ? "设置中..." : "设置密码并进入"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mustChangePwd, setMustChangePwd] = useState<{ token: string; worker: DemoWorker } | null>(null);
 
   const handleLogin = async () => {
     if (!phone.trim() || !password.trim()) {
-      setError("请输入手机号和密码");
+      setError("请输入账号和密码");
       return;
     }
     setLoading(true);
@@ -1168,19 +1225,35 @@ function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
         setLoading(false);
         return;
       }
-      localStorage.setItem("gy_careworker_token", data.token);
+      const t = data.token;
       const u = data.user;
-      onLogin({
-        id: u.id,
-        name: u.name,
-        phone: u.phone || phone.trim(),
-        site: (u.siteIds && u.siteIds[0]) || "site-001",
-      });
+      const w: DemoWorker = { id: u.id, name: u.name, phone: u.phone || phone.trim(), site: (u.siteIds && u.siteIds[0]) || "site-001" };
+
+      if (data.mustChangePassword) {
+        setMustChangePwd({ token: t, worker: w });
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("gy_careworker_token", t);
+      onLogin(w);
     } catch {
       setError("网络错误，请重试");
     }
     setLoading(false);
   };
+
+  if (mustChangePwd) {
+    return (
+      <ChangePasswordScreen
+        token={mustChangePwd.token}
+        onDone={() => {
+          localStorage.setItem("gy_careworker_token", mustChangePwd.token);
+          onLogin(mustChangePwd.worker);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="cw-login">
@@ -1199,13 +1272,13 @@ function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
         <div className="cw-login__form">
           {error && <div className="cw-login__error">{error}</div>}
           <label className="cw-login__field">
-            <span>手机号</span>
+            <span>账号</span>
             <input
-              type="tel"
-              placeholder="请输入手机号"
+              type="text"
+              placeholder="请输入账号"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              autoComplete="tel"
+              autoComplete="username"
             />
           </label>
           <label className="cw-login__field">
