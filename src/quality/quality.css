@@ -677,19 +677,21 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 640px;
-  max-width: 92vw;
-  max-height: 85vh;
+  width: 94%;
+  max-width: 900px;
+  height: 92vh;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 32px 100px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   z-index: 31;
-  animation: quality-modal-up 0.2s ease-out;
 }
 .quality-user-modal--sm {
   width: 440px;
+  max-width: 92vw;
+  height: auto;
+  max-height: 85vh;
 }
 .quality-user-modal__header {
   display: flex;
@@ -808,11 +810,6 @@
   width: 420px;
   max-width: 90vw;
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  animation: quality-modal-up 0.2s ease-out;
-}
-@keyframes quality-modal-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 .quality-modal__header {
   display: flex;

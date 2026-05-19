@@ -698,7 +698,6 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
                     <option value="site_operator">站点运营</option>
                     <option value="service_supervisor">服务主管</option>
                     <option value="org_admin">集团管理</option>
-                    <option value="careworker">护理员</option>
                   </select>
                 </div>
                 <div />
