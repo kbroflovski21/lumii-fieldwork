@@ -3,11 +3,7 @@ import { prisma } from "../db/prisma";
 import { genId, withOperationalState } from "./helpers";
 
 function isValidIdNumber(id: string): boolean {
-  if (!/^\d{17}[\dXx]$/.test(id)) return false;
-  const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
-  const checkCodes = "10X98765432";
-  const sum = id.slice(0, 17).split("").reduce((s, c, i) => s + parseInt(c) * weights[i], 0);
-  return checkCodes[sum % 11] === id[17].toUpperCase();
+  return /^\d{17}[\dXx]$/.test(id);
 }
 
 function toApi(row: any, familyContacts: any[] = [], planSummaries: any[] = []) {
