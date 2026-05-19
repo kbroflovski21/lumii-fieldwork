@@ -1,75 +1,90 @@
 import { Router } from "express";
-import { getDb } from "../db/init";
-import { genId, jsonParse, withOperationalState } from "./helpers";
+import { prisma } from "../db/prisma";
+import { genId, withOperationalState } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
   return {
-    id: row.id, userId: row.user_id, name: row.name, phone: row.phone, siteId: row.site_id,
-    workerType: row.worker_type, qualificationLabels: jsonParse(row.qualification_labels, []),
+    id: row.id, userId: row.userId, name: row.name, phone: row.phone, siteId: row.siteId,
+    workerType: row.workerType, qualificationLabels: row.qualificationLabels,
     status: row.status,
-    preferredBadge: row.preferred_badge_id ? { badgeId: row.preferred_badge_id, deviceCode: row.preferred_badge_device_code, status: row.preferred_badge_status, lastSyncAt: row.preferred_badge_last_sync_at } : undefined,
-    praiseSummary: { praiseCount: row.praise_count, latestPraiseAt: row.latest_praise_at, latestPraiseExcerpt: row.latest_praise_excerpt },
+    preferredBadge: row.preferredBadgeId ? { badgeId: row.preferredBadgeId, deviceCode: row.preferredBadgeDeviceCode, status: row.preferredBadgeStatus, lastSyncAt: row.preferredBadgeLastSyncAt } : undefined,
+    praiseSummary: { praiseCount: row.praiseCount, latestPraiseAt: row.latestPraiseAt, latestPraiseExcerpt: row.latestPraiseExcerpt },
   };
 }
 
 export function socialWorkersRoutes() {
   const r = Router();
 
-  r.get("/social-workers", (_req, res) => {
-    const db = getDb();
-    const rows = db.prepare("SELECT * FROM social_workers ORDER BY created_at DESC").all();
+  r.get("/social-workers", async (_req, res) => {
+    const rows = await prisma.socialWorker.findMany({ orderBy: { createdAt: "desc" } });
     res.json(withOperationalState({ socialWorkers: rows.map(toApi) }));
   });
 
-  r.post("/social-workers", (req, res) => {
-    const db = getDb();
+  r.post("/social-workers", async (req, res) => {
     const id = genId("worker");
     const b = req.body;
-    db.prepare("INSERT INTO social_workers (id, user_id, name, phone, site_id, worker_type, qualification_labels, status) VALUES (?, ?, ?, ?, 'site-001', ?, ?, 'active')").run(
-      id, `user-${id}`, b.name ?? "", b.phone ?? "", b.workerType ?? "service_personnel", JSON.stringify(b.qualificationLabels ?? [])
-    );
-    const row = db.prepare("SELECT * FROM social_workers WHERE id = ?").get(id);
+    await prisma.socialWorker.create({
+      data: {
+        id,
+        userId: `user-${id}`,
+        name: b.name ?? "",
+        phone: b.phone ?? "",
+        siteId: "site-001",
+        workerType: b.workerType ?? "service_personnel",
+        qualificationLabels: b.qualificationLabels ?? [],
+        status: "active",
+      },
+    });
+    const row = await prisma.socialWorker.findFirst({ where: { id } });
     res.json(toApi(row));
   });
 
-  r.patch("/social-workers/:id", (req, res) => {
-    const db = getDb();
+  r.patch("/social-workers/:id", async (req, res) => {
     const b = req.body;
-    const sets: string[] = [];
-    const vals: any[] = [];
-    if (b.name !== undefined) { sets.push("name = ?"); vals.push(b.name); }
-    if (b.phone !== undefined) { sets.push("phone = ?"); vals.push(b.phone); }
-    if (b.qualificationLabels !== undefined) { sets.push("qualification_labels = ?"); vals.push(JSON.stringify(b.qualificationLabels)); }
-    if (b.status !== undefined) { sets.push("status = ?"); vals.push(b.status); }
-    if (sets.length > 0) {
-      sets.push("updated_at = datetime('now')");
-      vals.push(req.params.id);
-      db.prepare(`UPDATE social_workers SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+    const data: any = {};
+    if (b.name !== undefined) data.name = b.name;
+    if (b.phone !== undefined) data.phone = b.phone;
+    if (b.qualificationLabels !== undefined) data.qualificationLabels = b.qualificationLabels;
+    if (b.status !== undefined) data.status = b.status;
+    if (Object.keys(data).length > 0) {
+      await prisma.socialWorker.update({ where: { id: req.params.id }, data });
     }
-    const row = db.prepare("SELECT * FROM social_workers WHERE id = ?").get(req.params.id);
+    const row = await prisma.socialWorker.findFirst({ where: { id: req.params.id } });
     res.json(toApi(row));
   });
 
-  r.put("/social-workers/:id/badge-binding", (req, res) => {
-    const db = getDb();
+  r.put("/social-workers/:id/badge-binding", async (req, res) => {
     const b = req.body;
     const badgeId = b.preferredBadgeId ?? b.badgeId ?? null;
     if (badgeId) {
-      const badge = db.prepare("SELECT device_code, status, last_sync_at FROM smart_badges WHERE id = ?").get(badgeId) as any;
-      db.prepare("UPDATE social_workers SET preferred_badge_id = ?, preferred_badge_device_code = ?, preferred_badge_status = ?, preferred_badge_last_sync_at = ?, updated_at = datetime('now') WHERE id = ?").run(
-        badgeId, badge?.device_code ?? null, badge?.status ?? null, badge?.last_sync_at ?? null, req.params.id
-      );
+      const badge = await prisma.smartBadge.findFirst({ where: { id: badgeId }, select: { deviceCode: true, status: true, lastSyncAt: true } });
+      await prisma.socialWorker.update({
+        where: { id: req.params.id },
+        data: {
+          preferredBadgeId: badgeId,
+          preferredBadgeDeviceCode: badge?.deviceCode ?? null,
+          preferredBadgeStatus: badge?.status ?? null,
+          preferredBadgeLastSyncAt: badge?.lastSyncAt ?? null,
+        },
+      });
     } else {
-      db.prepare("UPDATE social_workers SET preferred_badge_id = NULL, preferred_badge_device_code = NULL, preferred_badge_status = NULL, preferred_badge_last_sync_at = NULL, updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+      await prisma.socialWorker.update({
+        where: { id: req.params.id },
+        data: {
+          preferredBadgeId: null,
+          preferredBadgeDeviceCode: null,
+          preferredBadgeStatus: null,
+          preferredBadgeLastSyncAt: null,
+        },
+      });
     }
-    const row = db.prepare("SELECT * FROM social_workers WHERE id = ?").get(req.params.id);
+    const row = await prisma.socialWorker.findFirst({ where: { id: req.params.id } });
     res.json(toApi(row));
   });
 
-  r.post("/social-workers/:id/archive", (req, res) => {
-    const db = getDb();
-    db.prepare("UPDATE social_workers SET status = 'disabled', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+  r.post("/social-workers/:id/archive", async (req, res) => {
+    await prisma.socialWorker.update({ where: { id: req.params.id }, data: { status: "disabled" } });
     res.json({ ok: true, id: req.params.id, message: "archived" });
   });
 

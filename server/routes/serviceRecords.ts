@@ -1,100 +1,101 @@
 import { Router } from "express";
-import { getDb } from "../db/init";
-import { jsonParse, withOperationalState } from "./helpers";
+import { prisma } from "../db/prisma";
+import { withOperationalState } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
   return {
-    id: row.id, serviceDate: row.service_date, startTime: row.start_time, endTime: row.end_time,
-    durationMinutes: row.duration_minutes, socialWorkerId: row.social_worker_id, socialWorkerName: row.social_worker_name,
-    serviceObjectId: row.service_object_id, serviceObjectName: row.service_object_name,
-    familyContactIds: jsonParse(row.family_contact_ids, []), badgeId: row.badge_id, smartBadgeId: row.smart_badge_id,
-    serviceProject: row.service_project, assignmentConfidence: row.assignment_confidence,
-    reviewStatus: row.review_status, exportStatus: row.export_status,
-    locationEvidence: jsonParse(row.location_evidence), serviceExceptions: jsonParse(row.service_exceptions, []),
-    serviceItems: jsonParse(row.service_items, []), exceptionTags: jsonParse(row.exception_tags, []),
-    missingFields: jsonParse(row.missing_fields, []), audioAssetId: row.audio_asset_id, transcriptId: row.transcript_id,
-    structuredSummary: row.structured_summary, generatedSummary: row.generated_summary,
-    exportHistory: jsonParse(row.export_history, []),
+    id: row.id, serviceDate: row.serviceDate, startTime: row.startTime, endTime: row.endTime,
+    durationMinutes: row.durationMinutes, socialWorkerId: row.socialWorkerId, socialWorkerName: row.socialWorkerName,
+    serviceObjectId: row.serviceObjectId, serviceObjectName: row.serviceObjectName,
+    familyContactIds: row.familyContactIds, badgeId: row.badgeId, smartBadgeId: row.smartBadgeId,
+    serviceProject: row.serviceProject, assignmentConfidence: row.assignmentConfidence,
+    reviewStatus: row.reviewStatus, exportStatus: row.exportStatus,
+    locationEvidence: row.locationEvidence, serviceExceptions: row.serviceExceptions,
+    serviceItems: row.serviceItems, exceptionTags: row.exceptionTags,
+    missingFields: row.missingFields, audioAssetId: row.audioAssetId, transcriptId: row.transcriptId,
+    structuredSummary: row.structuredSummary, generatedSummary: row.generatedSummary,
+    exportHistory: row.exportHistory,
   };
 }
 
 function audioToApi(row: any) {
   if (!row) return row;
   return {
-    id: row.id, recordId: row.record_id, playbackUrl: row.playback_url, durationSeconds: row.duration_seconds,
-    capturedByBadgeId: row.captured_by_badge_id, uploadedAt: row.uploaded_at, retentionLabel: row.retention_label,
+    id: row.id, recordId: row.recordId, playbackUrl: row.playbackUrl, durationSeconds: row.durationSeconds,
+    capturedByBadgeId: row.capturedByBadgeId, uploadedAt: row.uploadedAt, retentionLabel: row.retentionLabel,
   };
 }
 
 function transcriptToApi(row: any) {
   if (!row) return row;
   return {
-    id: row.id, recordId: row.record_id, language: row.language, text: row.text,
-    confidence: row.confidence, segments: jsonParse(row.segments, []),
+    id: row.id, recordId: row.recordId, language: row.language, text: row.text,
+    confidence: row.confidence, segments: row.segments,
   };
 }
 
 export function serviceRecordsRoutes() {
   const r = Router();
 
-  r.get("/service-records", (_req, res) => {
-    const db = getDb();
-    const records = db.prepare("SELECT * FROM service_records ORDER BY service_date DESC").all();
-    const audioAssets = db.prepare("SELECT * FROM audio_assets").all();
-    const transcripts = db.prepare("SELECT * FROM transcripts").all();
-    const serviceObjects = db.prepare("SELECT * FROM service_objects").all();
-    const smartBadges = db.prepare("SELECT * FROM smart_badges").all();
+  r.get("/service-records", async (_req, res) => {
+    const records = await prisma.serviceRecord.findMany({ orderBy: { serviceDate: "desc" } });
+    const audioAssets = await prisma.audioAsset.findMany();
+    const transcripts = await prisma.transcript.findMany();
+    const serviceObjects = await prisma.serviceObject.findMany({ select: { id: true, name: true } });
+    const smartBadges = await prisma.smartBadge.findMany({ select: { id: true, deviceCode: true } });
 
     res.json(withOperationalState({
       serviceRecords: records.map(toApi),
       audioAssets: audioAssets.map(audioToApi),
       transcripts: transcripts.map(transcriptToApi),
-      serviceObjects: serviceObjects.map((o: any) => ({ id: o.id, name: o.name, familyContacts: [] })),
-      smartBadges: smartBadges.map((b: any) => ({ id: b.id, deviceCode: b.device_code })),
+      serviceObjects: serviceObjects.map((o) => ({ id: o.id, name: o.name, familyContacts: [] })),
+      smartBadges: smartBadges.map((b) => ({ id: b.id, deviceCode: b.deviceCode })),
     }));
   });
 
-  r.get("/service-records/:id", (req, res) => {
-    const db = getDb();
-    const row = db.prepare("SELECT * FROM service_records WHERE id = ?").get(req.params.id);
+  r.get("/service-records/:id", async (req, res) => {
+    const row = await prisma.serviceRecord.findFirst({ where: { id: req.params.id } });
     if (!row) return res.status(404).json({ error: "not found" });
     res.json(toApi(row));
   });
 
-  r.get("/service-records/:id/audio", (req, res) => {
-    const db = getDb();
-    const record = db.prepare("SELECT audio_asset_id FROM service_records WHERE id = ?").get(req.params.id) as any;
+  r.get("/service-records/:id/audio", async (req, res) => {
+    const record = await prisma.serviceRecord.findFirst({
+      where: { id: req.params.id },
+      select: { audioAssetId: true },
+    });
     if (!record) return res.status(404).json({ error: "not found" });
-    const audio = db.prepare("SELECT * FROM audio_assets WHERE id = ?").get(record.audio_asset_id);
+    const audio = await prisma.audioAsset.findFirst({ where: { id: record.audioAssetId! } });
     if (!audio) return res.status(404).json({ error: "audio not found" });
     res.json(audioToApi(audio));
   });
 
-  r.get("/service-records/:id/transcript", (req, res) => {
-    const db = getDb();
-    const record = db.prepare("SELECT transcript_id FROM service_records WHERE id = ?").get(req.params.id) as any;
+  r.get("/service-records/:id/transcript", async (req, res) => {
+    const record = await prisma.serviceRecord.findFirst({
+      where: { id: req.params.id },
+      select: { transcriptId: true },
+    });
     if (!record) return res.status(404).json({ error: "not found" });
-    const transcript = db.prepare("SELECT * FROM transcripts WHERE id = ?").get(record.transcript_id);
+    const transcript = await prisma.transcript.findFirst({ where: { id: record.transcriptId! } });
     if (!transcript) return res.status(404).json({ error: "transcript not found" });
     res.json(transcriptToApi(transcript));
   });
 
-  r.patch("/service-records/:id/review", (req, res) => {
-    const db = getDb();
+  r.patch("/service-records/:id/review", async (req, res) => {
     const b = req.body;
     if (b.action === "confirm_assignment") {
-      db.prepare("UPDATE service_records SET review_status = 'confirmed', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+      await prisma.serviceRecord.update({ where: { id: req.params.id }, data: { reviewStatus: "confirmed" } });
     } else if (b.action === "complete_information") {
-      db.prepare("UPDATE service_records SET review_status = 'confirmed', missing_fields = '[]', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+      await prisma.serviceRecord.update({ where: { id: req.params.id }, data: { reviewStatus: "confirmed", missingFields: [] } });
     } else if (b.action === "resolve_exception") {
-      db.prepare("UPDATE service_records SET review_status = 'confirmed', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+      await prisma.serviceRecord.update({ where: { id: req.params.id }, data: { reviewStatus: "confirmed" } });
     }
-    const row = db.prepare("SELECT * FROM service_records WHERE id = ?").get(req.params.id);
+    const row = await prisma.serviceRecord.findFirst({ where: { id: req.params.id } });
     res.json({ ok: true, id: req.params.id, message: "reviewed", serviceRecord: toApi(row) });
   });
 
-  r.post("/service-records/export", (req, res) => {
+  r.post("/service-records/export", async (req, res) => {
     res.json({ ok: true, exportId: `export-${Date.now()}`, fileVersion: "v1", exportedAt: new Date().toISOString() });
   });
 

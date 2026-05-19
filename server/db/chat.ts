@@ -1,63 +1,73 @@
-import type Database from "better-sqlite3";
+import { prisma } from "./prisma";
 import type { PersistedMessage } from "../ws/protocol";
 
 export class ChatDb {
-  constructor(private db: Database.Database) {}
+  constructor() {}
 
-  migrate(): void {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        agent_id TEXT NOT NULL,
-        session_key TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
-        content TEXT NOT NULL,
-        msg_type TEXT NOT NULL DEFAULT 'text',
-        card_data TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_chat_agent_session
-        ON chat_messages(agent_id, session_key, id DESC);
-    `);
+  async migrate(): Promise<void> {
+    // No-op: Prisma Migrate handles schema
   }
 
-  insert(agentId: string, sessionKey: string, role: string, content: string, msgType: string, cardData?: string): number {
-    const stmt = this.db.prepare(
-      `INSERT INTO chat_messages (agent_id, session_key, role, content, msg_type, card_data) VALUES (?, ?, ?, ?, ?, ?)`
-    );
-    const result = stmt.run(agentId, sessionKey, role, content, msgType, cardData ?? null);
-    return result.lastInsertRowid as number;
+  async insert(agentId: string, sessionKey: string, role: string, content: string, msgType: string, cardData?: string): Promise<number> {
+    const msg = await prisma.chatMessage.create({
+      data: {
+        agentId,
+        sessionKey,
+        role: role as any,
+        content,
+        msgType,
+        cardData: cardData ?? null,
+      },
+    });
+    return msg.id;
   }
 
-  getRecent(agentId: string, sessionKey: string, limit: number): PersistedMessage[] {
-    const rows = this.db.prepare(
-      `SELECT id, role, content, msg_type, card_data, created_at as timestamp
-       FROM chat_messages
-       WHERE agent_id = ? AND session_key = ?
-       ORDER BY id DESC LIMIT ?`
-    ).all(agentId, sessionKey, limit) as PersistedMessage[];
-    return rows.reverse();
+  async getRecent(agentId: string, sessionKey: string, limit: number): Promise<PersistedMessage[]> {
+    const rows = await prisma.chatMessage.findMany({
+      where: { agentId, sessionKey },
+      orderBy: { id: "desc" },
+      take: limit,
+      select: { id: true, role: true, content: true, msgType: true, cardData: true, createdAt: true },
+    });
+    return rows.reverse().map((r) => ({
+      id: r.id,
+      role: r.role,
+      content: r.content,
+      msg_type: r.msgType,
+      card_data: r.cardData,
+      timestamp: r.createdAt.toISOString(),
+    }));
   }
 
-  getBefore(agentId: string, sessionKey: string, beforeId: number, limit: number): { messages: PersistedMessage[]; hasMore: boolean } {
-    const rows = this.db.prepare(
-      `SELECT id, role, content, msg_type, card_data, created_at as timestamp
-       FROM chat_messages
-       WHERE agent_id = ? AND session_key = ? AND id < ?
-       ORDER BY id DESC LIMIT ?`
-    ).all(agentId, sessionKey, beforeId, limit + 1) as PersistedMessage[];
-
+  async getBefore(agentId: string, sessionKey: string, beforeId: number, limit: number): Promise<{ messages: PersistedMessage[]; hasMore: boolean }> {
+    const rows = await prisma.chatMessage.findMany({
+      where: { agentId, sessionKey, id: { lt: beforeId } },
+      orderBy: { id: "desc" },
+      take: limit + 1,
+      select: { id: true, role: true, content: true, msgType: true, cardData: true, createdAt: true },
+    });
     const hasMore = rows.length > limit;
-    const messages = rows.slice(0, limit).reverse();
+    const messages = rows.slice(0, limit).reverse().map((r) => ({
+      id: r.id,
+      role: r.role,
+      content: r.content,
+      msg_type: r.msgType,
+      card_data: r.cardData,
+      timestamp: r.createdAt.toISOString(),
+    }));
     return { messages, hasMore };
   }
 
-  getLastMessages(agentId: string, sessionKey: string, count: number): Array<{ role: string; timestamp?: string }> {
-    return this.db.prepare(
-      `SELECT role, created_at as timestamp
-       FROM chat_messages
-       WHERE agent_id = ? AND session_key = ?
-       ORDER BY id DESC LIMIT ?`
-    ).all(agentId, sessionKey, count) as Array<{ role: string; timestamp: string }>;
+  async getLastMessages(agentId: string, sessionKey: string, count: number): Promise<Array<{ role: string; timestamp?: string }>> {
+    const rows = await prisma.chatMessage.findMany({
+      where: { agentId, sessionKey },
+      orderBy: { id: "desc" },
+      take: count,
+      select: { role: true, createdAt: true },
+    });
+    return rows.map((r) => ({
+      role: r.role,
+      timestamp: r.createdAt.toISOString(),
+    }));
   }
 }

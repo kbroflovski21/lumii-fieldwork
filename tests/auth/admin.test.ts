@@ -5,16 +5,12 @@ import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
 import { adminRoutes } from "../../server/routes/admin";
 import { requireAuth } from "../../server/middleware/requireAuth";
-import { getDb } from "../../server/db/init";
-import { seedDatabase } from "../../server/db/seed";
 
 const JWT_SECRET = "test-admin-secret";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  getDb();
-  seedDatabase();
   app.use("/api", authRoutes(JWT_SECRET));
   const authMw = requireAuth(JWT_SECRET);
   app.use("/api", authMw, adminRoutes());

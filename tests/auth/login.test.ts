@@ -3,17 +3,12 @@ import { describe, it, expect, beforeAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
-import { getDb } from "../../server/db/init";
-import { seedDatabase } from "../../server/db/seed";
 
 const JWT_SECRET = "test-auth-secret";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  // Ensure DB is initialized and seeded
-  getDb();
-  seedDatabase();
   app.use("/api", authRoutes(JWT_SECRET));
   return app;
 }

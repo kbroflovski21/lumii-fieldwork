@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { getDb } from "../db/init";
+import { prisma } from "../db/prisma";
 
 function genId() {
   return `user-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -9,33 +9,35 @@ function genId() {
 export function adminRoutes() {
   const r = Router();
 
-  r.get("/admin/users", (req, res) => {
-    const db = getDb();
+  r.get("/admin/users", async (req, res) => {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") {
       res.status(403).json({ error: "无权限" });
       return;
     }
 
-    const rows = db.prepare("SELECT id, username, name, role, org_id, site_ids, phone, status, created_at FROM users WHERE org_id = ? ORDER BY created_at DESC").all(user.orgId) as any[];
+    const rows = await prisma.user.findMany({
+      where: { orgId: user.orgId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, username: true, name: true, role: true, orgId: true, siteIds: true, phone: true, status: true, createdAt: true },
+    });
 
     res.json({
-      users: rows.map((r: any) => ({
+      users: rows.map((r) => ({
         id: r.id,
         username: r.username,
         name: r.name,
         role: r.role,
-        orgId: r.org_id,
-        siteIds: JSON.parse(r.site_ids || "[]"),
+        orgId: r.orgId,
+        siteIds: r.siteIds as string[],
         phone: r.phone,
         status: r.status,
-        createdAt: r.created_at,
+        createdAt: r.createdAt.toISOString(),
       })),
     });
   });
 
-  r.post("/admin/users", (req, res) => {
-    const db = getDb();
+  r.post("/admin/users", async (req, res) => {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") {
       res.status(403).json({ error: "无权限" });
@@ -53,7 +55,7 @@ export function adminRoutes() {
       return;
     }
 
-    const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
+    const existing = await prisma.user.findFirst({ where: { username } });
     if (existing) {
       res.status(409).json({ error: "用户名已存在" });
       return;
@@ -61,15 +63,24 @@ export function adminRoutes() {
 
     const id = genId();
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare(
-      `INSERT INTO users (id, username, password_hash, name, role, org_id, site_ids, phone, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(id, username, hash, name, role, user.orgId, JSON.stringify(siteIds ?? []), phone ?? "", user.id);
+    await prisma.user.create({
+      data: {
+        id,
+        username,
+        passwordHash: hash,
+        name,
+        role: role as any,
+        orgId: user.orgId,
+        siteIds: siteIds ?? [],
+        phone: phone ?? "",
+        createdBy: user.id,
+      },
+    });
 
     res.status(201).json({ id, username, name, role });
   });
 
-  r.patch("/admin/users/:id", (req, res) => {
-    const db = getDb();
+  r.patch("/admin/users/:id", async (req, res) => {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") {
       res.status(403).json({ error: "无权限" });
@@ -77,30 +88,27 @@ export function adminRoutes() {
     }
 
     const { name, role, siteIds, phone, status } = req.body ?? {};
-    const target = db.prepare("SELECT * FROM users WHERE id = ? AND org_id = ?").get(req.params.id, user.orgId) as any;
+    const target = await prisma.user.findFirst({ where: { id: req.params.id, orgId: user.orgId } });
     if (!target) {
       res.status(404).json({ error: "用户不存在" });
       return;
     }
 
-    const updates: string[] = [];
-    const values: any[] = [];
-    if (name !== undefined) { updates.push("name = ?"); values.push(name); }
-    if (role !== undefined) { updates.push("role = ?"); values.push(role); }
-    if (siteIds !== undefined) { updates.push("site_ids = ?"); values.push(JSON.stringify(siteIds)); }
-    if (phone !== undefined) { updates.push("phone = ?"); values.push(phone); }
-    if (status !== undefined) { updates.push("status = ?"); values.push(status); }
-    updates.push("updated_at = datetime('now')");
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (role !== undefined) data.role = role;
+    if (siteIds !== undefined) data.siteIds = siteIds;
+    if (phone !== undefined) data.phone = phone;
+    if (status !== undefined) data.status = status;
 
-    if (updates.length > 1) {
-      db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`).run(...values, req.params.id);
+    if (Object.keys(data).length > 0) {
+      await prisma.user.update({ where: { id: req.params.id }, data });
     }
 
     res.json({ ok: true });
   });
 
-  r.post("/admin/users/:id/reset-password", (req, res) => {
-    const db = getDb();
+  r.post("/admin/users/:id/reset-password", async (req, res) => {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") {
       res.status(403).json({ error: "无权限" });
@@ -113,27 +121,29 @@ export function adminRoutes() {
       return;
     }
 
-    const target = db.prepare("SELECT id FROM users WHERE id = ? AND org_id = ?").get(req.params.id, user.orgId);
+    const target = await prisma.user.findFirst({ where: { id: req.params.id, orgId: user.orgId } });
     if (!target) {
       res.status(404).json({ error: "用户不存在" });
       return;
     }
 
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hash, req.params.id);
+    await prisma.user.update({ where: { id: req.params.id }, data: { passwordHash: hash } });
 
     res.json({ ok: true });
   });
 
-  r.delete("/admin/users/:id", (req, res) => {
-    const db = getDb();
+  r.delete("/admin/users/:id", async (req, res) => {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") {
       res.status(403).json({ error: "无权限" });
       return;
     }
 
-    const target = db.prepare("SELECT id, username FROM users WHERE id = ? AND org_id = ?").get(req.params.id, user.orgId) as any;
+    const target = await prisma.user.findFirst({
+      where: { id: req.params.id, orgId: user.orgId },
+      select: { id: true, username: true },
+    });
     if (!target) {
       res.status(404).json({ error: "用户不存在" });
       return;
@@ -144,7 +154,7 @@ export function adminRoutes() {
       return;
     }
 
-    db.prepare("DELETE FROM users WHERE id = ?").run(req.params.id);
+    await prisma.user.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   });
 

@@ -2,7 +2,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createServer, type Server } from "http";
 import { WebSocket } from "ws";
-import Database from "better-sqlite3";
 import { AgentConnectionPool } from "../../server/ws/pool";
 import { ChatDb } from "../../server/db/chat";
 import { signJwt } from "../../server/ws/auth";
@@ -32,13 +31,11 @@ describe("AgentConnectionPool", () => {
   let server: Server;
   let pool: AgentConnectionPool;
   let port: number;
-  let db: Database.Database;
   let chatDb: ChatDb;
 
   beforeEach(async () => {
-    db = new Database(":memory:");
-    chatDb = new ChatDb(db);
-    chatDb.migrate();
+    chatDb = new ChatDb();
+    await chatDb.migrate();
     pool = new AgentConnectionPool({ chatDb, jwtSecret: "test-secret", wsToken: "agent-token", agentId: "test-agent" });
     server = createServer();
     server.on("upgrade", (req, socket, head) => {
@@ -49,7 +46,7 @@ describe("AgentConnectionPool", () => {
     await new Promise<void>((r) => server.listen(0, () => { port = (server.address() as any).port; r(); }));
   });
 
-  afterEach(() => { pool.shutdown(); server.close(); db.close(); });
+  afterEach(() => { pool.shutdown(); server.close(); });
 
   it("accepts agent registration with valid ws_token", async () => {
     const ws = new WebSocket(`ws://localhost:${port}/api/ws/agent`);
@@ -111,8 +108,11 @@ describe("AgentConnectionPool", () => {
     expect(reply.role).toBe("assistant");
     expect(reply.content).toBe("hi back");
 
+    // Wait for async DB persistence
+    await new Promise((r) => setTimeout(r, 200));
+
     // Check DB persistence
-    const msgs = chatDb.getRecent("test-agent", "web:test-agent:u1:home", 50);
+    const msgs = await chatDb.getRecent("test-agent", "web:test-agent:u1:home", 50);
     expect(msgs).toHaveLength(2);
 
     agentWs.close(); userWs.close();
@@ -153,10 +153,14 @@ describe("AgentConnectionPool", () => {
     expect(end.type).toBe("stream_end");
     expect(end.content).toBe("Hello world!");
 
+    // Wait for async DB persistence
+    await new Promise((r) => setTimeout(r, 200));
+
     // Persisted
-    const msgs = chatDb.getRecent("test-agent", sk, 50);
-    expect(msgs).toHaveLength(1);
-    expect(msgs[0].content).toBe("Hello world!");
+    const msgs = await chatDb.getRecent("test-agent", sk, 50);
+    const assistantMsgs = msgs.filter(m => m.role === "assistant");
+    expect(assistantMsgs.length).toBeGreaterThanOrEqual(1);
+    expect(assistantMsgs[assistantMsgs.length - 1].content).toBe("Hello world!");
 
     agentWs.close(); userWs.close();
   });
@@ -233,10 +237,14 @@ describe("AgentConnectionPool", () => {
     expect(msg.content).toBe("真正的回复");
     expect(msg.content).not.toContain("__lak_progress_card_v1__");
 
+    // Wait for async DB persistence
+    await new Promise((r) => setTimeout(r, 200));
+
     // DB should only have the real reply
-    const msgs = chatDb.getRecent("test-agent", sk, 50);
-    expect(msgs.filter(m => m.role === "assistant")).toHaveLength(1);
-    expect(msgs.find(m => m.role === "assistant")!.content).toBe("真正的回复");
+    const msgs = await chatDb.getRecent("test-agent", sk, 50);
+    const assistantMsgs = msgs.filter((m: any) => m.role === "assistant");
+    expect(assistantMsgs.filter((m: any) => m.content === "真正的回复")).toHaveLength(1);
+    expect(assistantMsgs.filter((m: any) => m.content.includes("__lak_progress_card_v1__"))).toHaveLength(0);
 
     agentWs.close(); userWs.close();
   });

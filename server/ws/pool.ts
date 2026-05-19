@@ -43,7 +43,7 @@ export class AgentConnectionPool {
   }
 
   handleUserUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void {
-    this.userWss.handleUpgrade(req, socket, head, (ws) => {
+    this.userWss.handleUpgrade(req, socket, head, async (ws) => {
       const url = new URL(req.url!, "http://localhost");
       const tokenParam = url.searchParams.get("token") ?? "";
       const sessionId = url.searchParams.get("sessionId") ?? "home";
@@ -65,8 +65,8 @@ export class AgentConnectionPool {
       };
       this.userConns.add(uc);
 
-      const messages = this.config.chatDb.getRecent(this.config.agentId, sessionKey, 50);
-      const lastMsgs = this.config.chatDb.getLastMessages(this.config.agentId, sessionKey, 1);
+      const messages = await this.config.chatDb.getRecent(this.config.agentId, sessionKey, 50);
+      const lastMsgs = await this.config.chatDb.getLastMessages(this.config.agentId, sessionKey, 1);
       const wip = computeWip(lastMsgs, this.isAgentConnected(), Date.now());
       const inFlight = this.getInFlightForSession(sessionKey);
 
@@ -129,13 +129,13 @@ export class AgentConnectionPool {
     });
   }
 
-  private onAgentMessage(frame: unknown): void {
+  private async onAgentMessage(frame: unknown): Promise<void> {
     if (isBridgeReply(frame)) {
       // Skip lak progress cards — they are ephemeral status updates, not real messages
       if (frame.content.startsWith("__lak_progress_card_v1__:")) return;
-      const id = this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", frame.content, "text");
+      const id = await this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", frame.content, "text");
       this.broadcastToUsers(frame.session_key, { type: "message", id, role: "assistant", content: frame.content, msg_type: "text", timestamp: new Date().toISOString() } as UserMessageFrame);
-      this.broadcastWip(frame.session_key);
+      await this.broadcastWip(frame.session_key);
     } else if (isBridgePreviewStart(frame)) {
       const isProgressCard = frame.content.startsWith("__lak_progress_card_v1__:");
       const handle = randomUUID();
@@ -158,37 +158,37 @@ export class AgentConnectionPool {
       if (stream) {
         const isProgressCard = frame.content.startsWith("__lak_progress_card_v1__:");
         if (!isProgressCard) {
-          this.config.chatDb.insert(this.config.agentId, stream.sessionKey, "assistant", frame.content, "text");
+          await this.config.chatDb.insert(this.config.agentId, stream.sessionKey, "assistant", frame.content, "text");
           this.broadcastToUsers(stream.sessionKey, { type: "stream_end", msg_id: frame.preview_handle, content: frame.content });
         }
         this.activeStreams.delete(frame.preview_handle);
-        this.broadcastWip(stream.sessionKey);
+        await this.broadcastWip(stream.sessionKey);
       }
     } else if (isBridgeStreamEnd(frame)) {
       const stream = this.activeStreams.get(frame.preview_handle);
       if (stream) {
         const isProgressCard = stream.content.startsWith("__lak_progress_card_v1__:");
         if (!isProgressCard && stream.content) {
-          this.config.chatDb.insert(this.config.agentId, stream.sessionKey, "assistant", stream.content, "text");
+          await this.config.chatDb.insert(this.config.agentId, stream.sessionKey, "assistant", stream.content, "text");
           this.broadcastToUsers(stream.sessionKey, { type: "stream_end", msg_id: frame.preview_handle, content: stream.content });
         }
         this.activeStreams.delete(frame.preview_handle);
-        this.broadcastWip(stream.sessionKey);
+        await this.broadcastWip(stream.sessionKey);
       }
     } else if (isBridgeCard(frame)) {
       const cardData = JSON.stringify(frame.card);
-      const id = this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", "", "card", cardData);
+      const id = await this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", "", "card", cardData);
       this.broadcastToUsers(frame.session_key, { type: "message", id, role: "assistant", content: "", msg_type: "card", card_data: frame.card, timestamp: new Date().toISOString() });
     } else if (isBridgeButtons(frame)) {
       const cardData = JSON.stringify({ buttons: frame.buttons });
-      const id = this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", frame.content, "buttons", cardData);
+      const id = await this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", frame.content, "buttons", cardData);
       this.broadcastToUsers(frame.session_key, { type: "message", id, role: "assistant", content: frame.content, msg_type: "buttons", card_data: { buttons: frame.buttons }, timestamp: new Date().toISOString() });
     }
   }
 
-  private onUserMessage(uc: UserConnection, frame: { type: string; [k: string]: unknown }): void {
+  private async onUserMessage(uc: UserConnection, frame: { type: string; [k: string]: unknown }): Promise<void> {
     if (frame.type === "send" && typeof frame.content === "string") {
-      const id = this.config.chatDb.insert(this.config.agentId, uc.sessionKey, "user", frame.content, "text");
+      const id = await this.config.chatDb.insert(this.config.agentId, uc.sessionKey, "user", frame.content, "text");
       uc.ws.send(JSON.stringify({ type: "message", id, role: "user", content: frame.content, msg_type: "text", timestamp: new Date().toISOString() } as UserMessageFrame));
       if (this.agentConn && this.agentConn.ws.readyState === WebSocket.OPEN) {
         const bridge: BridgeOutgoing = { type: "message", msg_id: String(id), session_key: uc.sessionKey, user_id: uc.userId, user_name: uc.userName, org: "", content: frame.content, reply_ctx: uc.sessionKey, attachments: frame.attachments as any };
@@ -196,7 +196,7 @@ export class AgentConnectionPool {
       }
       this.broadcastToUsers(uc.sessionKey, { type: "wip_update", wip: true, session_key: uc.sessionKey });
     } else if (frame.type === "load_more" && typeof frame.before === "number") {
-      const page = this.config.chatDb.getBefore(this.config.agentId, uc.sessionKey, frame.before, 50);
+      const page = await this.config.chatDb.getBefore(this.config.agentId, uc.sessionKey, frame.before, 50);
       uc.ws.send(JSON.stringify({ type: "history", messages: page.messages, hasMore: page.hasMore }));
     } else if (frame.type === "card_action" && typeof frame.action === "string") {
       if (this.agentConn && this.agentConn.ws.readyState === WebSocket.OPEN) {
@@ -217,8 +217,8 @@ export class AgentConnectionPool {
     for (const uc of this.userConns) { if (uc.ws.readyState === WebSocket.OPEN) uc.ws.send(payload); }
   }
 
-  private broadcastWip(sessionKey: string): void {
-    const lastMsgs = this.config.chatDb.getLastMessages(this.config.agentId, sessionKey, 1);
+  private async broadcastWip(sessionKey: string): Promise<void> {
+    const lastMsgs = await this.config.chatDb.getLastMessages(this.config.agentId, sessionKey, 1);
     const wip = computeWip(lastMsgs, this.isAgentConnected(), Date.now());
     this.broadcastToUsers(sessionKey, { type: "wip_update", wip, session_key: sessionKey });
   }

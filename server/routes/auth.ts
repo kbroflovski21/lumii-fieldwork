@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { getDb } from "../db/init";
+import { prisma } from "../db/prisma";
 import { signJwt, verifyJwt } from "../ws/auth";
 
 export interface AuthUser {
@@ -17,15 +17,14 @@ export interface AuthUser {
 export function authRoutes(jwtSecret: string) {
   const r = Router();
 
-  r.post("/auth/login", (req, res) => {
+  r.post("/auth/login", async (req, res) => {
     const { username, password } = req.body ?? {};
     if (!username || !password) {
       res.status(400).json({ error: "用户名和密码不能为空" });
       return;
     }
 
-    const db = getDb();
-    const row = db.prepare("SELECT * FROM users WHERE username = ?").get(username) as any;
+    const row = await prisma.user.findFirst({ where: { username } });
     if (!row) {
       res.status(401).json({ error: "用户名或密码错误" });
       return;
@@ -36,18 +35,18 @@ export function authRoutes(jwtSecret: string) {
       return;
     }
 
-    if (!bcrypt.compareSync(password, row.password_hash)) {
+    if (!bcrypt.compareSync(password, row.passwordHash)) {
       res.status(401).json({ error: "用户名或密码错误" });
       return;
     }
 
-    const siteIds = JSON.parse(row.site_ids || "[]");
+    const siteIds = row.siteIds as string[];
     const token = signJwt({
       sub: row.id,
       username: row.username,
       name: row.name,
       role: row.role,
-      orgId: row.org_id,
+      orgId: row.orgId,
       siteIds,
     }, jwtSecret, "24h");
 
@@ -58,7 +57,7 @@ export function authRoutes(jwtSecret: string) {
         username: row.username,
         name: row.name,
         role: row.role,
-        orgId: row.org_id,
+        orgId: row.orgId,
         siteIds,
         phone: row.phone,
         status: row.status,
@@ -66,7 +65,7 @@ export function authRoutes(jwtSecret: string) {
     });
   });
 
-  r.get("/auth/me", (req, res) => {
+  r.get("/auth/me", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       res.status(401).json({ error: "未登录" });
@@ -80,8 +79,7 @@ export function authRoutes(jwtSecret: string) {
     }
 
     // Fetch fresh user data from DB
-    const db = getDb();
-    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(payload.sub ?? payload.userId) as any;
+    const row = await prisma.user.findFirst({ where: { id: payload.sub ?? payload.userId } });
     if (!row || row.status === "disabled") {
       res.status(401).json({ error: "用户不存在或已被禁用" });
       return;
@@ -93,15 +91,15 @@ export function authRoutes(jwtSecret: string) {
         username: row.username,
         name: row.name,
         role: row.role,
-        orgId: row.org_id,
-        siteIds: JSON.parse(row.site_ids || "[]"),
+        orgId: row.orgId,
+        siteIds: row.siteIds as string[],
         phone: row.phone,
         status: row.status,
       },
     });
   });
 
-  r.post("/auth/create-careworker-account", (req, res) => {
+  r.post("/auth/create-careworker-account", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       res.status(401).json({ error: "未登录" });
@@ -119,9 +117,8 @@ export function authRoutes(jwtSecret: string) {
       return;
     }
 
-    const db = getDb();
     // Check if account already exists for this phone
-    const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(phone);
+    const existing = await prisma.user.findFirst({ where: { username: phone } });
     if (existing) {
       res.status(409).json({ error: "该手机号已有账号" });
       return;
@@ -132,14 +129,23 @@ export function authRoutes(jwtSecret: string) {
     const hash = bcrypt.hashSync(password, 10);
     const id = `user-cw-${Date.now().toString(36)}`;
 
-    db.prepare(
-      `INSERT INTO users (id, username, password_hash, name, role, org_id, site_ids, phone) VALUES (?, ?, ?, ?, 'careworker', ?, ?, ?)`
-    ).run(id, phone, hash, name, payload.orgId ?? "org-001", JSON.stringify([siteId ?? "site-001"]), phone);
+    await prisma.user.create({
+      data: {
+        id,
+        username: phone,
+        passwordHash: hash,
+        name,
+        role: "careworker",
+        orgId: payload.orgId ?? "org-001",
+        siteIds: [siteId ?? "site-001"],
+        phone,
+      },
+    });
 
     res.status(201).json({ id, username: phone, password, name, role: "careworker" });
   });
 
-  r.patch("/auth/change-password", (req, res) => {
+  r.patch("/auth/change-password", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       res.status(401).json({ error: "未登录" });
@@ -157,15 +163,14 @@ export function authRoutes(jwtSecret: string) {
       return;
     }
 
-    const db = getDb();
-    const user = db.prepare("SELECT * FROM users WHERE id = ?").get(payload.sub ?? payload.userId) as any;
-    if (!user || !bcrypt.compareSync(oldPassword, user.password_hash)) {
+    const user = await prisma.user.findFirst({ where: { id: payload.sub ?? payload.userId } });
+    if (!user || !bcrypt.compareSync(oldPassword, user.passwordHash)) {
       res.status(400).json({ error: "当前密码错误" });
       return;
     }
 
     const hash = bcrypt.hashSync(newPassword, 10);
-    db.prepare("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hash, user.id);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hash } });
     res.json({ ok: true });
   });
 

@@ -1,65 +1,74 @@
 import { Router } from "express";
-import { getDb } from "../db/init";
-import { genId, jsonParse, withOperationalState } from "./helpers";
+import { prisma } from "../db/prisma";
+import { genId, withOperationalState } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
   return {
-    id: row.id, deviceCode: row.device_code, orgId: row.org_id, siteId: row.site_id, siteName: row.site_name,
-    status: row.status, batteryPercent: row.battery_percent, activatedAt: row.activated_at,
-    lastSyncAt: row.last_sync_at, lastRecordingAt: row.last_recording_at,
-    preferredWorkerId: row.preferred_worker_id, preferredWorkerName: row.preferred_worker_name,
-    recentServiceRecordIds: jsonParse(row.recent_service_record_ids, []),
+    id: row.id, deviceCode: row.deviceCode, orgId: row.orgId, siteId: row.siteId, siteName: row.siteName,
+    status: row.status, batteryPercent: row.batteryPercent, activatedAt: row.activatedAt,
+    lastSyncAt: row.lastSyncAt, lastRecordingAt: row.lastRecordingAt,
+    preferredWorkerId: row.preferredWorkerId, preferredWorkerName: row.preferredWorkerName,
+    recentServiceRecordIds: row.recentServiceRecordIds,
   };
 }
 
 export function smartBadgesRoutes() {
   const r = Router();
 
-  r.get("/smart-badges", (_req, res) => {
-    const db = getDb();
-    const rows = db.prepare("SELECT * FROM smart_badges ORDER BY created_at DESC").all();
+  r.get("/smart-badges", async (_req, res) => {
+    const rows = await prisma.smartBadge.findMany({ orderBy: { createdAt: "desc" } });
     res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
   });
 
-  r.get("/smart-badges/:id", (req, res) => {
-    const db = getDb();
-    const row = db.prepare("SELECT * FROM smart_badges WHERE id = ?").get(req.params.id);
+  r.get("/smart-badges/:id", async (req, res) => {
+    const row = await prisma.smartBadge.findFirst({ where: { id: req.params.id } });
     if (!row) return res.status(404).json({ error: "not found" });
     res.json(toApi(row));
   });
 
-  r.post("/smart-badges/activations", (req, res) => {
-    const db = getDb();
+  r.post("/smart-badges/activations", async (req, res) => {
     const b = req.body;
     const id = genId("badge");
-    db.prepare("INSERT INTO smart_badges (id, device_code, org_id, site_id, site_name, status, battery_percent, activated_at, last_sync_at, preferred_worker_id) VALUES (?, ?, 'org-001', ?, '红培社区站', 'available', 100, datetime('now'), datetime('now'), ?)").run(
-      id, b.deviceCode ?? `FW-${id.slice(-3)}`, b.siteId ?? "site-001", b.preferredWorkerId ?? null
-    );
-    const row = db.prepare("SELECT * FROM smart_badges WHERE id = ?").get(id);
+    const now = new Date().toISOString();
+    await prisma.smartBadge.create({
+      data: {
+        id,
+        deviceCode: b.deviceCode ?? `FW-${id.slice(-3)}`,
+        orgId: "org-001",
+        siteId: b.siteId ?? "site-001",
+        siteName: "红培社区站",
+        status: "available",
+        batteryPercent: 100,
+        activatedAt: now,
+        lastSyncAt: now,
+        preferredWorkerId: b.preferredWorkerId ?? null,
+      },
+    });
+    const row = await prisma.smartBadge.findFirst({ where: { id } });
     res.json({ ok: true, id, message: "activated", smartBadge: toApi(row) });
   });
 
-  r.patch("/smart-badges/:id", (req, res) => {
-    const db = getDb();
+  r.patch("/smart-badges/:id", async (req, res) => {
     const b = req.body;
-    const sets: string[] = [];
-    const vals: any[] = [];
-    if (b.status !== undefined) { sets.push("status = ?"); vals.push(b.status); }
-    if (b.preferredWorkerId !== undefined) { sets.push("preferred_worker_id = ?"); vals.push(b.preferredWorkerId); }
-    if (sets.length > 0) {
-      sets.push("updated_at = datetime('now')");
-      vals.push(req.params.id);
-      db.prepare(`UPDATE smart_badges SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+    const data: any = {};
+    if (b.status !== undefined) data.status = b.status;
+    if (b.preferredWorkerId !== undefined) data.preferredWorkerId = b.preferredWorkerId;
+    if (Object.keys(data).length > 0) {
+      await prisma.smartBadge.update({ where: { id: req.params.id }, data });
     }
-    const row = db.prepare("SELECT * FROM smart_badges WHERE id = ?").get(req.params.id);
+    const row = await prisma.smartBadge.findFirst({ where: { id: req.params.id } });
     res.json(toApi(row));
   });
 
-  r.get("/smart-badges/:id/service-records", (req, res) => {
-    const db = getDb();
-    const rows = db.prepare("SELECT * FROM service_records WHERE badge_id = ? ORDER BY service_date DESC LIMIT 10").all(req.params.id);
-    res.json(rows.map((r: any) => ({ serviceRecordId: r.id, serviceDate: r.service_date, serviceObjectName: r.service_object_name, reviewStatus: r.review_status })));
+  r.get("/smart-badges/:id/service-records", async (req, res) => {
+    const rows = await prisma.serviceRecord.findMany({
+      where: { badgeId: req.params.id },
+      orderBy: { serviceDate: "desc" },
+      take: 10,
+      select: { id: true, serviceDate: true, serviceObjectName: true, reviewStatus: true },
+    });
+    res.json(rows.map((r) => ({ serviceRecordId: r.id, serviceDate: r.serviceDate, serviceObjectName: r.serviceObjectName, reviewStatus: r.reviewStatus })));
   });
 
   return r;

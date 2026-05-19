@@ -1,14 +1,13 @@
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
-import { mkdirSync, existsSync, readFileSync } from "fs";
-import { join, dirname, resolve } from "path";
+import { existsSync, readFileSync } from "fs";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-import { getDb, closeDb } from "./db/init";
-import { seedDatabase } from "./db/seed";
+import { prisma } from "./db/prisma";
 import { ChatDb } from "./db/chat";
 import { AgentConnectionPool } from "./ws/pool";
 import { homeRoutes } from "./routes/home";
@@ -30,16 +29,8 @@ const STATIC_ROOT = process.env.FIELDWORK_STATIC_ROOT ?? join(__dirname, "../dis
 app.use(cors());
 app.use(express.json());
 
-// Ensure data directory exists
-mkdirSync(join(__dirname, "../data"), { recursive: true });
-
-// Initialize DB and seed
-getDb();
-seedDatabase();
-
 // Initialize chat persistence
-const chatDb = new ChatDb(getDb());
-chatDb.migrate();
+const chatDb = new ChatDb();
 
 // Initialize WebSocket connection pool
 const pool = new AgentConnectionPool({
@@ -108,5 +99,5 @@ httpServer.listen(PORT, "0.0.0.0", () => {
   }
 });
 
-process.on("SIGINT", () => { pool.shutdown(); closeDb(); process.exit(0); });
-process.on("SIGTERM", () => { pool.shutdown(); closeDb(); process.exit(0); });
+process.on("SIGINT", async () => { pool.shutdown(); await prisma.$disconnect(); process.exit(0); });
+process.on("SIGTERM", async () => { pool.shutdown(); await prisma.$disconnect(); process.exit(0); });

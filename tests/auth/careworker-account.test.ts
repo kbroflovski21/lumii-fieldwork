@@ -3,16 +3,13 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
-import { getDb } from "../../server/db/init";
-import { seedDatabase } from "../../server/db/seed";
+import { prisma } from "../../server/db/prisma";
 
 const JWT_SECRET = "test-cw-secret";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  getDb();
-  seedDatabase();
   app.use("/api", authRoutes(JWT_SECRET));
   return app;
 }
@@ -29,11 +26,10 @@ describe("POST /api/auth/create-careworker-account", () => {
     adminToken = (await request(app).post("/api/auth/login").send({ username: "admin", password: "admin123" })).body.token;
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     // Clean up created careworker accounts so other tests are not affected
-    const db = getDb();
     for (const phone of createdPhones) {
-      db.prepare("DELETE FROM users WHERE username = ?").run(phone);
+      await prisma.user.deleteMany({ where: { username: phone } });
     }
   });
 

@@ -3,8 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
-import { getDb } from "../../server/db/init";
-import { seedDatabase } from "../../server/db/seed";
+import { prisma } from "../../server/db/prisma";
 import bcrypt from "bcryptjs";
 
 const JWT_SECRET = "test-pwd-secret";
@@ -12,8 +11,6 @@ const JWT_SECRET = "test-pwd-secret";
 function createApp() {
   const app = express();
   app.use(express.json());
-  getDb();
-  seedDatabase();
   app.use("/api", authRoutes(JWT_SECRET));
   return app;
 }
@@ -28,11 +25,10 @@ describe("PATCH /api/auth/change-password", () => {
     token = res.body.token;
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     // Restore operator password to original so other tests are not affected
-    const db = getDb();
     const hash = bcrypt.hashSync("oper123", 10);
-    db.prepare("UPDATE users SET password_hash = ? WHERE username = 'operator'").run(hash);
+    await prisma.user.updateMany({ where: { username: "operator" }, data: { passwordHash: hash } });
   });
 
   it("changes password with valid old password", async () => {
