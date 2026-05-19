@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from "react";
-import { Bot } from "lucide-react";
+import { Bot, Edit3 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import { ProfileMenu } from "../shared/ProfileMenu";
@@ -476,50 +476,49 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
         </div>
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
-          <div className="so-overview-grid">
-            <dl className="so-overview-item"><dt>站点名称</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : site.name}</dd></dl>
-            <dl className="so-overview-item"><dt>联系人</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactName} onChange={e => setContactName(e.target.value)} /> : (site.contactName || "—")}</dd></dl>
-            <dl className="so-overview-item"><dt>联系电话</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /> : (site.contactPhone || "—")}</dd></dl>
-            <dl className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={address} onChange={e => setAddress(e.target.value)} /> : (site.address || "—")}</dd></dl>
-            <dl className="so-overview-item so-overview-item--full">
-              <dt>运营人员</dt>
-              <dd>
-                {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {allOperators.map(op => (
-                        <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
-                          <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
-                            <div style={{ fontSize: 12, color: "#64748B" }}>{op.username}</div>
-                          </div>
-                        </label>
-                      ))}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>站点信息</h4>
+              {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
+            </div>
+            <div className="so-overview-grid">
+              <dl className="so-overview-item"><dt>站点名称</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : site.name}</dd></dl>
+              <dl className="so-overview-item"><dt>联系人</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactName} onChange={e => setContactName(e.target.value)} /> : (site.contactName || "—")}</dd></dl>
+              <dl className="so-overview-item"><dt>联系电话</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /> : (site.contactPhone || "—")}</dd></dl>
+              <dl className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={address} onChange={e => setAddress(e.target.value)} /> : (site.address || "—")}</dd></dl>
+            </div>
+            {editing && (
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">取消</button>
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
+              </div>
+            )}
+          </div>
+          <div>
+            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>运营人员</h4>
+            {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {allOperators.map(op => (
+                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                    <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
+                      <div style={{ fontSize: 12, color: "#64748B" }}>{op.username}</div>
                     </div>
-                )}
-                {!opsLoading && allOperators.length > 0 && (
-                  <button className="sw-btn sw-btn--primary" style={{ marginTop: 10, height: 30, fontSize: 12 }} disabled={opsSaving} onClick={handleSaveOperators} type="button">
-                    {opsSaving ? "保存中..." : "保存分配"}
-                  </button>
-                )}
-              </dd>
-            </dl>
+                  </label>
+                ))}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+                  <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={opsSaving} onClick={handleSaveOperators} type="button">{opsSaving ? "保存中..." : "保存分配"}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="quality-user-modal__footer">
           <div className="quality-user-modal__footer-left">
             <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(site)} type="button">删除</button>
           </div>
-          <div className="quality-user-modal__footer-right">
-            {editing ? (
-              <>
-                <button className="sw-btn sw-btn--secondary" onClick={handleCancel} type="button">取消</button>
-                <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
-              </>
-            ) : (
-              <button className="sw-btn sw-btn--primary" onClick={() => setEditing(true)} type="button">编辑</button>
-            )}
-          </div>
+          <div />
         </div>
       </div>
     </>
@@ -934,6 +933,10 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
         </div>
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>用户信息</h4>
+            {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
+          </div>
           <div className="so-overview-grid">
             <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
             <dl className="so-overview-item"><dt>姓名</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : user.name}</dd></dl>
@@ -942,22 +945,19 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
             <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
             <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
           </div>
+          {editing && (
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+              <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">取消</button>
+              <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
+            </div>
+          )}
         </div>
         <div className="quality-user-modal__footer">
           <div className="quality-user-modal__footer-left">
             <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
             <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button">{user.status === "active" ? "禁用" : "启用"}</button>
           </div>
-          <div className="quality-user-modal__footer-right">
-            {editing ? (
-              <>
-                <button className="sw-btn sw-btn--secondary" onClick={handleCancel} type="button">取消</button>
-                <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
-              </>
-            ) : (
-              <button className="sw-btn sw-btn--primary" onClick={() => setEditing(true)} type="button">编辑</button>
-            )}
-          </div>
+          <div />
         </div>
       </div>
     </>
