@@ -38,12 +38,14 @@ function transcriptToApi(row: any) {
 export function serviceRecordsRoutes() {
   const r = Router();
 
-  r.get("/service-records", async (_req, res) => {
-    const records = await prisma.serviceRecord.findMany({ orderBy: { serviceDate: "desc" } });
+  r.get("/service-records", async (req, res) => {
+    const siteId = req.query.siteId as string | undefined;
+    const where = siteId ? { siteId } : {};
+    const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
     const audioAssets = await prisma.audioAsset.findMany();
     const transcripts = await prisma.transcript.findMany();
-    const serviceObjects = await prisma.serviceObject.findMany({ select: { id: true, name: true } });
-    const smartBadges = await prisma.smartBadge.findMany({ select: { id: true, deviceCode: true } });
+    const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });
+    const smartBadges = await prisma.smartBadge.findMany({ where, select: { id: true, deviceCode: true } });
 
     res.json(withOperationalState({
       serviceRecords: records.map(toApi),

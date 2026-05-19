@@ -49,9 +49,13 @@ async function getFamilyContacts(objectId: string) {
 export function serviceObjectsRoutes() {
   const r = Router();
 
-  r.get("/service-objects", async (_req, res) => {
-    const rows = await prisma.serviceObject.findMany({ orderBy: { createdAt: "desc" } });
+  r.get("/service-objects", async (req, res) => {
+    const siteId = req.query.siteId as string | undefined;
+    const where = siteId ? { siteId } : {};
+    const rows = await prisma.serviceObject.findMany({ where, orderBy: { createdAt: "desc" } });
+    const objectIds = rows.map((r) => r.id);
     const plans = await prisma.servicePlan.findMany({
+      where: objectIds.length > 0 ? { serviceObjectId: { in: objectIds } } : undefined,
       include: { exceptions: true },
     });
 
@@ -84,6 +88,7 @@ export function serviceObjectsRoutes() {
         id,
         name: b.name,
         phone: b.phone ?? null,
+        siteId: b.siteId ?? "site-001",
         idNumber: b.idNumber,
         age: b.age ?? null,
         gender: b.gender ?? "unknown",

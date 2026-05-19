@@ -16,8 +16,10 @@ function toApi(row: any) {
 export function smartBadgesRoutes() {
   const r = Router();
 
-  r.get("/smart-badges", async (_req, res) => {
-    const rows = await prisma.smartBadge.findMany({ orderBy: { createdAt: "desc" } });
+  r.get("/smart-badges", async (req, res) => {
+    const siteId = req.query.siteId as string | undefined;
+    const where = siteId ? { siteId } : {};
+    const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
     res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
   });
 

@@ -200,6 +200,7 @@ model ServiceObject {
   id                       String          @id @db.VarChar(64)
   name                     String          @db.VarChar(255)
   phone                    String?         @db.VarChar(64)
+  siteId                   String          @default("site-001") @map("site_id") @db.VarChar(64)
   idNumber                 String?         @map("id_number") @db.VarChar(18)
   age                      Int?
   gender                   Gender          @default(unknown)
@@ -283,6 +284,7 @@ model ServiceSchedule {
   source                   ScheduleSource @default(one_time)
   servicePlanId            String?        @map("service_plan_id") @db.VarChar(64)
   serviceObjectId          String         @map("service_object_id") @db.VarChar(64)
+  siteId                   String         @default("site-001") @map("site_id") @db.VarChar(64)
   serviceObjectName        String         @default("") @map("service_object_name") @db.VarChar(255)
   serviceProject           String         @default("") @map("service_project") @db.VarChar(255)
   addressSnapshot          String         @default("") @map("address_snapshot") @db.VarChar(500)
@@ -314,6 +316,7 @@ model ServiceRecord {
   startTime            String       @map("start_time") @db.VarChar(64)
   endTime              String       @map("end_time") @db.VarChar(64)
   durationMinutes      Int          @default(0) @map("duration_minutes")
+  siteId               String       @default("site-001") @map("site_id") @db.VarChar(64)
   socialWorkerId       String?      @map("social_worker_id") @db.VarChar(64)
   socialWorkerName     String?      @map("social_worker_name") @db.VarChar(255)
   serviceObjectId      String?      @map("service_object_id") @db.VarChar(64)
@@ -373,6 +376,7 @@ model Transcript {
 
 model HomeSummary {
   id                       String   @id @default("current") @db.VarChar(64)
+  siteId                   String   @default("site-001") @map("site_id") @db.VarChar(64)
   summaryDate              String   @map("summary_date") @db.VarChar(64)
   totalScheduledServices   Int      @default(0) @map("total_scheduled_services")
   unassignedServices       Int      @default(0) @map("unassigned_services")

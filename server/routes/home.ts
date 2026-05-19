@@ -4,8 +4,10 @@ import { prisma } from "../db/prisma";
 export function homeRoutes() {
   const r = Router();
 
-  r.get("/site-operations/home", async (_req, res) => {
-    const row = await prisma.homeSummary.findFirst({ where: { id: "current" } });
+  r.get("/site-operations/home", async (req, res) => {
+    const siteId = req.query.siteId as string | undefined;
+    const where = siteId ? { siteId } : { id: "current" };
+    const row = await prisma.homeSummary.findFirst({ where });
     if (!row) return res.status(404).json({ error: "no home summary" });
 
     res.json({

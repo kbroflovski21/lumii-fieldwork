@@ -20,8 +20,10 @@ function toApi(row: any) {
 export function serviceSchedulesRoutes() {
   const r = Router();
 
-  r.get("/service-schedule-occurrences", async (_req, res) => {
-    const rows = await prisma.serviceSchedule.findMany({ orderBy: { serviceDate: "asc" } });
+  r.get("/service-schedule-occurrences", async (req, res) => {
+    const siteId = req.query.siteId as string | undefined;
+    const where = siteId ? { siteId } : {};
+    const rows = await prisma.serviceSchedule.findMany({ where, orderBy: { serviceDate: "asc" } });
     res.json(withOperationalState({ serviceSchedules: rows.map(toApi) }));
   });
 
@@ -51,6 +53,7 @@ export function serviceSchedulesRoutes() {
         id,
         source: "one_time",
         serviceObjectId: b.serviceObjectId ?? "",
+        siteId: b.siteId ?? "site-001",
         serviceObjectName: objName,
         serviceProject: b.serviceProject ?? "",
         addressSnapshot: addr,
