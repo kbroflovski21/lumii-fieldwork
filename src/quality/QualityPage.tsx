@@ -405,7 +405,6 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
   useEffect(() => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setEditing(initialEditing); setError(""); setSelectedOps(new Set(site.operators.map(o => o.id))); }, [site, initialEditing]);
 
   useEffect(() => {
-    if (!editing) return;
     setOpsLoading(true);
     (async () => {
       try {
@@ -419,12 +418,26 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
     })();
   }, [editing, token]);
 
+  const [opsSaving, setOpsSaving] = useState(false);
+
   const toggleOp = (id: string) => {
     setSelectedOps(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  const handleSaveOperators = async () => {
+    setOpsSaving(true);
+    try {
+      await fetch(`/api/admin/sites/${site.id}/operators`, {
+        method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userIds: [...selectedOps] }),
+      });
+      onSaved();
+    } catch { /* ignore */ }
+    setOpsSaving(false);
   };
 
   const handleSave = async () => {
@@ -471,8 +484,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
             <dl className="so-overview-item so-overview-item--full">
               <dt>运营人员</dt>
               <dd>
-                {editing ? (
-                  opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
+                {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {allOperators.map(op => (
                         <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
@@ -484,9 +496,11 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
                         </label>
                       ))}
                     </div>
-                  )
-                ) : (
-                  site.operators.length > 0 ? site.operators.map(o => `${o.name} (${o.username})`).join("、") : "未分配"
+                )}
+                {!opsLoading && allOperators.length > 0 && (
+                  <button className="sw-btn sw-btn--primary" style={{ marginTop: 10, height: 30, fontSize: 12 }} disabled={opsSaving} onClick={handleSaveOperators} type="button">
+                    {opsSaving ? "保存中..." : "保存分配"}
+                  </button>
                 )}
               </dd>
             </dl>
@@ -692,7 +706,7 @@ function UsersView() {
       const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users);
+        setUsers(data.users.filter((u: QualityUser) => u.role !== "careworker"));
       }
     } catch { /* ignore */ }
     setLoading(false);
@@ -729,7 +743,7 @@ function UsersView() {
     setConfirmSubmitting(false);
   };
 
-  const ROLE_FILTER_MAP: Record<string, string> = { "集团管理": "org_admin", "站点运营": "site_operator", "护理员": "careworker" };
+  const ROLE_FILTER_MAP: Record<string, string> = { "集团管理": "org_admin", "站点运营": "site_operator" };
 
   const filteredUsers = users.filter(u => {
     if (roleFilter && u.role !== ROLE_FILTER_MAP[roleFilter]) return false;
@@ -760,7 +774,6 @@ function UsersView() {
             <option value="">全部角色</option>
             <option value="集团管理">集团管理</option>
             <option value="站点运营">站点运营</option>
-            <option value="护理员">护理员</option>
           </select>
         </div>
         {loading ? (

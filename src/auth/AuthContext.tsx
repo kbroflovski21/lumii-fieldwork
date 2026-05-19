@@ -71,8 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem("gy_auth_token");
     localStorage.removeItem("gy_chat_token");
+    localStorage.removeItem("gy_current_site");
     setToken(null);
     setUser(null);
+    window.history.replaceState(null, "", "/");
   }, []);
 
   return (

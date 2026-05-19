@@ -81,7 +81,7 @@ function AppRoutes() {
           </div>
           <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#0F172A" }}>暂无站点权限</h2>
           <p style={{ margin: "0 0 24px", fontSize: 14, color: "#64748B", lineHeight: 1.6 }}>您的账号尚未分配到任何站点。请联系集团管理员将您的账号分配到对应的运营站点。</p>
-          <button onClick={() => { localStorage.removeItem("gy_auth_token"); window.location.reload(); }} style={{ padding: "10px 24px", background: "#0052CC", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>退出登录</button>
+          <button onClick={() => { localStorage.removeItem("gy_auth_token"); localStorage.removeItem("gy_current_site"); window.location.href = "/"; }} style={{ padding: "10px 24px", background: "#0052CC", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>退出登录</button>
         </div>
       </div>
     );
