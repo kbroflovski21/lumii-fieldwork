@@ -473,7 +473,32 @@ function ViewModal({
   const [selectedBadge, setSelectedBadge] = useState(worker.preferredBadge?.badgeId ?? "");
   const [resetPwdResult, setResetPwdResult] = useState<string | null>(null);
   const [resetPwdLoading, setResetPwdLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [editingBasic, setEditingBasic] = useState(false);
+  const [editName, setEditName] = useState(worker.name);
+  const [editPhone, setEditPhone] = useState(worker.phone);
+  const [editQual, setEditQual] = useState(worker.qualificationLabels.join("、"));
+  const [savingBasic, setSavingBasic] = useState(false);
   const color = avatarColor(worker.name);
+
+  const copyText = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleSaveBasic = async () => {
+    setSavingBasic(true);
+    try {
+      await siteOperationsApi.updateSocialWorker(worker.id, {
+        name: editName.trim(), phone: editPhone.trim(),
+        qualificationLabels: editQual.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
+      });
+      setEditingBasic(false);
+      onMutate?.();
+    } catch {}
+    setSavingBasic(false);
+  };
 
   const handleResetPassword = async () => {
     setResetPwdLoading(true);
@@ -509,7 +534,6 @@ function ViewModal({
             <span className="sw-status-badge sw-status-badge--inline" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span>
           </div>
           <div className="so-modal__summary-actions">
-            <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled} onClick={onEdit} type="button"><Edit3 size={14} /> 编辑</button>
             <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
           </div>
         </div>
@@ -542,10 +566,32 @@ function ViewModal({
       <div className="so-modal__content">
         {activeTab === "overview" && (
           <>
-            {showBadgeSelect && (
-              <div className="so-tab-section" style={{ background: "#F0F5FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>选择常用工牌</strong>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="so-tab-section">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
+                {!editingBasic && <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={mutationsDisabled} onClick={() => { setEditName(worker.name); setEditPhone(worker.phone); setEditQual(worker.qualificationLabels.join("、")); setEditingBasic(true); }} type="button">编辑</button>}
+              </div>
+              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
+                <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : worker.name}</dd></div>
+                <div className="so-overview-item"><dt>电话</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : worker.phone}</dd></div>
+                <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span></dd></div>
+                <div className="so-overview-item so-overview-item--full"><dt>资质</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editQual} onChange={e => setEditQual(e.target.value)} placeholder="用顿号分隔" /> : (worker.qualificationLabels.length > 0 ? worker.qualificationLabels.join("、") : "—")}</dd></div>
+              </dl>
+              {editingBasic && (
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditingBasic(false)} type="button">取消</button>
+                  <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={savingBasic} onClick={handleSaveBasic} type="button">{savingBasic ? "保存中..." : "保存"}</button>
+                </div>
+              )}
+            </div>
+
+            <div className="so-tab-section">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>常用工牌</h4>
+                {!showBadgeSelect && <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={mutationsDisabled} onClick={() => setShowBadgeSelect(true)} type="button">更换</button>}
+              </div>
+              {showBadgeSelect ? (
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
                   <select style={{ flex: 1, height: 36, borderRadius: 8, border: "1px solid #E5E7EB", padding: "0 10px", fontSize: 13 }} value={selectedBadge} onChange={e => setSelectedBadge(e.target.value)}>
                     <option value="">无（取消绑定）</option>
                     <option value="badge-021">FW-021</option>
@@ -562,73 +608,52 @@ function ViewModal({
                   }} type="button">确认</button>
                   <button className="sw-btn sw-btn--secondary" style={{ height: 36, fontSize: 12 }} onClick={() => setShowBadgeSelect(false)} type="button">取消</button>
                 </div>
-              </div>
-            )}
-
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">基础信息</h4>
-              <dl className="so-overview-grid">
-                <div className="so-overview-item"><dt>姓名</dt><dd>{worker.name}</dd></div>
-                <div className="so-overview-item"><dt>电话</dt><dd>{worker.phone}</dd></div>
-                <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span></dd></div>
-                <div className="so-overview-item so-overview-item--full"><dt>资质</dt><dd>{worker.qualificationLabels.length > 0 ? worker.qualificationLabels.join("、") : "—"}</dd></div>
-              </dl>
-            </div>
-
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">常用工牌</h4>
-              {worker.preferredBadge ? (
-                <dl className="so-overview-grid">
+              ) : worker.preferredBadge ? (
+                <dl className="so-overview-grid" style={{ marginTop: 10 }}>
                   <div className="so-overview-item"><dt>设备编号</dt><dd>{worker.preferredBadge.deviceCode}</dd></div>
                   <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(worker.preferredBadge.status)}>{statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}</span></dd></div>
                   <div className="so-overview-item"><dt>最近同步</dt><dd>{worker.preferredBadge.lastSyncAt ? formatSyncTime(worker.preferredBadge.lastSyncAt) : "—"}</dd></div>
                 </dl>
               ) : (
-                <p className="sw-text-muted">未绑定常用工牌</p>
+                <p className="sw-text-muted" style={{ marginTop: 10 }}>未绑定常用工牌</p>
+              )}
+            </div>
+
+            <div className="so-tab-section">
+              <h4 className="so-tab-section-title">登录账号</h4>
+              {worker.account ? (
+                <>
+                  <dl className="so-overview-grid">
+                    <div className="so-overview-item"><dt>账号</dt><dd><strong>{worker.account.username}</strong></dd></div>
+                    <div className="so-overview-item"><dt>状态</dt><dd>
+                      {worker.account.mustChangePassword
+                        ? (worker.account.initialPassword ? <span style={{ color: "#D97706" }}>待激活</span> : <span style={{ color: "#EA580C" }}>待修改密码</span>)
+                        : <span style={{ color: "#16A34A" }}>已激活</span>}
+                    </dd></div>
+                    <div className="so-overview-item"><dt></dt><dd>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={resetPwdLoading} onClick={handleResetPassword} type="button">{resetPwdLoading ? "重置中..." : "重置密码"}</button>
+                    </dd></div>
+                  </dl>
+                  {worker.account.mustChangePassword && worker.account.initialPassword && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <span style={{ fontSize: 12, color: "#64748B" }}>默认密码:</span>
+                      <code style={{ fontFamily: "monospace", fontSize: 14 }}>{worker.account.initialPassword}</code>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button" onClick={() => copyText(worker.account!.initialPassword!)}>{copied ? "已复制" : "复制"}</button>
+                    </div>
+                  )}
+                  {resetPwdResult && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: 8, background: "#EFF6FF", borderRadius: 6 }}>
+                      <span style={{ fontSize: 12, color: "#64748B" }}>新密码:</span>
+                      <code style={{ fontFamily: "monospace", fontSize: 14, color: "#0052CC" }}>{resetPwdResult}</code>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button" onClick={() => copyText(resetPwdResult)}>{copied ? "已复制" : "复制"}</button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="sw-text-muted">暂无登录账号（创建服务人员时自动生成）</p>
               )}
             </div>
           </>
-        )}
-
-        {activeTab === "overview" && (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">登录账号</h4>
-            {worker.account ? (
-              <dl className="so-overview-grid">
-                <div className="so-overview-item"><dt>账号</dt><dd><strong>{worker.account.username}</strong></dd></div>
-                <div className="so-overview-item"><dt>状态</dt><dd>{worker.account.mustChangePassword ? <span style={{ color: "#D97706" }}>待首次登录</span> : <span style={{ color: "#16A34A" }}>已激活</span>}</dd></div>
-                <div className="so-overview-item">
-                  <dt>{worker.account.mustChangePassword ? "默认密码" : "密码"}</dt>
-                  <dd>
-                    {worker.account.mustChangePassword && worker.account.initialPassword ? (
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <code style={{ fontFamily: "monospace", fontSize: 14 }}>{worker.account.initialPassword}</code>
-                        <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button"
-                          onClick={() => navigator.clipboard.writeText(worker.account!.initialPassword!)}>复制</button>
-                      </span>
-                    ) : "已修改"}
-                    {resetPwdResult && (
-                      <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                        <span style={{ fontSize: 12, color: "#64748B" }}>新密码:</span>
-                        <code style={{ fontFamily: "monospace", fontSize: 14, color: "#0052CC" }}>{resetPwdResult}</code>
-                        <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button"
-                          onClick={() => navigator.clipboard.writeText(resetPwdResult)}>复制</button>
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            ) : (
-              <p className="sw-text-muted">暂无登录账号（创建服务人员时自动生成）</p>
-            )}
-            {worker.account && (
-              <div style={{ marginTop: 10 }}>
-                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} disabled={resetPwdLoading} onClick={handleResetPassword} type="button">
-                  {resetPwdLoading ? "重置中..." : "重置密码"}
-                </button>
-              </div>
-            )}
-          </div>
         )}
 
         {activeTab === "praise" && (
@@ -659,11 +684,7 @@ function ViewModal({
             <button className="sw-btn sw-btn--danger-ghost" disabled={mutationsDisabled} onClick={() => setShowArchiveConfirm(true)} type="button">归档人员</button>
           )}
         </div>
-        <div className="so-modal__footer-right">
-          <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled} onClick={() => { setActiveTab("overview"); setShowBadgeSelect(true); }} type="button">
-            <Shield size={14} /> 更新常用工牌
-          </button>
-        </div>
+        <div />
       </div>
     </div>
   );
