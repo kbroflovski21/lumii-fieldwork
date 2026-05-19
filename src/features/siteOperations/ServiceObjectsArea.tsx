@@ -19,7 +19,6 @@ import type { Resource } from "./useSiteOperationsData";
 type DrawerMode =
   | { kind: "closed" }
   | { kind: "view"; object: ServiceObject }
-  | { kind: "edit"; object: ServiceObject }
   | { kind: "create" };
 
 type EligibilityFilter = "" | ServiceEligibilityType;
@@ -217,6 +216,20 @@ export function ServiceObjectsArea({ resource, onMutate }: { resource: Resource<
     setDrawer({ kind: "closed" });
   }, [onMutate]);
 
+  const handleObjectRefresh = useCallback(() => {
+    onMutate?.();
+  }, [onMutate]);
+
+  // Sync drawer object with refreshed list data
+  useEffect(() => {
+    if (drawer.kind !== "closed" && "object" in drawer) {
+      const fresh = objects.find(o => o.id === drawer.object.id);
+      if (fresh && fresh !== drawer.object) {
+        setDrawer(prev => prev.kind !== "closed" && "object" in prev ? { ...prev, object: fresh } : prev);
+      }
+    }
+  }, [objects]);
+
   const filtered = objects.filter((o) => {
     if (eligibilityFilter && o.eligibilityType !== eligibilityFilter) return false;
     if (!matchStateFilter(o, stateFilter)) return false;
@@ -284,10 +297,8 @@ export function ServiceObjectsArea({ resource, onMutate }: { resource: Resource<
               drawer={drawer}
               mutationsDisabled={mutationsDisabled}
               onClose={() => setDrawer({ kind: "closed" })}
-              onEdit={(obj) => setDrawer({ kind: "edit", object: obj })}
-              onView={(obj) => setDrawer({ kind: "view", object: obj })}
               onCreated={handleCreated}
-              onUpdated={handleUpdated}
+              onUpdated={handleObjectRefresh}
             />
           </>
         ) : null}
@@ -391,19 +402,18 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
    Modal components (redesigned)
    ========================================== */
 
-function ObjectDrawer({ drawer, mutationsDisabled, onClose, onEdit, onView, onCreated, onUpdated }: {
+function ObjectDrawer({ drawer, mutationsDisabled, onClose, onCreated, onUpdated }: {
   drawer: Exclude<DrawerMode, { kind: "closed" }>; mutationsDisabled: boolean; onClose: () => void;
-  onEdit: (o: ServiceObject) => void; onView: (o: ServiceObject) => void; onCreated: () => void; onUpdated: () => void;
+  onCreated: () => void; onUpdated: () => void;
 }) {
-  if (drawer.kind === "view") return <ViewModal object={drawer.object} mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.object)} onUpdated={onUpdated} />;
-  if (drawer.kind === "edit") return <EditModal object={drawer.object} onClose={onClose} onCancel={() => onView(drawer.object)} onSaved={onUpdated} />;
+  if (drawer.kind === "view") return <ViewModal object={drawer.object} mutationsDisabled={mutationsDisabled} onClose={onClose} onUpdated={onUpdated} />;
   return <CreateModal onClose={onClose} onCreated={onCreated} />;
 }
 
-type ViewTab = "overview" | "plans" | "history" | "family";
+type ViewTab = "overview" | "plans" | "history" | "insights";
 
-function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated }: {
-  object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onEdit: () => void; onUpdated: () => void;
+function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
+  object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onUpdated: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -421,6 +431,52 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
       .catch(() => {});
     setSavedPlans(obj.servicePlanSummaries ?? []);
   }, [obj.id]);
+
+  // Inline editing state
+  const [editingBasic, setEditingBasic] = useState(false);
+  const [editName, setEditName] = useState(obj.name);
+  const [editPhone, setEditPhone] = useState(obj.phone ?? "");
+  const [editIdNumber, setEditIdNumber] = useState(obj.idNumber ?? "");
+  const [editAge, setEditAge] = useState(obj.age?.toString() ?? "");
+  const [editGender, setEditGender] = useState<string>(obj.gender ?? "unknown");
+  const [editAddress, setEditAddress] = useState(obj.address);
+  const [editEligibility, setEditEligibility] = useState(obj.eligibilityType);
+  const [editProjects, setEditProjects] = useState(obj.serviceProjects.join("、"));
+  const [editFrequency, setEditFrequency] = useState(obj.serviceFrequency ?? "");
+  const [savingBasic, setSavingBasic] = useState(false);
+
+  const [editingCare, setEditingCare] = useState(false);
+  const [editRiskTags, setEditRiskTags] = useState(obj.riskTags.join("、"));
+  const [editCareNotes, setEditCareNotes] = useState(obj.careNotes.join("\n"));
+  const [savingCare, setSavingCare] = useState(false);
+
+  const handleSaveBasic = async () => {
+    setSavingBasic(true);
+    try {
+      await siteOperationsApi.updateServiceObject(obj.id, {
+        name: editName.trim(), phone: editPhone.trim() || undefined, idNumber: editIdNumber.trim() || undefined,
+        age: editAge ? Number(editAge) : undefined, address: editAddress.trim(),
+        eligibilityType: editEligibility as ServiceEligibilityType,
+        serviceProjects: editProjects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
+      });
+      setEditingBasic(false);
+      onUpdated();
+    } catch { /* noop */ }
+    setSavingBasic(false);
+  };
+
+  const handleSaveCare = async () => {
+    setSavingCare(true);
+    try {
+      await siteOperationsApi.updateServiceObject(obj.id, {
+        riskTags: editRiskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
+        careNotes: editCareNotes.split("\n").map(s => s.trim()).filter(Boolean),
+      });
+      setEditingCare(false);
+      onUpdated();
+    } catch { /* noop */ }
+    setSavingCare(false);
+  };
 
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [aiInput, setAiInput] = useState("");
@@ -520,11 +576,12 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
     }, 800);
   };
 
+  const hasInsights = (obj.insightSummaries ?? []).length > 0 || !!obj.latestInsightSummary;
   const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "overview", label: "档案概览" },
     { id: "plans", label: "服务计划", count: savedPlans.length },
     { id: "history", label: "服务历史" },
-    { id: "family", label: "家属联系人", count: obj.familyContacts.length },
+    { id: "insights", label: "AI 洞察", count: hasInsights ? (obj.insightSummaries ?? []).length || undefined : undefined },
   ];
 
   const openAiScheduler = () => {
@@ -548,7 +605,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
             <span className="sw-status-badge sw-status-badge--inline" data-tone={status.tone}>{status.label}</span>
           </div>
           <div className="so-modal__summary-actions">
-            <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled} onClick={onEdit} type="button"><Edit3 size={14} /> 编辑</button>
             <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
           </div>
         </div>
@@ -594,43 +650,86 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
         {activeTab === "overview" && (
           <>
             <div className="so-tab-section">
-              <h4 className="so-tab-section-title">基础信息</h4>
-              <dl className="so-overview-grid">
-                <div className="so-overview-item"><dt>姓名</dt><dd>{obj.name}</dd></div>
-                <div className="so-overview-item"><dt>电话</dt><dd>{obj.phone || "—"}</dd></div>
-                <div className="so-overview-item"><dt>身份证号</dt><dd>{obj.idNumber || "—"}</dd></div>
-                <div className="so-overview-item"><dt>年龄/性别</dt><dd>{obj.age ? `${obj.age}岁` : "—"}{obj.gender === "female" ? " · 女" : obj.gender === "male" ? " · 男" : ""}</dd></div>
-                <div className="so-overview-item"><dt>服务资格</dt><dd><span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span></dd></div>
-                <div className="so-overview-item"><dt>服务频次</dt><dd>{obj.serviceFrequency || "—"}</dd></div>
-                <div className="so-overview-item"><dt>服务项目</dt><dd>{obj.serviceProjects.join("、") || "—"}</dd></div>
-                <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{obj.address}</dd></div>
-                {obj.mapDisplayPoint ? <div className="so-overview-item so-overview-item--full"><dt>地图点</dt><dd>{obj.mapDisplayPoint.label ?? `${obj.mapDisplayPoint.latitude}, ${obj.mapDisplayPoint.longitude}`}</dd></div> : null}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
+                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(obj.name); setEditPhone(obj.phone ?? ""); setEditIdNumber(obj.idNumber ?? ""); setEditAge(obj.age?.toString() ?? ""); setEditGender(obj.gender ?? "unknown"); setEditAddress(obj.address); setEditEligibility(obj.eligibilityType); setEditProjects(obj.serviceProjects.join("、")); setEditFrequency(obj.serviceFrequency ?? ""); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+              </div>
+              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
+                <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : obj.name}</dd></div>
+                <div className="so-overview-item"><dt>电话</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : (obj.phone || "—")}</dd></div>
+                <div className="so-overview-item"><dt>身份证号</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editIdNumber} onChange={e => setEditIdNumber(e.target.value)} maxLength={18} /> : (obj.idNumber || "—")}</dd></div>
+                <div className="so-overview-item"><dt>年龄</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAge} onChange={e => setEditAge(e.target.value)} type="number" style={{ width: 60 }} /> : (obj.age ? `${obj.age}岁` : "—")}</dd></div>
+                <div className="so-overview-item"><dt>性别</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
+                <div className="so-overview-item"><dt>服务资格</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
+                <div className="so-overview-item"><dt>服务频次</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editFrequency} onChange={e => setEditFrequency(e.target.value)} placeholder="如：每周三次" /> : (obj.serviceFrequency || "—")}</dd></div>
+                <div className="so-overview-item"><dt>服务项目</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="用顿号分隔" /> : (obj.serviceProjects.join("、") || "—")}</dd></div>
+                <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : obj.address}</dd></div>
+                {!editingBasic && obj.mapDisplayPoint ? <div className="so-overview-item so-overview-item--full"><dt>地图点</dt><dd>{obj.mapDisplayPoint.label ?? `${obj.mapDisplayPoint.latitude}, ${obj.mapDisplayPoint.longitude}`}</dd></div> : null}
               </dl>
+              {editingBasic && (
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditingBasic(false)} type="button">取消</button>
+                  <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={savingBasic} onClick={handleSaveBasic} type="button">{savingBasic ? "保存中..." : "保存"}</button>
+                </div>
+              )}
             </div>
 
             <div className="so-tab-section">
-              <h4 className="so-tab-section-title">照护重点</h4>
-              {obj.riskTags.length > 0 ? (
-                <div className="so-risk-tags">{obj.riskTags.map(t => <span key={t} className="so-risk-tag"><AlertTriangle size={12} /> {t}</span>)}</div>
-              ) : null}
-              {obj.careNotes.length > 0 ? (
-                <ul className="so-care-notes">{obj.careNotes.map((n, i) => <li key={i}>{n}</li>)}</ul>
-              ) : null}
-              {obj.riskTags.length === 0 && obj.careNotes.length === 0 ? <p className="sw-text-muted">暂无特殊注意事项</p> : null}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>照护重点</h4>
+                {!editingCare && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditRiskTags(obj.riskTags.join("、")); setEditCareNotes(obj.careNotes.join("\n")); setEditingCare(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+              </div>
+              {editingCare ? (
+                <div style={{ marginTop: 10 }}>
+                  <label className="sw-field" style={{ marginBottom: 8 }}><span>风险标签</span><input className="quality-user-modal__inline-input" value={editRiskTags} onChange={e => setEditRiskTags(e.target.value)} placeholder="用顿号分隔，如：独居、跌倒风险" style={{ width: "100%" }} /></label>
+                  <label className="sw-field"><span>照护备注</span><textarea className="sw-field__textarea" value={editCareNotes} onChange={e => setEditCareNotes(e.target.value)} placeholder="每行一条" rows={3} style={{ width: "100%" }} /></label>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditingCare(false)} type="button">取消</button>
+                    <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={savingCare} onClick={handleSaveCare} type="button">{savingCare ? "保存中..." : "保存"}</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 10 }}>
+                  {obj.riskTags.length > 0 ? (
+                    <div className="so-risk-tags">{obj.riskTags.map(t => <span key={t} className="so-risk-tag"><AlertTriangle size={12} /> {t}</span>)}</div>
+                  ) : null}
+                  {obj.careNotes.length > 0 ? (
+                    <ul className="so-care-notes">{obj.careNotes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+                  ) : null}
+                  {obj.riskTags.length === 0 && obj.careNotes.length === 0 ? <p className="sw-text-muted">暂无特殊注意事项</p> : null}
+                </div>
+              )}
             </div>
 
-            {((obj.insightSummaries ?? []).length > 0 || obj.latestInsightSummary) && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">AI 洞察</h4>
-                {obj.latestInsightSummary ? <p className="so-insight-summary">{obj.latestInsightSummary}</p> : null}
-                {(obj.insightSummaries ?? []).map(insight => (
-                  <div className="so-insight" data-severity={insight.severity} key={insight.id}>
-                    <strong>{insight.title}</strong>
-                    <span>{insight.description}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="so-tab-section">
+              <h4 className="so-tab-section-title">家属联系人</h4>
+              {obj.familyContacts.length > 0 ? (
+                <div className="so-family-list">
+                  {obj.familyContacts.map(c => (
+                    <div className="so-family-row" key={c.id}>
+                      <div className="so-family-row__info">
+                        <strong>{c.name}</strong>
+                        <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
+                      </div>
+                      <div className="so-family-row__sub">
+                        <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
+                          {subscriptionLabel[c.subscriptionStatus]}
+                        </span>
+                        {c.lastPushedAt && <small className="sw-text-muted">{formatTime(c.lastPushedAt)}</small>}
+                        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px", marginLeft: 8 }}
+                          disabled={mutationsDisabled}
+                          onClick={async () => {
+                            const token = localStorage.getItem("gy_auth_token");
+                            await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                            onUpdated();
+                          }}
+                          type="button">删除</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="sw-text-muted">暂无家属联系人</p>}
+            </div>
           </>
         )}
 
@@ -803,34 +902,19 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
           </div>
         )}
 
-        {activeTab === "family" && (
+        {activeTab === "insights" && (
           <div className="so-tab-section">
-            {obj.familyContacts.length > 0 ? (
-              <div className="so-family-list">
-                {obj.familyContacts.map(c => (
-                  <div className="so-family-row" key={c.id}>
-                    <div className="so-family-row__info">
-                      <strong>{c.name}</strong>
-                      <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
-                    </div>
-                    <div className="so-family-row__sub">
-                      <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
-                        {subscriptionLabel[c.subscriptionStatus]}
-                      </span>
-                      {c.lastPushedAt && <small className="sw-text-muted">{formatTime(c.lastPushedAt)}</small>}
-                      <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px", marginLeft: 8 }}
-                        disabled={mutationsDisabled}
-                        onClick={async () => {
-                          const token = localStorage.getItem("gy_auth_token");
-                          await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-                          onUpdated();
-                        }}
-                        type="button">删除</button>
-                    </div>
+            {hasInsights ? (
+              <>
+                {obj.latestInsightSummary ? <p className="so-insight-summary">{obj.latestInsightSummary}</p> : null}
+                {(obj.insightSummaries ?? []).map(insight => (
+                  <div className="so-insight" data-severity={insight.severity} key={insight.id}>
+                    <strong>{insight.title}</strong>
+                    <span>{insight.description}</span>
                   </div>
                 ))}
-              </div>
-            ) : <p className="sw-text-muted">暂无家属联系人</p>}
+              </>
+            ) : <p className="sw-text-muted">暂无 AI 洞察数据</p>}
           </div>
         )}
       </div>
@@ -851,74 +935,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated 
         </div>
       </div>
 
-    </div>
-  );
-}
-
-/* ── Edit Modal ── */
-
-function EditModal({ object: obj, onClose, onCancel, onSaved }: {
-  object: ServiceObject; onClose: () => void; onCancel: () => void; onSaved: () => void;
-}) {
-  const [name, setName] = useState(obj.name);
-  const [phone, setPhone] = useState(obj.phone ?? "");
-  const [idNumber, setIdNumber] = useState(obj.idNumber ?? "");
-  const [age, setAge] = useState(obj.age?.toString() ?? "");
-  const [gender, setGender] = useState<string>(obj.gender ?? "unknown");
-  const [address, setAddress] = useState(obj.address);
-  const [eligibility, setEligibility] = useState(obj.eligibilityType);
-  const [projects, setProjects] = useState(obj.serviceProjects.join("、"));
-  const [frequency, setFrequency] = useState(obj.serviceFrequency ?? "");
-  const [riskTags, setRiskTags] = useState(obj.riskTags.join("、"));
-  const [careNotes, setCareNotes] = useState(obj.careNotes.join("\n"));
-  const [familyName, setFamilyName] = useState(obj.familyContacts[0]?.name ?? "");
-  const [familyRelation, setFamilyRelation] = useState(obj.familyContacts[0]?.relation ?? "");
-  const [familyPhone, setFamilyPhone] = useState(obj.familyContacts[0]?.phone ?? "");
-  const [familyWechat, setFamilyWechat] = useState(obj.familyContacts[0]?.wechatId ?? "");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-
-  const handleSave = async () => {
-    setSaveError("");
-    setSaving(true);
-    try {
-      await siteOperationsApi.updateServiceObject(obj.id, {
-        name: name.trim(), phone: phone.trim() || undefined, idNumber: idNumber.trim() || undefined, age: age ? Number(age) : undefined, address: address.trim(),
-        eligibilityType: eligibility as ServiceEligibilityType,
-        serviceProjects: projects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
-        riskTags: riskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
-        careNotes: careNotes.split("\n").map(s => s.trim()).filter(Boolean),
-      });
-      onSaved();
-    } catch (e: any) {
-      setSaveError(e?.message ?? "保存失败");
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="编辑服务对象">
-      <div className="so-modal__form-header">
-        <h3>编辑服务对象</h3>
-        <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-      </div>
-      <div className="so-modal__content">
-        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
-          address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
-          projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
-          riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
-          familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
-          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
-          familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
-      </div>
-      {saveError && <div style={{ margin: "0 16px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{saveError}</div>}
-      <div className="so-modal__footer">
-        <div />
-        <div className="so-modal__footer-right">
-          <button className="sw-btn sw-btn--secondary" onClick={onCancel} type="button">取消</button>
-          <button className="sw-btn sw-btn--primary" disabled={saving} onClick={handleSave} type="button">{saving ? "保存中..." : "保存"}</button>
-        </div>
-      </div>
     </div>
   );
 }

@@ -308,7 +308,7 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
   );
 }
 
-type ViewTab = "info" | "worker" | "records";
+type ViewTab = "info" | "records";
 
 function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecords }: {
   badge: SmartBadge;
@@ -319,7 +319,6 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("info");
   const [confirmAction, setConfirmAction] = useState<"disable" | "lost" | null>(null);
-  const [showWorkerSelect, setShowWorkerSelect] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState(badge.preferredWorkerId ?? "");
   const [viewingRecord, setViewingRecord] = useState<ServiceRecord | null>(null);
   const [recordsData, setRecordsData] = useState<any>(null);
@@ -338,9 +337,10 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
     setConfirmAction(null);
   };
 
+  const [editingWorker, setEditingWorker] = useState(false);
+
   const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "info", label: "设备信息" },
-    { id: "worker", label: "服务人员" },
     { id: "records", label: "服务记录", count: badge.recentServiceRecordIds.length || undefined },
   ];
 
@@ -410,50 +410,40 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
                 <div className="so-overview-item"><dt>电量</dt><dd>{badge.batteryPercent != null ? <span className={badge.batteryPercent < 20 ? "badges-battery--low" : ""}>{badge.batteryPercent}%</span> : "—"}</dd></div>
                 <div className="so-overview-item"><dt>最近同步</dt><dd>{badge.lastSyncAt ? formatSyncTime(badge.lastSyncAt) : "—"}</dd></div>
                 <div className="so-overview-item"><dt>最近录音</dt><dd>{badge.lastRecordingAt ? formatSyncTime(badge.lastRecordingAt) : "—"}</dd></div>
-                <div className="so-overview-item"><dt>常用人员</dt><dd>{badge.preferredWorkerName ?? "站点共享"}</dd></div>
                 <div className="so-overview-item"><dt>服务记录</dt><dd>{badge.recentServiceRecordIds.length > 0 ? `${badge.recentServiceRecordIds.length} 条` : "—"}</dd></div>
               </dl>
             </div>
-          </>
-        )}
 
-        {activeTab === "worker" && (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">常用服务人员</h4>
-            {showWorkerSelect ? (
-              <div style={{ background: "#F0F5FF", border: "1px solid #C7D2FE", borderRadius: 10, padding: 16, marginBottom: 16 }}>
-                <strong style={{ fontSize: 13, display: "block", marginBottom: 8 }}>选择常用服务人员</strong>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <select style={{ flex: 1, height: 36, borderRadius: 8, border: "1px solid #E5E7EB", padding: "0 10px", fontSize: 13 }} value={selectedWorker} onChange={e => setSelectedWorker(e.target.value)}>
-                    <option value="">无（站点共享）</option>
-                    <option value="worker-001">王丽</option>
-                    <option value="worker-002">张敏</option>
-                    <option value="worker-003">李芳</option>
-                  </select>
-                  <button className="sw-btn sw-btn--primary" style={{ height: 36, fontSize: 12 }} onClick={async () => {
-                    try { await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined }); } catch {}
-                    setShowWorkerSelect(false);
-                    onUpdated();
-                  }} type="button">确认</button>
-                  <button className="sw-btn sw-btn--secondary" style={{ height: 36, fontSize: 12 }} onClick={() => setShowWorkerSelect(false)} type="button">取消</button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {badge.preferredWorkerName ? (
-                  <p>{badge.preferredWorkerName}</p>
-                ) : (
-                  <p className="sw-text-muted">站点共享使用，未指定常用人员</p>
+            <div className="so-tab-section">
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>服务人员</h4>
+                {!editingWorker && !mutationsDisabled && canDisableOrLose(badge.status) && (
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditingWorker(true)} type="button" title="编辑"><Edit3 size={14} /></button>
                 )}
-                <p className="badges-hint">工牌可被站点内任一服务人员使用，常用人员仅作为推断默认关联</p>
-                {!mutationsDisabled && canDisableOrLose(badge.status) ? (
-                  <button className="sw-btn sw-btn--secondary" onClick={() => setShowWorkerSelect(true)} type="button" style={{ marginTop: 12 }}>
-                    <Edit3 size={14} /> 更新常用人员
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
+              </div>
+              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
+                <div className="so-overview-item"><dt>常用人员</dt><dd>
+                  {editingWorker ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)" }} value={selectedWorker} onChange={e => setSelectedWorker(e.target.value)}>
+                        <option value="">无（站点共享）</option>
+                        <option value="worker-001">王丽</option>
+                        <option value="worker-002">张敏</option>
+                        <option value="worker-003">李芳</option>
+                      </select>
+                      <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
+                        try { await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined }); } catch {}
+                        setEditingWorker(false);
+                        onUpdated();
+                      }} type="button">确认</button>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => setEditingWorker(false)} type="button">取消</button>
+                    </div>
+                  ) : (badge.preferredWorkerName ?? "站点共享")}
+                </dd></div>
+              </dl>
+              <p className="badges-hint" style={{ marginTop: 4 }}>工牌可被站点内任一服务人员使用，常用人员仅作为推断默认关联</p>
+            </div>
+          </>
         )}
 
         {activeTab === "records" && (
