@@ -180,7 +180,6 @@ body {
   grid-row: 2;
   min-width: 0;
   overflow: hidden;
-  z-index: 1;
 }
 
 .site-operations-placeholder {

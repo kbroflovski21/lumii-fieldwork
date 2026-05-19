@@ -102,7 +102,6 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  z-index: 1;
 }
 
 /* ── Header — row 1, spans all columns ── */

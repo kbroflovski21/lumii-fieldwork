@@ -138,7 +138,6 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  z-index: 1;
 }
 
 .sv-copilot-toggle {
