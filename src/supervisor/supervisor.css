@@ -135,8 +135,31 @@
   display: flex;
   min-width: 0;
   min-height: 0;
+  width: 100%;
+  flex: 1;
   height: 100%;
   overflow: hidden;
+}
+
+/* Inherit tokens when embedded outside .sv-page (e.g. inside QualityPage) */
+.sv-content-standalone {
+  --sv-page-bg: #f7f9fb;
+  --sv-surface: #ffffff;
+  --sv-surface-subtle: #f9fafb;
+  --sv-line: #e5e7eb;
+  --sv-line-subtle: #f3f4f6;
+  --sv-text: #191c1e;
+  --sv-text-sec: #374151;
+  --sv-text-muted: #9ca3af;
+  --sv-accent: #0052cc;
+  --sv-accent-soft: rgba(0, 82, 204, 0.08);
+  --sv-ai-accent: #6366f1;
+  --sv-ai-accent-soft: rgba(99, 102, 241, 0.08);
+  --sv-success-text: #116b4c;
+  --sv-warning-text: #976000;
+  --sv-danger-text: #b42318;
+  --sv-muted-bg: #f3f4f6;
+  --sv-muted-text: #6b7280;
 }
 
 .sv-main {

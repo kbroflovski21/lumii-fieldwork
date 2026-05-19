@@ -1,6 +1,6 @@
 # 规范管理页面 UI 重设计 — 设计规格
 
-状态：设计定稿
+状态：前端已实现，待接入后端
 日期：2026-05-19
 基线：`docs/supervisor-page-spec.md` (v2)
 
@@ -55,11 +55,11 @@
 
 ```
 点击「重新生成」
-  → 调用 AI 生成新版本
-  → 展示生成结果预览（标记为"待确认"）
-  → 用户对比当前版本和新生成版本
-  → 「采用此版本」→ 保存为新版本，版本号 +1
-  → 「放弃」→ 丢弃生成结果，保持原版本不变
+  -> 调用 AI 生成新版本
+  -> 展示生成结果预览（标记为"待确认"）
+  -> 用户对比当前版本和新生成版本
+  -> 「采用此版本」-> 保存为新版本，版本号 +1
+  -> 「放弃」-> 丢弃生成结果，保持原版本不变
 ```
 
 生成过程中显示 loading 状态。生成完成后，新旧版本应能方便对比。
@@ -70,12 +70,12 @@
 
 ```
 通用规范
-  ├── 国家长期护理保险服务规范    [完整/部分/待建]
-  └── 居家养老服务通用要求
+  +-- 国家长期护理保险服务规范    [完整/部分/待建]
+  +-- 居家养老服务通用要求
 服务项目规范
-  ├── 清洁照护 - 口腔清洁
-  ├── 基础健康观察 - 生命体征测量
-  └── ...
+  +-- 清洁照护 - 口腔清洁
+  +-- 基础健康观察 - 生命体征测量
+  +-- ...
 ```
 
 状态标记（完整/部分/待建）表示该规范下三个文档的完成度：
@@ -131,49 +131,7 @@ Output: { reply: string, actions: Action[] }
 Actions: create_folder | update_doc | delete_folder
 ```
 
-### 7.2 新增接口
-
-#### 生成督导/报告要求
-
-```
-POST /api/standards/:folderId/generate
-Content-Type: application/json
-
-Request:
-{
-  "docType": "supervision" | "report",
-  "sopContent": string,        // 当前 SOP 内容
-  "sopVersion": number,        // 当前 SOP 版本号
-  "currentContent"?: string    // 当前已有的 prompt 内容（用于参考优化）
-}
-
-Response:
-{
-  "content": string,           // AI 生成的新内容
-  "basedOnSopVersion": number,
-  "summary": string            // 变更摘要（用于版本历史记录）
-}
-```
-
-#### 确认采用生成结果
-
-```
-POST /api/standards/:folderId/confirm-generate
-Content-Type: application/json
-
-Request:
-{
-  "docType": "supervision" | "report",
-  "content": string,           // 确认采用的内容
-  "summary": string            // 版本变更摘要
-}
-
-Response:
-{
-  "version": number,           // 新版本号
-  "updatedAt": string          // ISO 时间戳
-}
-```
+### 7.2 规范目录 CRUD
 
 #### 获取规范列表
 
@@ -197,6 +155,63 @@ Response:
 }
 ```
 
+#### 创建规范目录
+
+```
+POST /api/standards
+Content-Type: application/json
+
+Request:
+{
+  "name": string,
+  "type": "general" | "service"
+}
+
+Response:
+{
+  "folder": StdFolder       // 新创建的空目录，sop/supervision/report 均为 null
+}
+
+HTTP 409: 同名目录已存在
+```
+
+#### 重命名规范目录
+
+```
+PATCH /api/standards/:folderId
+Content-Type: application/json
+
+Request:
+{
+  "name": string
+}
+
+Response:
+{
+  "folder": StdFolder
+}
+
+HTTP 404: 目录不存在
+HTTP 409: 同名目录已存在
+```
+
+#### 删除规范目录
+
+```
+DELETE /api/standards/:folderId
+
+Response:
+{
+  "ok": true
+}
+
+HTTP 404: 目录不存在
+```
+
+删除时同步删除该目录下所有文档及版本历史。前端需在调用前显示确认弹窗。
+
+### 7.3 文档内容操作
+
 #### 更新文档内容（手动编辑）
 
 ```
@@ -212,9 +227,15 @@ Request:
 Response:
 {
   "version": number,
-  "updatedAt": string
+  "updatedAt": string          // ISO 时间戳
 }
+
+HTTP 404: 目录或文档类型不存在
 ```
+
+`:docType` 取值：`sop` | `supervision` | `report`
+
+若文档不存在则自动创建（version = 1），否则 version +1。
 
 #### 获取版本历史详情
 
@@ -225,10 +246,63 @@ Response:
 {
   "content": string,
   "version": number,
-  "date": string,
+  "date": string,              // ISO 时间戳
   "summary": string,
   "source": "manual" | "ai_generated"
 }
+
+HTTP 404: 版本不存在
+```
+
+### 7.4 AI 生成
+
+#### 生成督导/报告要求
+
+```
+POST /api/standards/:folderId/generate
+Content-Type: application/json
+
+Request:
+{
+  "docType": "supervision" | "report",
+  "sopContent": string,        // 当前 SOP 内容
+  "sopVersion": number,        // 当前 SOP 版本号
+  "currentContent"?: string    // 当前已有的 prompt 内容（用于参考优化）
+}
+
+Response:
+{
+  "content": string,           // AI 生成的新内容
+  "basedOnSopVersion": number,
+  "summary": string            // 变更摘要（用于版本历史记录）
+}
+
+HTTP 400: SOP 内容为空（无法基于空 SOP 生成）
+HTTP 404: 目录不存在
+```
+
+前端收到后进入预览态（GeneratePreview），不直接保存。
+
+#### 确认采用生成结果
+
+```
+POST /api/standards/:folderId/confirm-generate
+Content-Type: application/json
+
+Request:
+{
+  "docType": "supervision" | "report",
+  "content": string,           // 确认采用的内容
+  "summary": string            // 版本变更摘要
+}
+
+Response:
+{
+  "version": number,           // 新版本号
+  "updatedAt": string          // ISO 时间戳
+}
+
+HTTP 404: 目录不存在
 ```
 
 ## 8. 页面状态
@@ -252,6 +326,14 @@ interface SupervisorState {
 
   // AI 生成预览
   generatePreview: GeneratePreview | null;
+
+  // 确认弹窗
+  confirmModal: {
+    title: string;
+    message: string;
+    danger: boolean;
+    onConfirm: () => void;
+  } | null;
 }
 ```
 
@@ -259,15 +341,21 @@ interface SupervisorState {
 
 | 文件 | 变更 |
 |------|------|
-| `src/supervisor/SupervisorPage.tsx` | 重构：拆分为双层视图，添加层切换逻辑 |
-| `src/supervisor/supervisor.css` | 更新样式：层切换按钮、AI 配置层卡片布局 |
-| `src/supervisor/SupervisorContent.tsx` | 可能需要更新导出 |
+| `src/supervisor/SupervisorPage.tsx` | 重构：拆分为双层视图，添加层切换逻辑、目录 folder 级选择、AI 配置层、生成确认流程 |
+| `src/supervisor/supervisor.css` | 更新样式：层切换按钮、AI 配置层卡片布局、folder 状态标记、CSS 变量作用域修复 |
+| `src/supervisor/SupervisorContent.tsx` | 无变更（仍从 SupervisorPage 导出 SupervisorContentInner） |
 
 不新建文件，在现有文件中重构。
 
-## 10. 不在范围内
+## 10. 已知问题与后续
 
-- 后端实现（本次只定义 API 契约）
+- **前端目前使用 mock 数据** — 所有 folder/doc 数据内置于组件中，需接入后端 API 后替换
+- **添加规范目录** — 当前通过 AI 聊天面板触发（sendToLLM），后续可考虑直接调用 POST /api/standards
+- **CSS 变量作用域** — `sv-content-standalone` 上已重复声明 CSS 变量，确保嵌入 QualityPage 时样式正确
+
+## 11. 不在范围内
+
+- 后端实现（本次只定义 API 契约 + 前端实现）
 - 数据库 schema 变更
 - AI 聊天面板（保留现有实现，不做改动）
 - 权限变更（仍然仅 org_admin 可访问）
