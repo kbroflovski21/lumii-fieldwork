@@ -1,0 +1,369 @@
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+enum UserRole {
+  org_admin
+  site_operator
+  service_supervisor
+  careworker
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+enum WorkerStatus {
+  active
+  disabled
+  incomplete_profile
+}
+
+enum BadgeStatus {
+  pending_activation
+  available
+  in_use
+  offline
+  low_battery
+  sync_delayed
+  lost
+  disabled
+}
+
+enum Gender {
+  female
+  male
+  unknown
+}
+
+enum EligibilityType {
+  insurance
+  government
+  institution
+  self_paid
+}
+
+enum SubscriptionStatus {
+  none
+  daily
+  weekly
+  monthly
+  exception_only
+}
+
+enum PlanStatus {
+  active
+  paused
+  archived
+}
+
+enum ExceptionKind {
+  pause
+  time_change
+  worker_change
+  skip
+}
+
+enum ScheduleSource {
+  service_plan
+  one_time
+}
+
+enum ScheduleStatus {
+  scheduled
+  assigned
+  adjusted
+  in_progress
+  completed
+  cancelled
+  unassigned
+}
+
+enum ReviewStatus {
+  needs_review
+  confirmed
+  info_incomplete
+  exception_open
+}
+
+enum ExportStatus {
+  not_ready
+  exportable
+  exported
+  exported_with_flags
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+model User {
+  id           String     @id @db.VarChar(64)
+  username     String     @unique @db.VarChar(255)
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  name         String     @db.VarChar(255)
+  role         UserRole
+  orgId        String     @default("org-001") @map("org_id") @db.VarChar(64)
+  siteIds      Json       @default("[]") @map("site_ids")
+  phone        String     @default("") @db.VarChar(64)
+  status       UserStatus @default(active)
+  createdBy    String?    @map("created_by") @db.VarChar(64)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model SocialWorker {
+  id                       String       @id @db.VarChar(64)
+  userId                   String       @map("user_id") @db.VarChar(64)
+  name                     String       @db.VarChar(255)
+  phone                    String       @default("") @db.VarChar(64)
+  siteId                   String       @default("site-001") @map("site_id") @db.VarChar(64)
+  workerType               String       @default("service_personnel") @map("worker_type") @db.VarChar(64)
+  qualificationLabels      Json         @default("[]") @map("qualification_labels")
+  status                   WorkerStatus @default(active)
+  preferredBadgeId         String?      @map("preferred_badge_id") @db.VarChar(64)
+  preferredBadgeDeviceCode String?      @map("preferred_badge_device_code") @db.VarChar(64)
+  preferredBadgeStatus     String?      @map("preferred_badge_status") @db.VarChar(64)
+  preferredBadgeLastSyncAt String?      @map("preferred_badge_last_sync_at") @db.VarChar(64)
+  praiseCount              Int          @default(0) @map("praise_count")
+  latestPraiseAt           String?      @map("latest_praise_at") @db.VarChar(64)
+  latestPraiseExcerpt      String?      @map("latest_praise_excerpt") @db.Text
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  @@map("social_workers")
+}
+
+model SmartBadge {
+  id                    String      @id @db.VarChar(64)
+  deviceCode            String      @unique @map("device_code") @db.VarChar(64)
+  orgId                 String      @default("org-001") @map("org_id") @db.VarChar(64)
+  siteId                String      @default("site-001") @map("site_id") @db.VarChar(64)
+  siteName              String?     @map("site_name") @db.VarChar(255)
+  status                BadgeStatus @default(pending_activation)
+  batteryPercent        Int?        @map("battery_percent")
+  activatedAt           String?     @map("activated_at") @db.VarChar(64)
+  lastSyncAt            String?     @map("last_sync_at") @db.VarChar(64)
+  lastRecordingAt       String?     @map("last_recording_at") @db.VarChar(64)
+  preferredWorkerId     String?     @map("preferred_worker_id") @db.VarChar(64)
+  preferredWorkerName   String?     @map("preferred_worker_name") @db.VarChar(255)
+  recentServiceRecordIds Json       @default("[]") @map("recent_service_record_ids")
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  @@map("smart_badges")
+}
+
+model ServiceObject {
+  id                       String          @id @db.VarChar(64)
+  name                     String          @db.VarChar(255)
+  phone                    String?         @db.VarChar(64)
+  age                      Int?
+  gender                   Gender          @default(unknown)
+  address                  String          @default("") @db.VarChar(500)
+  mapDisplayPoint          Json?           @map("map_display_point")
+  eligibilityType          EligibilityType @default(government) @map("eligibility_type")
+  serviceProjects          Json            @default("[]") @map("service_projects")
+  serviceFrequency         String?         @map("service_frequency") @db.VarChar(255)
+  careNotes                Json            @default("[]") @map("care_notes")
+  riskTags                 Json            @default("[]") @map("risk_tags")
+  familySubscriptionSummary String         @default("none") @map("family_subscription_summary") @db.VarChar(64)
+  latestInsightSummary     String?         @map("latest_insight_summary") @db.Text
+  insightSummaries         Json            @default("[]") @map("insight_summaries")
+  state                    String?         @default("normal") @db.VarChar(64)
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  familyContacts  FamilyContact[]
+  servicePlans    ServicePlan[]
+  serviceSchedules ServiceSchedule[]
+
+  @@map("service_objects")
+}
+
+model FamilyContact {
+  id                 String             @id @db.VarChar(64)
+  serviceObjectId    String             @map("service_object_id") @db.VarChar(64)
+  name               String             @db.VarChar(255)
+  relation           String             @default("") @db.VarChar(64)
+  phone              String             @default("") @db.VarChar(64)
+  subscriptionStatus SubscriptionStatus @default(none) @map("subscription_status")
+  lastPushedAt       String?            @map("last_pushed_at") @db.VarChar(64)
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  serviceObject ServiceObject @relation(fields: [serviceObjectId], references: [id])
+
+  @@map("family_contacts")
+}
+
+model ServicePlan {
+  id                      String     @id @db.VarChar(64)
+  serviceObjectId         String     @map("service_object_id") @db.VarChar(64)
+  serviceProject          String     @map("service_project") @db.VarChar(255)
+  cadenceRule             String     @default("") @map("cadence_rule") @db.VarChar(255)
+  cadenceLabel            String     @default("") @map("cadence_label") @db.VarChar(255)
+  preferredTimeWindow     Json       @default("{}") @map("preferred_time_window")
+  startDate               String     @map("start_date") @db.VarChar(64)
+  endDate                 String?    @map("end_date") @db.VarChar(64)
+  primarySocialWorkerId   String?    @map("primary_social_worker_id") @db.VarChar(64)
+  primarySocialWorkerName String?    @map("primary_social_worker_name") @db.VarChar(255)
+  status                  PlanStatus @default(active)
+  nextScheduleAt          String?    @map("next_schedule_at") @db.VarChar(64)
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  serviceObject ServiceObject          @relation(fields: [serviceObjectId], references: [id])
+  exceptions    ServicePlanException[]
+
+  @@map("service_plans")
+}
+
+model ServicePlanException {
+  id                         String        @id @db.VarChar(64)
+  servicePlanId              String        @map("service_plan_id") @db.VarChar(64)
+  kind                       ExceptionKind
+  effectiveFrom              String        @map("effective_from") @db.VarChar(64)
+  effectiveTo                String?       @map("effective_to") @db.VarChar(64)
+  timeWindow                 Json?         @map("time_window")
+  replacementSocialWorkerId  String?       @map("replacement_social_worker_id") @db.VarChar(64)
+  note                       String?       @db.Text
+  createdAt                  DateTime      @default(now()) @map("created_at")
+
+  servicePlan ServicePlan @relation(fields: [servicePlanId], references: [id])
+
+  @@map("service_plan_exceptions")
+}
+
+model ServiceSchedule {
+  id                       String         @id @db.VarChar(64)
+  source                   ScheduleSource @default(one_time)
+  servicePlanId            String?        @map("service_plan_id") @db.VarChar(64)
+  serviceObjectId          String         @map("service_object_id") @db.VarChar(64)
+  serviceObjectName        String         @default("") @map("service_object_name") @db.VarChar(255)
+  serviceProject           String         @default("") @map("service_project") @db.VarChar(255)
+  addressSnapshot          String         @default("") @map("address_snapshot") @db.VarChar(500)
+  address                  String?        @db.VarChar(500)
+  mapDisplayPoint          Json?          @map("map_display_point")
+  serviceDate              String         @map("service_date") @db.VarChar(64)
+  startTime                String?        @map("start_time") @db.VarChar(64)
+  endTime                  String?        @map("end_time") @db.VarChar(64)
+  timeWindow               Json           @default("{}") @map("time_window")
+  assignedSocialWorkerId   String?        @map("assigned_social_worker_id") @db.VarChar(64)
+  assignedSocialWorkerName String?        @map("assigned_social_worker_name") @db.VarChar(255)
+  status                   ScheduleStatus @default(scheduled)
+  notes                    String?        @db.Text
+  serviceRecordId          String?        @map("service_record_id") @db.VarChar(64)
+  planExceptionApplied     Int            @default(0) @map("plan_exception_applied")
+  riskTags                 Json           @default("[]") @map("risk_tags")
+  adjustmentHistory        Json           @default("[]") @map("adjustment_history")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @default(now()) @updatedAt @map("updated_at")
+
+  serviceObject ServiceObject @relation(fields: [serviceObjectId], references: [id])
+
+  @@map("service_schedules")
+}
+
+model ServiceRecord {
+  id                   String       @id @db.VarChar(64)
+  serviceDate          String       @map("service_date") @db.VarChar(64)
+  startTime            String       @map("start_time") @db.VarChar(64)
+  endTime              String       @map("end_time") @db.VarChar(64)
+  durationMinutes      Int          @default(0) @map("duration_minutes")
+  socialWorkerId       String?      @map("social_worker_id") @db.VarChar(64)
+  socialWorkerName     String?      @map("social_worker_name") @db.VarChar(255)
+  serviceObjectId      String?      @map("service_object_id") @db.VarChar(64)
+  serviceObjectName    String?      @map("service_object_name") @db.VarChar(255)
+  familyContactIds     Json         @default("[]") @map("family_contact_ids")
+  badgeId              String       @map("badge_id") @db.VarChar(64)
+  smartBadgeId         String?      @map("smart_badge_id") @db.VarChar(64)
+  serviceProject       String?      @map("service_project") @db.VarChar(255)
+  assignmentConfidence Float        @default(0.5) @map("assignment_confidence")
+  reviewStatus         ReviewStatus @default(needs_review) @map("review_status")
+  exportStatus         ExportStatus @default(not_ready) @map("export_status")
+  locationEvidence     Json?        @map("location_evidence")
+  serviceExceptions    Json         @default("[]") @map("service_exceptions")
+  serviceItems         Json         @default("[]") @map("service_items")
+  exceptionTags        Json         @default("[]") @map("exception_tags")
+  missingFields        Json         @default("[]") @map("missing_fields")
+  audioAssetId         String?      @map("audio_asset_id") @db.VarChar(64)
+  transcriptId         String?      @map("transcript_id") @db.VarChar(64)
+  structuredSummary    String?      @map("structured_summary") @db.Text
+  generatedSummary     String?      @map("generated_summary") @db.Text
+  exportHistory        Json         @default("[]") @map("export_history")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  audioAssets AudioAsset[]
+  transcripts Transcript[]
+
+  @@map("service_records")
+}
+
+model AudioAsset {
+  id              String @id @db.VarChar(64)
+  recordId        String @map("record_id") @db.VarChar(64)
+  playbackUrl     String? @map("playback_url") @db.VarChar(500)
+  durationSeconds Int    @default(0) @map("duration_seconds")
+  capturedByBadgeId String? @map("captured_by_badge_id") @db.VarChar(64)
+  uploadedAt      String? @map("uploaded_at") @db.VarChar(64)
+  retentionLabel  String? @map("retention_label") @db.VarChar(64)
+
+  record ServiceRecord @relation(fields: [recordId], references: [id])
+
+  @@map("audio_assets")
+}
+
+model Transcript {
+  id         String  @id @db.VarChar(64)
+  recordId   String  @map("record_id") @db.VarChar(64)
+  language   String  @default("zh-CN") @db.VarChar(16)
+  text       String  @db.Text
+  confidence Float?
+  segments   Json    @default("[]")
+
+  record ServiceRecord @relation(fields: [recordId], references: [id])
+
+  @@map("transcripts")
+}
+
+model HomeSummary {
+  id                       String   @id @default("current") @db.VarChar(64)
+  summaryDate              String   @map("summary_date") @db.VarChar(64)
+  totalScheduledServices   Int      @default(0) @map("total_scheduled_services")
+  unassignedServices       Int      @default(0) @map("unassigned_services")
+  activeSocialWorkers      Int      @default(0) @map("active_social_workers")
+  onlineBadges             Int      @default(0) @map("online_badges")
+  recordsNeedReview        Int      @default(0) @map("records_need_review")
+  exportableServiceRecords Int      @default(0) @map("exportable_service_records")
+  highlights               Json     @default("[]")
+  activities               Json     @default("[]")
+  recommendedActions       Json     @default("[]") @map("recommended_actions")
+  permissionState          String   @default("full") @map("permission_state") @db.VarChar(64)
+  updatedAt                DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("home_summary")
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  agentId   String   @map("agent_id") @db.VarChar(64)
+  sessionKey String  @map("session_key") @db.VarChar(255)
+  role      ChatRole
+  content   String   @db.Text
+  msgType   String   @default("text") @map("msg_type") @db.VarChar(64)
+  cardData  String?  @map("card_data") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([agentId, sessionKey, id(sort: Desc)], name: "idx_chat_agent_session")
+  @@map("chat_messages")
+}

@@ -8,3 +8,4 @@ tsconfig.tsbuildinfo
 .gstack/
 *.db-shm
 *.db-wal
+generated/
