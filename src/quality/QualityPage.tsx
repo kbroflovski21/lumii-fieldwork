@@ -414,6 +414,7 @@ function UsersView() {
 
   const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -510,6 +511,7 @@ function UsersView() {
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setResetTarget(u); }}>重置密码</button>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
                     </div>
                   </td>
@@ -529,9 +531,18 @@ function UsersView() {
           onClose={closeModal}
           onSaved={() => { fetchUsers(); showToast(modalMode === "create" ? "用户创建成功" : "用户信息已更新"); closeModal(); }}
           onEdit={() => setModalMode("edit")}
-          onResetPassword={() => showToast("密码已重置")}
           onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
           onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
+        />
+      )}
+
+      {/* ── Reset Password Modal ── */}
+      {resetTarget && (
+        <ResetPasswordModal
+          user={resetTarget}
+          token={token!}
+          onClose={() => setResetTarget(null)}
+          onSuccess={() => { setResetTarget(null); showToast("密码已重置"); }}
         />
       )}
 
@@ -579,14 +590,13 @@ function UsersView() {
 
 /* ── User Modal Component (so-modal design) ── */
 
-function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPassword, onToggle, onDelete }: {
+function UserModal({ mode, user, token, onClose, onSaved, onEdit, onToggle, onDelete }: {
   mode: UserModalMode;
   user: QualityUser | null;
   token: string;
   onClose: () => void;
   onSaved: () => void;
   onEdit: () => void;
-  onResetPassword: () => void;
   onToggle: (u: QualityUser) => void;
   onDelete: (u: QualityUser) => void;
 }) {
@@ -604,12 +614,6 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const [resetPwd, setResetPwd] = useState("");
-  const [resetPwdConfirm, setResetPwdConfirm] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [resetSubmitting, setResetSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"info" | "password">("info");
-
   useEffect(() => {
     setForm({
       username: user?.username ?? "",
@@ -619,10 +623,6 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
       phone: user?.phone ?? "",
     });
     setError("");
-    setActiveTab("info");
-    setResetPwd("");
-    setResetPwdConfirm("");
-    setResetError("");
   }, [user, mode]);
 
   const handleSubmit = async () => {
@@ -648,7 +648,7 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
         const res = await fetch(`/api/admin/users/${user!.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ name: form.name, phone: form.phone, status: form.role === user!.role ? undefined : undefined }),
+          body: JSON.stringify({ name: form.name, phone: form.phone }),
         });
         if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); setSubmitting(false); return; }
       }
@@ -657,69 +657,32 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
     setSubmitting(false);
   };
 
-  const handleResetPassword = async () => {
-    setResetError("");
-    if (!resetPwd || resetPwd.length < 6) { setResetError("密码至少6位"); return; }
-    if (resetPwd !== resetPwdConfirm) { setResetError("两次密码输入不一致"); return; }
-    setResetSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/users/${user!.id}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: resetPwd }),
-      });
-      if (res.ok) {
-        setResetPwd("");
-        setResetPwdConfirm("");
-        onResetPassword();
-      } else {
-        const d = await res.json();
-        setResetError(d.error ?? "重置失败");
-      }
-    } catch { setResetError("网络错误"); }
-    setResetSubmitting(false);
-  };
-
-  return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="so-modal so-modal--view" role="dialog" aria-label={isCreate ? "新增用户" : user?.name}>
-        {/* Header */}
-        <div className="so-modal__summary">
-          <div className="so-modal__summary-main">
-            <div className="so-modal__summary-name">
-              <h3>{isCreate ? "新增用户" : (isEdit ? "编辑用户" : user?.name)}</h3>
-              {isView && user && (
+  /* View mode: so-modal--view (summary header + content + footer) */
+  if (isView && user) {
+    return (
+      <>
+        <div className="sw-scrim" onClick={onClose} />
+        <div className="so-modal so-modal--view" role="dialog" aria-label={user.name}>
+          <div className="so-modal__summary">
+            <div className="so-modal__summary-main">
+              <div className="so-modal__summary-name">
+                <h3>{user.name}</h3>
                 <span className="so-modal__summary-demo">{user.username}</span>
-              )}
+              </div>
+              <div className="so-modal__summary-actions">
+                <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
             </div>
-            <div className="so-modal__summary-actions">
-              <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-          </div>
-          {isView && user && (
             <div className="so-modal__summary-tags">
               <span className="so-modal__chip">{QUALITY_ROLE_LABELS[user.role] ?? user.role}</span>
               <span className={`so-modal__chip ${user.status === "active" ? "" : "so-modal__chip--danger"}`}>
                 {user.status === "active" ? "正常" : "已禁用"}
               </span>
             </div>
-          )}
-        </div>
-
-        {/* Tabs (view mode only) */}
-        {isView && (
-          <div className="so-modal__tabs" role="tablist">
-            <button className="so-modal__tab" data-active={activeTab === "info"} onClick={() => setActiveTab("info")} role="tab" type="button">基本信息</button>
-            <button className="so-modal__tab" data-active={activeTab === "password"} onClick={() => setActiveTab("password")} role="tab" type="button">重置密码</button>
           </div>
-        )}
-
-        {/* Content */}
-        <div className="so-modal__content">
-          {isView && activeTab === "info" && user && (
+          <div className="so-modal__content">
             <div className="so-overview-grid">
               <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
               <dl className="so-overview-item"><dt>姓名</dt><dd>{user.name}</dd></dl>
@@ -728,45 +691,54 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
               <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
               <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
             </div>
-          )}
-
-          {isView && activeTab === "password" && user && (
-            <div className="so-form-cards">
-              <div className="so-form-card">
-                <h4 className="so-form-card__title">重置密码</h4>
-                {resetError && <div className="quality-modal__error">{resetError}</div>}
-                <div className="sw-field"><span>新密码</span><input type="password" value={resetPwd} onChange={e => setResetPwd(e.target.value)} placeholder="至少6位" /></div>
-                <div className="sw-field"><span>确认密码</span><input type="password" value={resetPwdConfirm} onChange={e => setResetPwdConfirm(e.target.value)} placeholder="再次输入新密码" /></div>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button className="sw-btn sw-btn--primary" disabled={resetSubmitting} onClick={handleResetPassword} type="button">
-                    {resetSubmitting ? "重置中..." : "确认重置"}
-                  </button>
-                </div>
-              </div>
+          </div>
+          <div className="so-modal__footer">
+            <div>
+              <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
+              <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button" style={{ marginLeft: 8 }}>
+                {user.status === "active" ? "禁用" : "启用"}
+              </button>
             </div>
-          )}
+            <div className="so-modal__footer-right">
+              <button className="sw-btn sw-btn--primary" onClick={onEdit} type="button">编辑</button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
-          {(isCreate || isEdit) && (
-            <div className="so-form-cards">
-              <div className="so-form-card">
-                <h4 className="so-form-card__title">账号信息</h4>
-                {error && <div className="quality-modal__error">{error}</div>}
-                {isCreate && (
-                  <>
-                    <div className="so-form-card__row">
-                      <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
-                      <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
-                    </div>
-                  </>
-                )}
+  /* Create / Edit mode: so-modal--form (form header + content + footer) */
+  return (
+    <>
+      <div className="sw-scrim" onClick={onClose} />
+      <div className="so-modal so-modal--form" role="dialog" aria-label={isCreate ? "新增用户" : "编辑用户"}>
+        <div className="so-modal__form-header">
+          <h3>{isCreate ? "新增用户" : `编辑 · ${user?.name}`}</h3>
+          <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="so-modal__content">
+          <div className="so-form-cards">
+            <div className="so-form-card">
+              <h4 className="so-form-card__title">账号信息</h4>
+              {error && <div className="quality-modal__error">{error}</div>}
+              {isCreate && (
                 <div className="so-form-card__row">
-                  <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
-                  <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
+                  <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
+                  <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
                 </div>
+              )}
+              <div className="so-form-card__row">
+                <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+                <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
+              </div>
+              {isCreate && (
                 <div className="so-form-card__row">
                   <div className="sw-field">
                     <span>角色</span>
-                    <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} disabled={isEdit}>
+                    <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
                       <option value="site_operator">站点运营</option>
                       <option value="service_supervisor">服务主管</option>
                       <option value="org_admin">集团管理</option>
@@ -775,33 +747,83 @@ function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPasswor
                   </div>
                   <div />
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="so-modal__footer">
-          <div>
-            {isView && user && (
-              <>
-                <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
-                <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button" style={{ marginLeft: 8 }}>
-                  {user.status === "active" ? "禁用" : "启用"}
-                </button>
-              </>
-            )}
           </div>
+        </div>
+        <div className="so-modal__footer">
+          <div />
           <div className="so-modal__footer-right">
-            {isView && <button className="sw-btn sw-btn--primary" onClick={onEdit} type="button">编辑</button>}
-            {(isCreate || isEdit) && (
-              <>
-                <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-                <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
-                  {submitting ? "保存中..." : (isCreate ? "创建用户" : "保存修改")}
-                </button>
-              </>
-            )}
+            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
+              {submitting ? "保存中..." : (isCreate ? "创建用户" : "保存修改")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Reset Password Modal ── */
+
+function ResetPasswordModal({ user, token, onClose, onSuccess }: {
+  user: QualityUser;
+  token: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [pwd, setPwd] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    setError("");
+    if (!pwd || pwd.length < 6) { setError("密码至少6位"); return; }
+    if (pwd !== confirm) { setError("两次密码输入不一致"); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: pwd }),
+      });
+      if (res.ok) { onSuccess(); } else {
+        const d = await res.json();
+        setError(d.error ?? "重置失败");
+      }
+    } catch { setError("网络错误"); }
+    setSubmitting(false);
+  };
+
+  return (
+    <>
+      <div className="sw-scrim" onClick={onClose} />
+      <div className="so-modal so-modal--form" role="dialog" aria-label="重置密码" style={{ height: "auto", maxHeight: "60vh" }}>
+        <div className="so-modal__form-header">
+          <h3>重置密码 · {user.name}</h3>
+          <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="so-modal__content">
+          <div className="so-form-cards">
+            <div className="so-form-card">
+              <h4 className="so-form-card__title">新密码</h4>
+              {error && <div className="quality-modal__error">{error}</div>}
+              <div className="sw-field"><span>新密码</span><input type="password" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="至少6位" /></div>
+              <div className="sw-field"><span>确认密码</span><input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="再次输入新密码" /></div>
+            </div>
+          </div>
+        </div>
+        <div className="so-modal__footer">
+          <div />
+          <div className="so-modal__footer-right">
+            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+            <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
+              {submitting ? "重置中..." : "确认重置"}
+            </button>
           </div>
         </div>
       </div>
