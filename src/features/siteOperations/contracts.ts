@@ -186,6 +186,7 @@ export type FamilyContact = {
   name: string;
   relation: string;
   phone: string;
+  wechatId?: string;
   subscriptionStatus: "none" | "daily" | "weekly" | "monthly" | "exception_only";
   lastPushedAt?: string;
 };
@@ -242,6 +243,7 @@ export type ServiceObject = {
   id: string;
   name: string;
   phone?: string;
+  idNumber?: string;
   age?: number;
   gender?: "female" | "male" | "unknown";
   address: string;
@@ -261,6 +263,7 @@ export type ServiceObject = {
 
 export type CreateServiceObjectRequest = {
   name: string;
+  idNumber: string;
   age?: number;
   address: string;
   mapDisplayPoint?: MapDisplayPoint;

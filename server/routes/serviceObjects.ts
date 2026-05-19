@@ -2,10 +2,18 @@ import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { genId, withOperationalState } from "./helpers";
 
+function isValidIdNumber(id: string): boolean {
+  if (!/^\d{17}[\dXx]$/.test(id)) return false;
+  const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+  const checkCodes = "10X98765432";
+  const sum = id.slice(0, 17).split("").reduce((s, c, i) => s + parseInt(c) * weights[i], 0);
+  return checkCodes[sum % 11] === id[17].toUpperCase();
+}
+
 function toApi(row: any, familyContacts: any[] = [], planSummaries: any[] = []) {
   if (!row) return row;
   return {
-    id: row.id, name: row.name, phone: row.phone, age: row.age, gender: row.gender,
+    id: row.id, name: row.name, phone: row.phone, idNumber: row.idNumber, age: row.age, gender: row.gender,
     address: row.address, mapDisplayPoint: row.mapDisplayPoint,
     eligibilityType: row.eligibilityType, serviceProjects: row.serviceProjects,
     serviceFrequency: row.serviceFrequency, careNotes: row.careNotes,
@@ -33,7 +41,7 @@ async function getPlanSummaries(objectId: string) {
 async function getFamilyContacts(objectId: string) {
   const contacts = await prisma.familyContact.findMany({ where: { serviceObjectId: objectId } });
   return contacts.map((c) => ({
-    id: c.id, name: c.name, relation: c.relation, phone: c.phone,
+    id: c.id, name: c.name, relation: c.relation, phone: c.phone, wechatId: c.wechatId,
     subscriptionStatus: c.subscriptionStatus, lastPushedAt: c.lastPushedAt,
   }));
 }
@@ -69,11 +77,14 @@ export function serviceObjectsRoutes() {
   r.post("/service-objects", async (req, res) => {
     const id = genId("object");
     const b = req.body;
+    if (!b.idNumber) { res.status(400).json({ error: "身份证号为必填" }); return; }
+    if (!isValidIdNumber(b.idNumber)) { res.status(400).json({ error: "身份证号格式不正确" }); return; }
     await prisma.serviceObject.create({
       data: {
         id,
         name: b.name,
         phone: b.phone ?? null,
+        idNumber: b.idNumber,
         age: b.age ?? null,
         gender: b.gender ?? "unknown",
         address: b.address ?? "",
@@ -93,7 +104,8 @@ export function serviceObjectsRoutes() {
   r.patch("/service-objects/:id", async (req, res) => {
     const b = req.body;
     const data: any = {};
-    const fields: Record<string, string> = { name: "name", phone: "phone", age: "age", gender: "gender", address: "address", eligibilityType: "eligibilityType", serviceFrequency: "serviceFrequency" };
+    if (b.idNumber !== undefined && b.idNumber && !isValidIdNumber(b.idNumber)) { res.status(400).json({ error: "身份证号格式不正确" }); return; }
+    const fields: Record<string, string> = { name: "name", phone: "phone", idNumber: "idNumber", age: "age", gender: "gender", address: "address", eligibilityType: "eligibilityType", serviceFrequency: "serviceFrequency" };
     for (const [api, col] of Object.entries(fields)) {
       if (b[api] !== undefined) data[col] = b[api];
     }
@@ -118,6 +130,13 @@ export function serviceObjectsRoutes() {
     const row = await prisma.serviceObject.findFirst({ where: { id: req.params.id } });
     if (!row) return res.status(404).json({ error: "not found" });
     res.json(toApi(row, await getFamilyContacts(req.params.id), await getPlanSummaries(req.params.id)));
+  });
+
+  r.delete("/family-contacts/:id", async (req, res) => {
+    const contact = await prisma.familyContact.findFirst({ where: { id: req.params.id } });
+    if (!contact) { res.status(404).json({ error: "联系人不存在" }); return; }
+    await prisma.familyContact.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
   });
 
   r.put("/service-objects/:id/family-subscriptions", async (req, res) => {

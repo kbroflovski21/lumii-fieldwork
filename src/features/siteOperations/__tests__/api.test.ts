@@ -110,13 +110,14 @@ describe("siteOperationsApi", () => {
       () =>
         siteOperationsApi.createServiceObject({
           name: "李叔叔",
+          idNumber: "330102194501011234",
           address: "红培社区 12 号",
           eligibilityType: "government",
           serviceProjects: ["助餐"]
         }),
       "/api/service-objects",
       "POST",
-      { name: "李叔叔", address: "红培社区 12 号", eligibilityType: "government", serviceProjects: ["助餐"] }
+      { name: "李叔叔", idNumber: "330102194501011234", address: "红培社区 12 号", eligibilityType: "government", serviceProjects: ["助餐"] }
     ],
     [
       "updateServiceObject",

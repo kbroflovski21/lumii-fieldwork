@@ -200,6 +200,7 @@ model ServiceObject {
   id                       String          @id @db.VarChar(64)
   name                     String          @db.VarChar(255)
   phone                    String?         @db.VarChar(64)
+  idNumber                 String?         @map("id_number") @db.VarChar(18)
   age                      Int?
   gender                   Gender          @default(unknown)
   address                  String          @default("") @db.VarChar(500)
@@ -229,6 +230,7 @@ model FamilyContact {
   name               String             @db.VarChar(255)
   relation           String             @default("") @db.VarChar(64)
   phone              String             @default("") @db.VarChar(64)
+  wechatId           String?            @map("wechat_id") @db.VarChar(64)
   subscriptionStatus SubscriptionStatus @default(none) @map("subscription_status")
   lastPushedAt       String?            @map("last_pushed_at") @db.VarChar(64)
   createdAt          DateTime           @default(now()) @map("created_at")

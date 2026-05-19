@@ -395,15 +395,15 @@ function ObjectDrawer({ drawer, mutationsDisabled, onClose, onEdit, onView, onCr
   drawer: Exclude<DrawerMode, { kind: "closed" }>; mutationsDisabled: boolean; onClose: () => void;
   onEdit: (o: ServiceObject) => void; onView: (o: ServiceObject) => void; onCreated: () => void; onUpdated: () => void;
 }) {
-  if (drawer.kind === "view") return <ViewModal object={drawer.object} mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.object)} />;
+  if (drawer.kind === "view") return <ViewModal object={drawer.object} mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.object)} onUpdated={onUpdated} />;
   if (drawer.kind === "edit") return <EditModal object={drawer.object} onClose={onClose} onCancel={() => onView(drawer.object)} onSaved={onUpdated} />;
   return <CreateModal onClose={onClose} onCreated={onCreated} />;
 }
 
 type ViewTab = "overview" | "plans" | "history" | "family";
 
-function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit }: {
-  object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onEdit: () => void;
+function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit, onUpdated }: {
+  object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onEdit: () => void; onUpdated: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -598,6 +598,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit }: {
               <dl className="so-overview-grid">
                 <div className="so-overview-item"><dt>姓名</dt><dd>{obj.name}</dd></div>
                 <div className="so-overview-item"><dt>电话</dt><dd>{obj.phone || "—"}</dd></div>
+                <div className="so-overview-item"><dt>身份证号</dt><dd>{obj.idNumber || "—"}</dd></div>
                 <div className="so-overview-item"><dt>年龄/性别</dt><dd>{obj.age ? `${obj.age}岁` : "—"}{obj.gender === "female" ? " · 女" : obj.gender === "male" ? " · 男" : ""}</dd></div>
                 <div className="so-overview-item"><dt>服务资格</dt><dd><span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span></dd></div>
                 <div className="so-overview-item"><dt>服务频次</dt><dd>{obj.serviceFrequency || "—"}</dd></div>
@@ -810,13 +811,21 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onEdit }: {
                   <div className="so-family-row" key={c.id}>
                     <div className="so-family-row__info">
                       <strong>{c.name}</strong>
-                      <span>{c.relation} · {c.phone}</span>
+                      <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
                     </div>
                     <div className="so-family-row__sub">
                       <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
                         {subscriptionLabel[c.subscriptionStatus]}
                       </span>
                       {c.lastPushedAt && <small className="sw-text-muted">{formatTime(c.lastPushedAt)}</small>}
+                      <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px", marginLeft: 8 }}
+                        disabled={mutationsDisabled}
+                        onClick={async () => {
+                          const token = localStorage.getItem("gy_auth_token");
+                          await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                          onUpdated();
+                        }}
+                        type="button">删除</button>
                     </div>
                   </div>
                 ))}
@@ -853,6 +862,7 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
 }) {
   const [name, setName] = useState(obj.name);
   const [phone, setPhone] = useState(obj.phone ?? "");
+  const [idNumber, setIdNumber] = useState(obj.idNumber ?? "");
   const [age, setAge] = useState(obj.age?.toString() ?? "");
   const [gender, setGender] = useState<string>(obj.gender ?? "unknown");
   const [address, setAddress] = useState(obj.address);
@@ -870,7 +880,7 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
     setSaving(true);
     try {
       await siteOperationsApi.updateServiceObject(obj.id, {
-        name: name.trim(), age: age ? Number(age) : undefined, address: address.trim(),
+        name: name.trim(), idNumber: idNumber.trim() || undefined, age: age ? Number(age) : undefined, address: address.trim(),
         eligibilityType: eligibility as ServiceEligibilityType,
         serviceProjects: projects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         riskTags: riskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
@@ -887,7 +897,7 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
-        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
+        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
           riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
@@ -910,6 +920,7 @@ function EditModal({ object: obj, onClose, onCancel, onSaved }: {
 function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [idNumber, setIdNumber] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("unknown");
   const [address, setAddress] = useState("");
@@ -922,13 +933,17 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [familyRelation, setFamilyRelation] = useState("");
   const [familyPhone, setFamilyPhone] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
 
   const handleCreate = async () => {
-    if (!name.trim() || !address.trim()) return;
+    setError("");
+    if (!name.trim() || !address.trim()) { setError("姓名和地址为必填"); return; }
+    if (!idNumber.trim()) { setError("身份证号为必填"); return; }
+    if (!/^\d{17}[\dXx]$/.test(idNumber.trim())) { setError("身份证号格式不正确"); return; }
     setCreating(true);
     try {
       await siteOperationsApi.createServiceObject({
-        name: name.trim(), age: age ? Number(age) : undefined, address: address.trim(),
+        name: name.trim(), idNumber: idNumber.trim(), age: age ? Number(age) : undefined, address: address.trim(),
         eligibilityType: eligibility as ServiceEligibilityType,
         serviceProjects: projects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         riskTags: riskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
@@ -945,7 +960,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
-        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
+        {error && <div style={{ margin: "0 0 12px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{error}</div>}
+        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
           projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
           riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
@@ -965,11 +981,12 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 
 /* ── Form Fields (card-grouped layout) ── */
 
-function FormFields({ name, onNameChange, phone, onPhoneChange, age, onAgeChange, gender, onGenderChange, address, onAddressChange,
+function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNumberChange, age, onAgeChange, gender, onGenderChange, address, onAddressChange,
   eligibility, onEligibilityChange, projects, onProjectsChange, frequency, onFrequencyChange,
   riskTags, onRiskTagsChange, careNotes, onCareNotesChange,
   familyName, onFamilyNameChange, familyRelation, onFamilyRelationChange, familyPhone, onFamilyPhoneChange }: {
   name: string; onNameChange: (v: string) => void; phone: string; onPhoneChange: (v: string) => void;
+  idNumber: string; onIdNumberChange: (v: string) => void;
   age: string; onAgeChange: (v: string) => void;
   gender: string; onGenderChange: (v: string) => void; address: string; onAddressChange: (v: string) => void;
   eligibility: string; onEligibilityChange: (v: string) => void; projects: string; onProjectsChange: (v: string) => void;
@@ -987,6 +1004,7 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, age, onAgeChange
           <label className="sw-field"><span>电话</span><input onChange={(e) => onPhoneChange(e.target.value)} placeholder="输入手机号" value={phone} /></label>
         </div>
         <div className="so-form-card__row">
+          <label className="sw-field"><span>身份证号 *</span><input onChange={(e) => onIdNumberChange(e.target.value)} placeholder="18位身份证号码" value={idNumber} maxLength={18} /></label>
           <label className="sw-field"><span>年龄</span><input onChange={(e) => onAgeChange(e.target.value)} placeholder="如 82" type="number" value={age} /></label>
           <label className="sw-field"><span>性别</span><select onChange={(e) => onGenderChange(e.target.value)} value={gender}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select></label>
         </div>
