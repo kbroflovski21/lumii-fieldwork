@@ -92,14 +92,7 @@ function AppRoutes() {
     return <SiteSelectorModal sites={sites} onSelect={selectSite} />;
   }
 
-  // Admin entering site-operations with ?siteId= parameter
-  if (path.startsWith("/site-operations") && user.role === "org_admin") {
-    const urlSiteId = new URLSearchParams(window.location.search).get("siteId");
-    if (urlSiteId) {
-      const site = sites.find(s => s.id === urlSiteId);
-      if (site) selectSite(site);
-    }
-  }
+
 
   if (path === "/" || path === "/login") {
     if (user.role === "org_admin") return <QualityPage />;

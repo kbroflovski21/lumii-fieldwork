@@ -33,17 +33,20 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user || !token) { setLoading(false); setSites([]); setCurrentSite(null); return; }
 
-    if (user.role === "org_admin") {
-      setLoading(false);
-      return;
-    }
-
     fetch("/api/auth/my-sites", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.sites) {
           setSites(data.sites);
-          if (data.sites.length === 1) {
+          if (user.role === "org_admin") {
+            // Admin: auto-select from URL or localStorage
+            const urlSiteId = new URLSearchParams(window.location.search).get("siteId");
+            const savedSiteId = urlSiteId || localStorage.getItem("gy_current_site");
+            if (savedSiteId) {
+              const found = data.sites.find((s: SiteInfo) => s.id === savedSiteId);
+              if (found) setCurrentSite(found);
+            }
+          } else if (data.sites.length === 1) {
             setCurrentSite(data.sites[0]);
           } else {
             const saved = localStorage.getItem("gy_current_site");

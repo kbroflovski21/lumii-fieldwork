@@ -49,11 +49,11 @@ app.use("/api", authRoutes(jwtSecret));
 const authMw = requireAuth(jwtSecret);
 app.use("/api/admin", authMw);
 app.use("/api", adminRoutes());
-app.use("/api", siteRoutes());
 
 // Business routes — optional auth (attaches user if token present)
 const gyTokenSecret = process.env.GY_TOKEN_SECRET;
 const optAuth = optionalAuth(jwtSecret, gyTokenSecret);
+app.use("/api", optAuth, siteRoutes());
 app.use("/api", optAuth, homeRoutes());
 app.use("/api", optAuth, socialWorkersRoutes());
 app.use("/api", optAuth, smartBadgesRoutes());
