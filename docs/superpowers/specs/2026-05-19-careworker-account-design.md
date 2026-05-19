@@ -1,7 +1,8 @@
 # 服务人员账号管理重设计
 
 **日期：** 2026-05-19
-**状态：** Approved
+**状态：** Implemented
+**实现日期：** 2026-05-19
 
 ## 1. 目标
 
@@ -83,3 +84,35 @@ POST `/api/social-workers` 改造：
 | server/routes/auth.ts | 删除 create-careworker-account，login 返回 mustChangePassword，change-password 清除字段 |
 | src/features/siteOperations/SocialWorkersArea.tsx | 移除"生成登录账号"按钮，新增账号信息区块+重置密码 |
 | src/careworker/CareworkerPage.tsx | 登录后检查 mustChangePassword，强制改密界面 |
+
+## 9. 实现备注 (2026-05-19)
+
+### 9.1 CW 用户名自增逻辑
+
+```typescript
+async function nextCwUsername(): Promise<string> {
+  const lastCw = await prisma.user.findFirst({
+    where: { username: { startsWith: "CW" } },
+    orderBy: { username: "desc" },
+  });
+  if (lastCw) {
+    const num = parseInt(lastCw.username.slice(2), 10);
+    return `CW${(isNaN(num) ? 100000 : num) + 1}`;
+  }
+  return "CW100001";
+}
+```
+
+起始值 `CW100001`，每次查当前最大 CW 用户名的数字部分 +1。
+
+### 9.2 SocialWorker.userId 为 optional FK
+
+`SocialWorker.userId` 定义为普通字段 + optional 关系（`User?`），因为现有 seed 数据中的 SocialWorker 可能没有关联的 User 记录。查询时使用 `include: { user: { select: ... } }`，对无关联的旧数据返回 `null`。
+
+### 9.3 change-password 跳过旧密码校验
+
+当 `user.mustChangePassword === true` 时，`PATCH /api/auth/change-password` 跳过 `oldPassword` 校验。前端传入的 `oldPassword` 可以是任意值（CareworkerPage 使用占位符 `__force_change__`）。改密后同时清除 `initialPassword` 和 `mustChangePassword`。
+
+### 9.4 CareworkerPage 登录字段
+
+CareworkerPage 的登录界面标签从"手机号"改为"账号"，因为 CW 用户名不再是手机号，而是 `CW100001` 格式。

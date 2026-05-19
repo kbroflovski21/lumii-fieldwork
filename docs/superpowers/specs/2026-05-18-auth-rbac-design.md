@@ -309,3 +309,37 @@ WebSocket 连接使用用户 JWT（包含 role + siteIds），lak 通过 agent s
 - 描述: prompt() 用于重置密码输入、alert() 用于操作成功反馈、禁用按钮无确认
 - 原因: 初期快速实现未设计自定义 UI 组件
 - 修复: 替换为自定义 Modal 系统（quality-modal）：创建用户 Modal + 重置密码 Modal + 禁用确认 Modal（2-step, danger 按钮）+ Toast 成功提示
+
+## 12. 2026-05-19 更新：角色合并与账号流程变更
+
+### 12.1 service_supervisor 角色移除
+
+`service_supervisor` 已从 `UserRole` 枚举中移除，合并到 `org_admin`。
+原 supervisor 用户（username: `supervisor`）数据库中 role 改为 `org_admin`。
+UserRole 枚举现在只有三个值：`org_admin`、`site_operator`、`careworker`。
+
+### 12.2 服务人员 (CW) 账号自动创建
+
+不再需要手动调用 `/api/auth/create-careworker-account` — 该端点已删除。
+创建服务人员时（`POST /api/social-workers`）自动创建 careworker 登录账号：
+
+- **用户名格式：** `CW` + 6位自增数字（`CW100001`、`CW100002`...）
+- 自增序号通过查询当前最大 CW 用户名 +1 生成
+- 随机 8 位密码自动生成
+
+### 12.3 User 模型新增字段
+
+```prisma
+mustChangePassword Boolean @default(false) @map("must_change_password")
+initialPassword    String? @map("initial_password") @db.VarChar(32)
+```
+
+- `mustChangePassword`：新建时设 `true`，用户改密后设 `false`
+- `initialPassword`：明文存储默认密码（便于管理员查看），改密后清为 `null`
+
+### 12.4 首次登录强制改密
+
+- `POST /api/auth/login` 响应新增 `mustChangePassword` 字段
+- `PATCH /api/auth/change-password`：当 `mustChangePassword=true` 时跳过旧密码校验
+- 改密成功后自动清除 `initialPassword` 并设 `mustChangePassword=false`
+- CareworkerPage 登录后检查该标志，强制显示改密界面

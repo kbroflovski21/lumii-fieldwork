@@ -1,7 +1,8 @@
 # SQLite → Prisma ORM + MySQL 全面重构
 
 **日期：** 2026-05-19
-**状态：** Approved
+**状态：** Implemented
+**实现日期：** 2026-05-19
 **范围：** 数据库层从 better-sqlite3 (同步) 迁移到 Prisma ORM + MySQL (异步)，包含 Prisma Migrate、Docker 测试环境
 
 ## 1. 目标
@@ -239,3 +240,27 @@ npx prisma migrate status
 ```
 
 Migration 文件保存在 `prisma/migrations/` 目录，纳入 git 版本管理。
+
+## 12. 实现备注 (2026-05-19)
+
+### 12.1 Prisma 7 差异
+
+本项目使用 Prisma 7（非 Prisma 5/6），有以下关键区别：
+
+- **配置文件：** 使用 `prisma.config.ts`（TypeScript）而非传统的 `.env` + `prisma/schema.prisma` 中的 `url = env("DATABASE_URL")`。
+  `prisma.config.ts` 使用 `defineConfig()` 指定 schema 路径、migration 路径、seed 命令和 datasource URL。
+- **Generator output：** `prisma-client`（非 `prisma-client-js`），输出路径为 `../generated/prisma`。
+  导入方式：`import { PrismaClient } from "../generated/prisma"` 而非 `@prisma/client`。
+- **适配器：** 生产环境使用 `@prisma/adapter-mariadb`（兼容 MySQL 8.0）。
+
+### 12.2 连接池配置
+
+- URL 参数 `connection_limit=30`：最大 30 个并发连接
+- 生产环境 `DATABASE_URL=mysql://user:pass@host:3306/goldenyears?connection_limit=30&pool_timeout=10`
+- 测试环境 `connection_limit=5`
+
+### 12.3 Docker MySQL 测试环境
+
+- Docker MySQL 容器运行在 **端口 3307**（避免与生产 3306 冲突）
+- `docker-compose.test.yml` 使用 `tmpfs: /var/lib/mysql` 加速测试 I/O
+- 测试数据库名：`goldenyears_test`
