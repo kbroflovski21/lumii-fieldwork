@@ -125,5 +125,28 @@ export function adminRoutes() {
     res.json({ ok: true });
   });
 
+  r.delete("/admin/users/:id", (req, res) => {
+    const db = getDb();
+    const user = (req as any).authUser;
+    if (!user || user.role !== "org_admin") {
+      res.status(403).json({ error: "无权限" });
+      return;
+    }
+
+    const target = db.prepare("SELECT id, username FROM users WHERE id = ? AND org_id = ?").get(req.params.id, user.orgId) as any;
+    if (!target) {
+      res.status(404).json({ error: "用户不存在" });
+      return;
+    }
+
+    if (target.username === user.username) {
+      res.status(400).json({ error: "不能删除自己的账号" });
+      return;
+    }
+
+    db.prepare("DELETE FROM users WHERE id = ?").run(req.params.id);
+    res.json({ ok: true });
+  });
+
   return r;
 }

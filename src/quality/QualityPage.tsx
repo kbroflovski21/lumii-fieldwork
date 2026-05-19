@@ -401,30 +401,19 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
   careworker: "护理员",
 };
 
+type UserModalMode = "view" | "create" | "edit";
+
 function UsersView() {
   const { token } = useAuth();
   const [users, setUsers] = useState<QualityUser[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
-  const [toggleTarget, setToggleTarget] = useState<QualityUser | null>(null);
   const [toast, setToast] = useState("");
 
-  // Create-user form state
-  const [formData, setFormData] = useState({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
-  const [formError, setFormError] = useState("");
-  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [modalUser, setModalUser] = useState<QualityUser | null>(null);
+  const [modalMode, setModalMode] = useState<UserModalMode>("view");
 
-  // Reset-password form state
-  const [resetPwd, setResetPwd] = useState("");
-  const [resetPwdConfirm, setResetPwdConfirm] = useState("");
-  const [resetError, setResetError] = useState("");
-  const [resetSubmitting, setResetSubmitting] = useState(false);
-
-  // Toggle submitting state
-  const [toggleSubmitting, setToggleSubmitting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -444,91 +433,39 @@ function UsersView() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError("");
-    setFormSubmitting(true);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...formData, siteIds: formData.siteIds.split(",").map(s => s.trim()).filter(Boolean) }),
-      });
-      if (res.ok) {
-        setShowCreateModal(false);
-        setFormData({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
-        fetchUsers();
-        showToast("用户创建成功");
-      } else {
-        const data = await res.json();
-        setFormError(data.error ?? "创建失败");
-      }
-    } catch {
-      setFormError("网络错误");
-    }
-    setFormSubmitting(false);
-  };
+  const openView = (u: QualityUser) => { setModalUser(u); setModalMode("view"); };
+  const openCreate = () => { setModalUser(null); setModalMode("create"); };
+  const openEdit = (u: QualityUser) => { setModalUser(u); setModalMode("edit"); };
+  const closeModal = () => { setModalUser(null); setModalMode("view"); };
 
-  const handleToggleStatus = async () => {
-    if (!toggleTarget) return;
-    setToggleSubmitting(true);
-    const newStatus = toggleTarget.status === "active" ? "disabled" : "active";
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    setConfirmSubmitting(true);
     try {
-      await fetch(`/api/admin/users/${toggleTarget.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      if (confirmAction.type === "toggle") {
+        const newStatus = confirmAction.user.status === "active" ? "disabled" : "active";
+        await fetch(`/api/admin/users/${confirmAction.user.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        showToast(newStatus === "disabled" ? "用户已禁用" : "用户已启用");
+      } else {
+        await fetch(`/api/admin/users/${confirmAction.user.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        showToast("用户已删除");
+        if (modalUser?.id === confirmAction.user.id) closeModal();
+      }
       fetchUsers();
-      showToast(newStatus === "disabled" ? "用户已禁用" : "用户已启用");
     } catch { /* ignore */ }
-    setToggleTarget(null);
-    setToggleSubmitting(false);
-  };
-
-  const handleResetPassword = async () => {
-    if (!resetTarget) return;
-    setResetError("");
-    if (!resetPwd || resetPwd.length < 6) { setResetError("密码至少6位"); return; }
-    if (resetPwd !== resetPwdConfirm) { setResetError("两次密码输入不一致"); return; }
-    setResetSubmitting(true);
-    try {
-      const res = await fetch(`/api/admin/users/${resetTarget.id}/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ password: resetPwd }),
-      });
-      if (res.ok) {
-        setResetTarget(null);
-        setResetPwd("");
-        setResetPwdConfirm("");
-        showToast("密码已重置");
-      } else {
-        const data = await res.json();
-        setResetError(data.error ?? "重置失败");
-      }
-    } catch {
-      setResetError("网络错误");
-    }
-    setResetSubmitting(false);
-  };
-
-  const openCreateModal = () => {
-    setFormData({ username: "", password: "", name: "", role: "site_operator", phone: "", siteIds: "site-001" });
-    setFormError("");
-    setShowCreateModal(true);
-  };
-
-  const openResetModal = (u: QualityUser) => {
-    setResetPwd("");
-    setResetPwdConfirm("");
-    setResetError("");
-    setResetTarget(u);
+    setConfirmAction(null);
+    setConfirmSubmitting(false);
   };
 
   return (
     <>
-      {/* Toast */}
       {toast && <div className="quality-toast">{toast}</div>}
 
       <div className="quality-records__header">
@@ -536,9 +473,7 @@ function UsersView() {
           <div className="quality-records__title">用户管理</div>
           <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
         </div>
-        <button className="quality-users__add-btn" onClick={openCreateModal}>
-          新增用户
-        </button>
+        <button className="quality-users__add-btn" onClick={openCreate}>新增用户</button>
       </div>
 
       <div className="quality-table-wrap">
@@ -548,21 +483,24 @@ function UsersView() {
           <table className="quality-records-table">
             <thead>
               <tr>
-                {["姓名", "用户名", "角色", "站点", "手机", "状态", "操作"].map(h => (
+                {["用户名", "姓名", "角色", "手机号", "状态", "操作"].map(h => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && (
-                <tr><td colSpan={7} className="quality-records-table__empty">暂无用户</td></tr>
+                <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
               )}
               {users.map(u => (
-                <tr key={u.id}>
+                <tr key={u.id} onDoubleClick={() => openView(u)} style={{ cursor: "pointer" }}>
+                  <td>
+                    <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openView(u); }} href="#">
+                      {u.username}
+                    </a>
+                  </td>
                   <td className="quality-records-table__worker">{u.name}</td>
-                  <td><code style={{ fontSize: 12, background: "#F3F4F6", padding: "2px 6px", borderRadius: 4 }}>{u.username}</code></td>
                   <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
-                  <td>{u.siteIds.join(", ")}</td>
                   <td>{u.phone || "—"}</td>
                   <td>
                     <span className={`quality-status-badge quality-status-badge--${u.status === "active" ? "normal" : "anomaly"}`}>
@@ -571,12 +509,8 @@ function UsersView() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={() => setToggleTarget(u)}>
-                        {u.status === "active" ? "禁用" : "启用"}
-                      </button>
-                      <button className="quality-users__action-btn" onClick={() => openResetModal(u)}>
-                        重置密码
-                      </button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
                     </div>
                   </td>
                 </tr>
@@ -586,129 +520,291 @@ function UsersView() {
         )}
       </div>
 
-      {/* ── Create User Modal ── */}
-      {showCreateModal && (
-        <div className="quality-modal-scrim" onClick={() => setShowCreateModal(false)}>
-          <div className="quality-modal" onClick={e => e.stopPropagation()}>
-            <div className="quality-modal__header">
-              <span>新增用户</span>
-              <button onClick={() => setShowCreateModal(false)}>&times;</button>
-            </div>
-            <form onSubmit={handleCreate}>
-              <div className="quality-modal__body">
-                {formError && <div className="quality-modal__error">{formError}</div>}
-                <div className="quality-modal__field">
-                  <label>用户名</label>
-                  <input value={formData.username} onChange={e => setFormData(d => ({ ...d, username: e.target.value }))} required />
-                </div>
-                <div className="quality-modal__field">
-                  <label>密码</label>
-                  <input type="password" value={formData.password} onChange={e => setFormData(d => ({ ...d, password: e.target.value }))} required minLength={6} />
-                </div>
-                <div className="quality-modal__field">
-                  <label>姓名</label>
-                  <input value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} required />
-                </div>
-                <div className="quality-modal__field">
-                  <label>角色</label>
-                  <select value={formData.role} onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
-                    <option value="site_operator">站点运营</option>
-                    <option value="service_supervisor">服务主管</option>
-                    <option value="org_admin">集团管理</option>
-                    <option value="careworker">护理员</option>
-                  </select>
-                </div>
-                <div className="quality-modal__field">
-                  <label>手机号</label>
-                  <input value={formData.phone} onChange={e => setFormData(d => ({ ...d, phone: e.target.value }))} />
-                </div>
-                <div className="quality-modal__field">
-                  <label>站点ID</label>
-                  <input value={formData.siteIds} onChange={e => setFormData(d => ({ ...d, siteIds: e.target.value }))} placeholder="site-001,site-002" />
-                </div>
-              </div>
-              <div className="quality-modal__footer">
-                <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setShowCreateModal(false)}>取消</button>
-                <button type="submit" className="quality-modal__btn quality-modal__btn--primary" disabled={formSubmitting}>
-                  {formSubmitting ? "创建中..." : "创建用户"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* ── User Detail/Edit/Create Modal (so-modal style) ── */}
+      {(modalUser || modalMode === "create") && (
+        <UserModal
+          mode={modalMode}
+          user={modalUser}
+          token={token!}
+          onClose={closeModal}
+          onSaved={() => { fetchUsers(); showToast(modalMode === "create" ? "用户创建成功" : "用户信息已更新"); closeModal(); }}
+          onEdit={() => setModalMode("edit")}
+          onResetPassword={() => showToast("密码已重置")}
+          onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
+          onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
+        />
       )}
 
-      {/* ── Reset Password Modal ── */}
-      {resetTarget && (
-        <div className="quality-modal-scrim" onClick={() => setResetTarget(null)}>
-          <div className="quality-modal" onClick={e => e.stopPropagation()}>
+      {/* ── Confirm Dialog (delete/toggle) ── */}
+      {confirmAction && (
+        <div className="sw-scrim" onClick={() => setConfirmAction(null)}>
+          <div className="quality-modal" onClick={e => e.stopPropagation()} style={{ zIndex: 32 }}>
             <div className="quality-modal__header">
-              <span>重置密码</span>
-              <button onClick={() => setResetTarget(null)}>&times;</button>
-            </div>
-            <div className="quality-modal__body">
-              <p>{`为「${resetTarget.name}」重置密码`}</p>
-              {resetError && <div className="quality-modal__error">{resetError}</div>}
-              <div className="quality-modal__field">
-                <label>新密码</label>
-                <input type="password" value={resetPwd} onChange={e => setResetPwd(e.target.value)} placeholder="至少6位" />
-              </div>
-              <div className="quality-modal__field">
-                <label>确认密码</label>
-                <input type="password" value={resetPwdConfirm} onChange={e => setResetPwdConfirm(e.target.value)} placeholder="再次输入新密码" />
-              </div>
-            </div>
-            <div className="quality-modal__footer">
-              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setResetTarget(null)}>取消</button>
-              <button type="button" className="quality-modal__btn quality-modal__btn--primary" disabled={resetSubmitting} onClick={handleResetPassword}>
-                {resetSubmitting ? "重置中..." : "确认重置"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Toggle Status Confirmation Modal ── */}
-      {toggleTarget && (
-        <div className="quality-modal-scrim" onClick={() => setToggleTarget(null)}>
-          <div className="quality-modal" onClick={e => e.stopPropagation()}>
-            <div className="quality-modal__header">
-              <span>{toggleTarget.status === "active" ? "确认禁用" : "确认启用"}</span>
-              <button onClick={() => setToggleTarget(null)}>&times;</button>
+              <span>{confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}</span>
+              <button onClick={() => setConfirmAction(null)}>&times;</button>
             </div>
             <div className="quality-modal__body">
               <div className="quality-modal__warning">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 6v4m0 4h.01M3.07 16.5h13.86c1.1 0 1.79-1.19 1.24-2.14L11.24 3.14a1.43 1.43 0 0 0-2.48 0L1.83 14.36c-.55.95.14 2.14 1.24 2.14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <div>
                   <p style={{ fontWeight: 600, marginBottom: 4 }}>
-                    {toggleTarget.status === "active"
-                      ? `确定要禁用用户「${toggleTarget.name}」吗？`
-                      : `确定要启用用户「${toggleTarget.name}」吗？`}
+                    {confirmAction.type === "delete"
+                      ? `确定要删除用户「${confirmAction.user.name}」吗？`
+                      : confirmAction.user.status === "active"
+                        ? `确定要禁用用户「${confirmAction.user.name}」吗？`
+                        : `确定要启用用户「${confirmAction.user.name}」吗？`}
                   </p>
                   <p style={{ margin: 0, fontSize: 13 }}>
-                    {toggleTarget.status === "active"
-                      ? "禁用后该用户将无法登录系统。"
-                      : "启用后该用户将恢复登录权限。"}
+                    {confirmAction.type === "delete"
+                      ? "删除后该用户数据将无法恢复。"
+                      : confirmAction.user.status === "active"
+                        ? "禁用后该用户将无法登录系统。"
+                        : "启用后该用户将恢复登录权限。"}
                   </p>
                 </div>
               </div>
             </div>
             <div className="quality-modal__footer">
-              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setToggleTarget(null)}>取消</button>
-              <button
-                type="button"
-                className={`quality-modal__btn ${toggleTarget.status === "active" ? "quality-modal__btn--danger" : "quality-modal__btn--primary"}`}
-                disabled={toggleSubmitting}
-                onClick={handleToggleStatus}
-              >
-                {toggleSubmitting
-                  ? (toggleTarget.status === "active" ? "禁用中..." : "启用中...")
-                  : (toggleTarget.status === "active" ? "确认禁用" : "确认启用")}
+              <button type="button" className="quality-modal__btn quality-modal__btn--cancel" onClick={() => setConfirmAction(null)}>取消</button>
+              <button type="button" className="quality-modal__btn quality-modal__btn--danger" disabled={confirmSubmitting} onClick={handleConfirm}>
+                {confirmSubmitting ? "处理中..." : confirmAction.type === "delete" ? "确认删除" : (confirmAction.user.status === "active" ? "确认禁用" : "确认启用")}
               </button>
             </div>
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+/* ── User Modal Component (so-modal design) ── */
+
+function UserModal({ mode, user, token, onClose, onSaved, onEdit, onResetPassword, onToggle, onDelete }: {
+  mode: UserModalMode;
+  user: QualityUser | null;
+  token: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onEdit: () => void;
+  onResetPassword: () => void;
+  onToggle: (u: QualityUser) => void;
+  onDelete: (u: QualityUser) => void;
+}) {
+  const isCreate = mode === "create";
+  const isEdit = mode === "edit";
+  const isView = mode === "view";
+
+  const [form, setForm] = useState({
+    username: user?.username ?? "",
+    password: "",
+    name: user?.name ?? "",
+    role: user?.role ?? "site_operator",
+    phone: user?.phone ?? "",
+  });
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetPwdConfirm, setResetPwdConfirm] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"info" | "password">("info");
+
+  useEffect(() => {
+    setForm({
+      username: user?.username ?? "",
+      password: "",
+      name: user?.name ?? "",
+      role: user?.role ?? "site_operator",
+      phone: user?.phone ?? "",
+    });
+    setError("");
+    setActiveTab("info");
+    setResetPwd("");
+    setResetPwdConfirm("");
+    setResetError("");
+  }, [user, mode]);
+
+  const handleSubmit = async () => {
+    setError("");
+    if (isCreate && (!form.username || !form.password || !form.name)) {
+      setError("用户名、密码和姓名为必填");
+      return;
+    }
+    if (isEdit && !form.name) {
+      setError("姓名为必填");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (isCreate) {
+        const res = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ username: form.username, password: form.password, name: form.name, role: form.role, phone: form.phone, siteIds: [] }),
+        });
+        if (!res.ok) { const d = await res.json(); setError(d.error ?? "创建失败"); setSubmitting(false); return; }
+      } else {
+        const res = await fetch(`/api/admin/users/${user!.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: form.name, phone: form.phone, status: form.role === user!.role ? undefined : undefined }),
+        });
+        if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); setSubmitting(false); return; }
+      }
+      onSaved();
+    } catch { setError("网络错误"); }
+    setSubmitting(false);
+  };
+
+  const handleResetPassword = async () => {
+    setResetError("");
+    if (!resetPwd || resetPwd.length < 6) { setResetError("密码至少6位"); return; }
+    if (resetPwd !== resetPwdConfirm) { setResetError("两次密码输入不一致"); return; }
+    setResetSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user!.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: resetPwd }),
+      });
+      if (res.ok) {
+        setResetPwd("");
+        setResetPwdConfirm("");
+        onResetPassword();
+      } else {
+        const d = await res.json();
+        setResetError(d.error ?? "重置失败");
+      }
+    } catch { setResetError("网络错误"); }
+    setResetSubmitting(false);
+  };
+
+  return (
+    <>
+      <div className="sw-scrim" onClick={onClose} />
+      <div className="so-modal so-modal--view" role="dialog" aria-label={isCreate ? "新增用户" : user?.name}>
+        {/* Header */}
+        <div className="so-modal__summary">
+          <div className="so-modal__summary-main">
+            <div className="so-modal__summary-name">
+              <h3>{isCreate ? "新增用户" : (isEdit ? "编辑用户" : user?.name)}</h3>
+              {isView && user && (
+                <span className="so-modal__summary-demo">{user.username}</span>
+              )}
+            </div>
+            <div className="so-modal__summary-actions">
+              <button className="so-modal__close" aria-label="关闭" onClick={onClose} type="button">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+          {isView && user && (
+            <div className="so-modal__summary-tags">
+              <span className="so-modal__chip">{QUALITY_ROLE_LABELS[user.role] ?? user.role}</span>
+              <span className={`so-modal__chip ${user.status === "active" ? "" : "so-modal__chip--danger"}`}>
+                {user.status === "active" ? "正常" : "已禁用"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs (view mode only) */}
+        {isView && (
+          <div className="so-modal__tabs" role="tablist">
+            <button className="so-modal__tab" data-active={activeTab === "info"} onClick={() => setActiveTab("info")} role="tab" type="button">基本信息</button>
+            <button className="so-modal__tab" data-active={activeTab === "password"} onClick={() => setActiveTab("password")} role="tab" type="button">重置密码</button>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="so-modal__content">
+          {isView && activeTab === "info" && user && (
+            <div className="so-overview-grid">
+              <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
+              <dl className="so-overview-item"><dt>姓名</dt><dd>{user.name}</dd></dl>
+              <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
+              <dl className="so-overview-item"><dt>手机号</dt><dd>{user.phone || "—"}</dd></dl>
+              <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
+              <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
+            </div>
+          )}
+
+          {isView && activeTab === "password" && user && (
+            <div className="so-form-cards">
+              <div className="so-form-card">
+                <h4 className="so-form-card__title">重置密码</h4>
+                {resetError && <div className="quality-modal__error">{resetError}</div>}
+                <div className="sw-field"><span>新密码</span><input type="password" value={resetPwd} onChange={e => setResetPwd(e.target.value)} placeholder="至少6位" /></div>
+                <div className="sw-field"><span>确认密码</span><input type="password" value={resetPwdConfirm} onChange={e => setResetPwdConfirm(e.target.value)} placeholder="再次输入新密码" /></div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button className="sw-btn sw-btn--primary" disabled={resetSubmitting} onClick={handleResetPassword} type="button">
+                    {resetSubmitting ? "重置中..." : "确认重置"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(isCreate || isEdit) && (
+            <div className="so-form-cards">
+              <div className="so-form-card">
+                <h4 className="so-form-card__title">账号信息</h4>
+                {error && <div className="quality-modal__error">{error}</div>}
+                {isCreate && (
+                  <>
+                    <div className="so-form-card__row">
+                      <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
+                      <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
+                    </div>
+                  </>
+                )}
+                <div className="so-form-card__row">
+                  <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
+                  <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
+                </div>
+                <div className="so-form-card__row">
+                  <div className="sw-field">
+                    <span>角色</span>
+                    <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} disabled={isEdit}>
+                      <option value="site_operator">站点运营</option>
+                      <option value="service_supervisor">服务主管</option>
+                      <option value="org_admin">集团管理</option>
+                      <option value="careworker">护理员</option>
+                    </select>
+                  </div>
+                  <div />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="so-modal__footer">
+          <div>
+            {isView && user && (
+              <>
+                <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
+                <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button" style={{ marginLeft: 8 }}>
+                  {user.status === "active" ? "禁用" : "启用"}
+                </button>
+              </>
+            )}
+          </div>
+          <div className="so-modal__footer-right">
+            {isView && <button className="sw-btn sw-btn--primary" onClick={onEdit} type="button">编辑</button>}
+            {(isCreate || isEdit) && (
+              <>
+                <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+                <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">
+                  {submitting ? "保存中..." : (isCreate ? "创建用户" : "保存修改")}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

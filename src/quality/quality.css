@@ -671,6 +671,23 @@
   border-color: var(--quality-accent);
 }
 
+.quality-users__link {
+  color: var(--quality-accent);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.quality-users__link:hover {
+  text-decoration: underline;
+}
+
+.so-modal__chip--danger {
+  background: var(--quality-danger-bg);
+  border-color: #FCA5A5;
+  color: var(--quality-danger-text);
+}
+
 .quality-users__action-btn {
   height: 28px;
   padding: 0 10px;
