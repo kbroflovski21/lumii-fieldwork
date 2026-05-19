@@ -590,6 +590,47 @@ function ViewModal({
           </>
         )}
 
+        {activeTab === "overview" && (
+          <div className="so-tab-section">
+            <h4 className="so-tab-section-title">登录账号</h4>
+            {worker.account ? (
+              <dl className="so-overview-grid">
+                <div className="so-overview-item"><dt>账号</dt><dd><strong>{worker.account.username}</strong></dd></div>
+                <div className="so-overview-item"><dt>状态</dt><dd>{worker.account.mustChangePassword ? <span style={{ color: "#D97706" }}>待首次登录</span> : <span style={{ color: "#16A34A" }}>已激活</span>}</dd></div>
+                <div className="so-overview-item">
+                  <dt>{worker.account.mustChangePassword ? "默认密码" : "密码"}</dt>
+                  <dd>
+                    {worker.account.mustChangePassword && worker.account.initialPassword ? (
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <code style={{ fontFamily: "monospace", fontSize: 14 }}>{worker.account.initialPassword}</code>
+                        <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button"
+                          onClick={() => navigator.clipboard.writeText(worker.account!.initialPassword!)}>复制</button>
+                      </span>
+                    ) : "已修改"}
+                    {resetPwdResult && (
+                      <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                        <span style={{ fontSize: 12, color: "#64748B" }}>新密码:</span>
+                        <code style={{ fontFamily: "monospace", fontSize: 14, color: "#0052CC" }}>{resetPwdResult}</code>
+                        <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button"
+                          onClick={() => navigator.clipboard.writeText(resetPwdResult)}>复制</button>
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <p className="sw-text-muted">暂无登录账号（创建服务人员时自动生成）</p>
+            )}
+            {worker.account && (
+              <div style={{ marginTop: 10 }}>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} disabled={resetPwdLoading} onClick={handleResetPassword} type="button">
+                  {resetPwdLoading ? "重置中..." : "重置密码"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "praise" && (
           <div className="so-tab-section">
             <div className="sw-praise-summary">
@@ -608,44 +649,6 @@ function ViewModal({
           </div>
         )}
       </div>
-
-      {/* Account Info Card */}
-      {worker.account ? (
-        <div style={{ margin: "0 16px 12px", padding: 14, background: worker.account.mustChangePassword ? "#FFFBEB" : "#F0FDF4", border: `1px solid ${worker.account.mustChangePassword ? "#FDE68A" : "#86EFAC"}`, borderRadius: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>登录账号</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: "#64748B" }}>账号</span>
-            <strong style={{ fontSize: 14, color: "#0F172A" }}>{worker.account.username}</strong>
-          </div>
-          {worker.account.mustChangePassword && worker.account.initialPassword ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-              <span style={{ fontSize: 13, color: "#64748B" }}>默认密码</span>
-              <strong style={{ fontSize: 14, color: "#0F172A", fontFamily: "monospace" }}>{worker.account.initialPassword}</strong>
-              <button className="sw-btn sw-btn--secondary" style={{ height: 24, fontSize: 11, padding: "0 8px" }} type="button"
-                onClick={() => navigator.clipboard.writeText(worker.account!.initialPassword!)}>复制</button>
-            </div>
-          ) : (
-            <div style={{ fontSize: 13, color: "#16A34A", marginBottom: 6 }}>已修改密码</div>
-          )}
-          {resetPwdResult && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, padding: 8, background: "#EFF6FF", borderRadius: 6 }}>
-              <span style={{ fontSize: 13, color: "#64748B" }}>新密码</span>
-              <strong style={{ fontSize: 14, color: "#0052CC", fontFamily: "monospace" }}>{resetPwdResult}</strong>
-              <button className="sw-btn sw-btn--secondary" style={{ height: 24, fontSize: 11, padding: "0 8px" }} type="button"
-                onClick={() => navigator.clipboard.writeText(resetPwdResult)}>复制</button>
-            </div>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <button className="sw-btn sw-btn--secondary" style={{ height: 30, fontSize: 12 }} disabled={resetPwdLoading} onClick={handleResetPassword} type="button">
-              {resetPwdLoading ? "重置中..." : "重置密码"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ margin: "0 16px 12px", padding: 14, background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10 }}>
-          <div style={{ fontSize: 13, color: "#64748B" }}>暂无登录账号（创建服务人员时自动生成）</div>
-        </div>
-      )}
 
       {/* Footer */}
       <div className="so-modal__footer">

@@ -29,16 +29,24 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   const [serviceObjects, setServiceObjects] = useState<Resource<ServiceObjectsResponse>>(idle);
   const [refetchKey, setRefetchKey] = useState(0);
 
-  const refetch = useCallback(() => {
+  const resetAll = useCallback(() => {
+    setHome(idle);
+    setSocialWorkers(idle);
+    setSmartBadges(idle);
+    setServiceSchedules(idle);
+    setServiceRecords(idle);
+    setServiceObjects(idle);
     setRefetchKey(k => k + 1);
-    // Reset the active area's resource to trigger refetch
-    if (activeArea === "social_workers") setSocialWorkers(idle);
-    else if (activeArea === "smart_badges") setSmartBadges(idle);
-    else if (activeArea === "service_objects") setServiceObjects(idle);
-    else if (activeArea === "service_schedules") setServiceSchedules(idle);
-    else if (activeArea === "service_records") setServiceRecords(idle);
-    else if (activeArea === "home") setHome(idle);
-  }, [activeArea]);
+  }, []);
+
+  // Reset all data when siteId changes
+  useEffect(() => {
+    resetAll();
+  }, [siteId, resetAll]);
+
+  const refetch = useCallback(() => {
+    resetAll();
+  }, [resetAll]);
 
   useEffect(() => {
     if (home.status !== "idle") return;
