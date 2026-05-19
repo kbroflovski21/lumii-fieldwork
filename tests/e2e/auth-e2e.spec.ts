@@ -88,29 +88,31 @@ test.describe("Role-Based Access", () => {
 
 test.describe("Admin User Management", () => {
   test("admin can create and see user in list", async ({ page }) => {
-    // Login as admin and navigate to /admin
     await page.goto(BASE);
     await page.locator('input[placeholder="请输入用户名"]').fill("admin");
     await page.locator('input[placeholder="请输入密码"]').fill("admin123");
     await page.locator(".login-form__submit").click();
     await expect(page.locator("text=质量总览").first()).toBeVisible({ timeout: 10000 });
-    await page.goto(`${BASE}/admin`);
-    await expect(page.locator(".admin-header")).toBeVisible({ timeout: 10000 });
+
+    // Go to user management tab
+    await page.locator("button[title=用户管理]").click();
+    await expect(page.locator("text=用户管理").first()).toBeVisible({ timeout: 5000 });
 
     // Click "新增用户"
-    await page.locator("text=新增用户").click();
-    await expect(page.locator(".admin-form")).toBeVisible();
+    await page.locator(".quality-users__add-btn").click();
+    await expect(page.locator(".quality-user-modal")).toBeVisible({ timeout: 5000 });
 
-    // Fill form
+    // Fill form in the modal
     const uname = `e2e-user-${Date.now()}`;
-    await page.locator('.admin-form__grid input').first().fill(uname);
-    await page.locator('.admin-form__grid input[type="password"]').fill("testpass123");
-    await page.locator('.admin-form__grid input').nth(2).fill("E2E测试用户");
+    await page.locator(".sw-field input").first().fill(uname);
+    await page.locator('.sw-field input[type="password"]').fill("testpass123");
+    await page.locator(".sw-field input").nth(2).fill("E2E测试用户");
 
     // Submit
-    await page.locator(".admin-form .admin-btn--primary").click();
+    await page.locator(".sw-btn--primary").last().click();
+    await page.waitForTimeout(1000);
 
     // Verify user appears in table
-    await expect(page.locator(`.admin-table td code:text("${uname}")`)).toBeVisible({ timeout: 5000 });
+    await expect(page.locator(`a.quality-users__link:has-text("${uname}")`)).toBeVisible({ timeout: 5000 });
   });
 });

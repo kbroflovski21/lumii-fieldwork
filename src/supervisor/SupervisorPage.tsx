@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bot } from "lucide-react";
-import { useAuth } from "../auth/AuthContext";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import "./supervisor.css";
 
@@ -172,10 +171,15 @@ function makeTimestamp(): string {
   return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function SupervisorPage() {
-  const { user } = useAuth();
+export function SupervisorContentInner() {
+  return (
+    <div className="sv-content-standalone">
+      <SOPContent />
+    </div>
+  );
+}
 
-  /* ── State ── */
+function SOPContent() {
   const [folders, setFolders] = useState<StdFolder[]>(buildInitialFolders);
   const [selectedFolder, setSelectedFolder] = useState("gen-ltci");
   const [selectedDoc, setSelectedDoc] = useState<DocType>("sop");
@@ -358,39 +362,8 @@ export function SupervisorPage() {
   /* ══════════════════════════════════════════════ */
 
   return (
-    <div className="sv-page">
-      {/* Header — row 1, spans all columns */}
-      <header className="sv-header">
-        <div>
-          <h1 className="sv-header__title">服务主管 · 规范管理</h1>
-          <div className="sv-header__status">
-            <span className="sv-header__status-dot" />
-            AI 就绪
-          </div>
-        </div>
-        <div className="sv-header__actions">
-          <button
-            className="sv-copilot-toggle"
-            data-active={copilotOpen}
-            onClick={() => setCopilotOpen((prev) => !prev)}
-            type="button"
-            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-          >
-            <Bot size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* Left Icon Rail — row 2, col 1 */}
-      <nav className="sv-rail">
-        <div className="sv-rail__logo">
-          <DocIcon />
-        </div>
-        <ProfileMenu />
-      </nav>
-
-      {/* Main content — row 2, col 2: 3-panel SOP layout */}
-      <main className="sv-main">
+    <>
+      <div className="sv-main">
         {/* LEFT: Directory */}
         {dirCollapsed ? (
           <div className="sv-dir sv-dir--collapsed">
@@ -640,7 +613,7 @@ export function SupervisorPage() {
             </button>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Confirmation modal */}
       {confirmModal && (
@@ -656,7 +629,44 @@ export function SupervisorPage() {
           </div>
         </div>
       )}
+    </>
+  );
+}
 
+export function SupervisorPage() {
+  const [copilotOpen, setCopilotOpen] = useState(false);
+
+  return (
+    <div className="sv-page">
+      <header className="sv-header">
+        <div>
+          <h1 className="sv-header__title">集团管理 · 规范管理</h1>
+          <div className="sv-header__status">
+            <span className="sv-header__status-dot" />
+            AI 就绪
+          </div>
+        </div>
+        <div className="sv-header__actions">
+          <button
+            className="sv-copilot-toggle"
+            data-active={copilotOpen}
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            type="button"
+            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+          >
+            <Bot size={18} />
+          </button>
+        </div>
+      </header>
+      <nav className="sv-rail">
+        <div className="sv-rail__logo">
+          <DocIcon />
+        </div>
+        <ProfileMenu />
+      </nav>
+      <main className="sv-main">
+        <SOPContent />
+      </main>
     </div>
   );
 }

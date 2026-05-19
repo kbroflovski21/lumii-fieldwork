@@ -1,13 +1,11 @@
 import { lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
-import { AdminPage } from "./admin/AdminPage";
 import { QualityPage } from "./quality/QualityPage";
 import { FamilyPage } from "./family/FamilyPage";
 import { CareworkerPage } from "./careworker/CareworkerPage";
 import { HardwareSimulator } from "./careworker/HardwareSimulator";
 import { SiteOperationsPage } from "./components/SiteOperations/SiteOperationsPage";
-import { SupervisorPage } from "./supervisor/SupervisorPage";
 
 const SiteOperationsRedpeiMock = lazy(() =>
   import("./mock/site-operations-redpei/SiteOperationsRedpeiMock").then((module) => ({
@@ -54,14 +52,13 @@ function AppRoutes() {
   // Logged in on root or /login → redirect by role
   if (path === "/" || path === "/login") {
     if (user.role === "org_admin") return <QualityPage />;
-    if (user.role === "service_supervisor") return <SupervisorPage />;
     return <SiteOperationsPage />;
   }
 
-  // Quality management page
-  if (path.startsWith("/quality")) {
+  // Quality management page (org_admin only — includes SOP management tab)
+  if (path.startsWith("/quality") || path.startsWith("/supervisor") || path.startsWith("/sop-management")) {
     if (user.role !== "org_admin") {
-      return <div style={{ padding: 40, textAlign: "center" }}><h2>403 无权访问</h2><p>您的角色无权访问质量管理</p><a href="/site-operations">返回站点运营</a></div>;
+      return <div style={{ padding: 40, textAlign: "center" }}><h2>403 无权访问</h2><p>您的角色无权访问集团管理</p><a href="/site-operations">返回站点运营</a></div>;
     }
     return <QualityPage />;
   }
@@ -70,29 +67,10 @@ function AppRoutes() {
     if (user.role !== "org_admin") {
       return <div style={{ padding: 40, textAlign: "center" }}><h2>403 无权访问</h2><p>您的角色无权访问管理后台</p><a href="/site-operations">返回站点运营</a></div>;
     }
-    return <AdminPage />;
+    return <QualityPage />;
   }
 
-  if (path.startsWith("/supervisor")) {
-    if (user.role !== "service_supervisor" && user.role !== "org_admin") {
-      return <div style={{ padding: 40, textAlign: "center" }}><h2>403 无权访问</h2></div>;
-    }
-    return <SupervisorPage />;
-  }
-
-  if (path.startsWith("/sop-management")) {
-    if (user.role !== "service_supervisor" && user.role !== "org_admin") {
-      return <div style={{ padding: 40, textAlign: "center" }}><h2>403 无权访问</h2></div>;
-    }
-    return <SupervisorPage />;
-  }
-
-  // Default: site-operations (org_admin + site_operator)
-  if (user.role === "service_supervisor") {
-    window.location.href = "/supervisor";
-    return null;
-  }
-
+  // Default: site-operations (site_operator)
   return <SiteOperationsPage />;
 }
 

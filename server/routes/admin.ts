@@ -50,7 +50,7 @@ export function adminRoutes() {
       return;
     }
 
-    if (!["org_admin", "site_operator", "service_supervisor", "careworker"].includes(role)) {
+    if (!["org_admin", "site_operator", "careworker"].includes(role)) {
       res.status(400).json({ error: "无效的角色" });
       return;
     }

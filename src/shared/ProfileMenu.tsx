@@ -6,7 +6,6 @@ import "./shell-profile.css";
 const ROLE_LABELS: Record<string, string> = {
   org_admin: "集团管理",
   site_operator: "站点运营",
-  service_supervisor: "服务主管",
   careworker: "护理员",
 };
 

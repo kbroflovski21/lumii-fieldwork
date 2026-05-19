@@ -43,41 +43,40 @@ test.describe("Quality Manager (集团管理)", () => {
     await page.locator('input[placeholder="请输入密码"]').fill("admin123");
     await page.locator(".login-form__submit").click();
     await expect(page.locator("text=质量总览").first()).toBeVisible({ timeout: 10000 });
-    // Navigate to /admin via URL
-    await page.goto(`${BASE}/admin`);
-    await expect(page.locator(".admin-header")).toBeVisible({ timeout: 10000 });
+    // User management is a tab in quality page
+    await page.locator("button[title=用户管理]").click();
+    await expect(page.locator("text=用户管理").first()).toBeVisible({ timeout: 10000 });
   });
 });
 
-test.describe("Supervisor (服务主管)", () => {
-  test("service_supervisor sees supervisor page after login", async ({ page }) => {
+test.describe("Supervisor account (now org_admin)", () => {
+  test("supervisor account logs in and sees quality page", async ({ page }) => {
     await page.goto(BASE);
     await page.locator('input[placeholder="请输入用户名"]').fill("supervisor");
     await page.locator('input[placeholder="请输入密码"]').fill("super123");
     await page.locator(".login-form__submit").click();
-    // supervisor default page
-    await expect(page.locator("text=SOP").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=质量总览").first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("supervisor page shows folder tree", async ({ page }) => {
+  test("SOP management is a tab in quality page", async ({ page }) => {
     await page.goto(BASE);
     await page.locator('input[placeholder="请输入用户名"]').fill("supervisor");
     await page.locator('input[placeholder="请输入密码"]').fill("super123");
     await page.locator(".login-form__submit").click();
-    await expect(page.locator("text=SOP").first()).toBeVisible({ timeout: 10000 });
-    // Check folder tree has content
+    await expect(page.locator("text=质量总览").first()).toBeVisible({ timeout: 10000 });
+    // Click SOP tab
+    await page.locator("button[title=规范管理]").click();
     await expect(page.locator("text=通用规范").first()).toBeVisible({ timeout: 5000 });
   });
 
-  test("supervisor redirected from site-operations to supervisor page", async ({ page }) => {
+  test("supervisor /site-operations shows site operations", async ({ page }) => {
     await page.goto(BASE);
     await page.locator('input[placeholder="请输入用户名"]').fill("supervisor");
     await page.locator('input[placeholder="请输入密码"]').fill("super123");
     await page.locator(".login-form__submit").click();
-    await expect(page.locator("text=SOP").first()).toBeVisible({ timeout: 10000 });
-    // Try to access site-operations — should redirect back to supervisor
+    await expect(page.locator("text=质量总览").first()).toBeVisible({ timeout: 10000 });
     await page.goto(`${BASE}/site-operations`);
-    await expect(page.locator("text=SOP").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=Lumii 站点运营助手")).toBeVisible({ timeout: 10000 });
   });
 });
 

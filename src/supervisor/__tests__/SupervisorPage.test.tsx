@@ -9,7 +9,7 @@ vi.mock("../../auth/AuthContext", () => ({
       id: "u1",
       username: "supervisor",
       name: "主管",
-      role: "service_supervisor" as const,
+      role: "org_admin" as const,
       orgId: "org-001",
       siteIds: ["site-001"],
     },
@@ -39,7 +39,7 @@ describe("SupervisorPage", () => {
 
   it("renders the header with title", () => {
     render(<SupervisorPage />);
-    expect(screen.getByText("服务主管 · 规范管理")).toBeInTheDocument();
+    expect(screen.getByText("集团管理 · 规范管理")).toBeInTheDocument();
   });
 
   it("shows AI ready status", () => {

@@ -392,7 +392,7 @@ async function main() {
       data: [
         { id: "user-admin-001", username: "admin", passwordHash: hash("admin123"), name: "系统管理员", role: "org_admin", orgId: "org-001", siteIds: ["site-001"], phone: "13800000000" },
         { id: "user-op-001", username: "operator", passwordHash: hash("oper123"), name: "站点运营员", role: "site_operator", orgId: "org-001", siteIds: ["site-001"], phone: "13800000001" },
-        { id: "user-sup-001", username: "supervisor", passwordHash: hash("super123"), name: "服务主管", role: "service_supervisor", orgId: "org-001", siteIds: ["site-001"], phone: "13800000002" },
+        { id: "user-sup-001", username: "supervisor", passwordHash: hash("super123"), name: "服务主管", role: "org_admin", orgId: "org-001", siteIds: ["site-001"], phone: "13800000002" },
       ],
     });
     console.log("[seed] Seeded 3 default users");

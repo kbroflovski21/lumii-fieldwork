@@ -17,7 +17,6 @@ interface AdminUser {
 const ROLE_LABELS: Record<string, string> = {
   org_admin: "集团管理",
   site_operator: "站点运营",
-  service_supervisor: "服务主管",
 };
 
 export function AdminPage() {
@@ -109,7 +108,6 @@ export function AdminPage() {
               <label>角色
                 <select value={formData.role} onChange={e => setFormData(d => ({ ...d, role: e.target.value }))}>
                   <option value="site_operator">站点运营</option>
-                  <option value="service_supervisor">服务主管</option>
                   <option value="org_admin">集团管理</option>
                 </select>
               </label>

@@ -5,6 +5,7 @@ import { WebSocket } from "ws";
 import { AgentConnectionPool } from "../../server/ws/pool";
 import { ChatDb } from "../../server/db/chat";
 import { signJwt } from "../../server/ws/auth";
+import { prisma } from "../../server/db/prisma";
 
 /** Buffered message queue that never drops messages between awaits */
 function createMsgQueue(ws: WebSocket) {
@@ -36,6 +37,7 @@ describe("AgentConnectionPool", () => {
   beforeEach(async () => {
     chatDb = new ChatDb();
     await chatDb.migrate();
+    await prisma.chatMessage.deleteMany();
     pool = new AgentConnectionPool({ chatDb, jwtSecret: "test-secret", wsToken: "agent-token", agentId: "test-agent" });
     server = createServer();
     server.on("upgrade", (req, socket, head) => {

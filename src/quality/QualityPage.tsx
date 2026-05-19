@@ -3,6 +3,7 @@ import { Bot } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import { ProfileMenu } from "../shared/ProfileMenu";
+import { SupervisorContent } from "../supervisor/SupervisorContent";
 import "./quality.css";
 
 /* ── Mock data ── */
@@ -83,7 +84,15 @@ function IconUsers({ size = 20 }: { size?: number }) {
 
 /* ── Helpers ── */
 
-type View = "dashboard" | "records" | "users";
+function IconClipboardList({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+  );
+}
+
+type View = "dashboard" | "sop" | "records" | "users";
 
 function rateClass(value: number, thresholds: [number, number]): string {
   if (value >= thresholds[0]) return "quality-table__value--success";
@@ -111,6 +120,7 @@ export function QualityPage() {
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
+    { key: "sop", label: "规范管理", icon: <IconClipboardList /> },
     { key: "records", label: "服务记录", icon: <IconDocument /> },
     { key: "users", label: "用户管理", icon: <IconUsers /> },
   ];
@@ -119,8 +129,11 @@ export function QualityPage() {
     <div className="quality-page" data-copilot-open={copilotOpen}>
       {/* Header — row 1, spans all columns */}
       <header className="quality-header">
+        <div className="quality-header__logo">
+          <IconShield size={18} stroke="white" />
+        </div>
         <div>
-          <h1 className="quality-header__title">金色年华 · 集团质量管理</h1>
+          <h1 className="quality-header__title">金色年华 · 集团管理</h1>
           <div className="quality-header__status">
             <span className="quality-header__dot" />
             运行中 · 4 个站点 · 本周 168 单
@@ -146,9 +159,6 @@ export function QualityPage() {
 
       {/* Left Icon Rail — row 2, col 1 */}
       <div className="quality-rail">
-        <div className="quality-rail__logo">
-          <IconShield size={18} stroke="white" />
-        </div>
         {navItems.map((n) => (
           <button
             key={n.key}
@@ -165,11 +175,15 @@ export function QualityPage() {
 
       {/* Main content — row 2, col 2 */}
       <div className="quality-main">
-        <div className="quality-content">
-          {view === "dashboard" && <DashboardView />}
-          {view === "records" && <RecordsView />}
-          {view === "users" && <UsersView />}
-        </div>
+        {view === "sop" ? (
+          <SupervisorContent />
+        ) : (
+          <div className="quality-content">
+            {view === "dashboard" && <DashboardView />}
+            {view === "records" && <RecordsView />}
+            {view === "users" && <UsersView />}
+          </div>
+        )}
       </div>
 
       {/* CopilotPanel — row 2, col 3 */}
@@ -397,7 +411,6 @@ interface QualityUser {
 const QUALITY_ROLE_LABELS: Record<string, string> = {
   org_admin: "集团管理",
   site_operator: "站点运营",
-  service_supervisor: "服务主管",
   careworker: "护理员",
 };
 
@@ -578,10 +591,19 @@ function CloseBtn({ onClick }: { onClick: () => void }) {
 }
 
 /* ── User Detail Modal with inline edit ── */
+function useEscClose(onClose: () => void) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+}
+
 function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete }: {
   user: QualityUser; token: string; onClose: () => void; onSaved: () => void;
   onToggle: (u: QualityUser) => void; onDelete: (u: QualityUser) => void;
 }) {
+  useEscClose(onClose);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone);
@@ -653,6 +675,7 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete }: 
 
 /* ── Create User Modal ── */
 function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose: () => void; onCreated: () => void }) {
+  useEscClose(onClose);
   const [form, setForm] = useState({ username: "", password: "", name: "", role: "site_operator", phone: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -696,7 +719,6 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
                   <span>角色</span>
                   <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
                     <option value="site_operator">站点运营</option>
-                    <option value="service_supervisor">服务主管</option>
                     <option value="org_admin">集团管理</option>
                   </select>
                 </div>
@@ -719,6 +741,7 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
 
 /* ── Reset Password Modal (compact) ── */
 function ResetPasswordModal({ user, token, onClose, onSuccess }: { user: QualityUser; token: string; onClose: () => void; onSuccess: () => void }) {
+  useEscClose(onClose);
   const [pwd, setPwd] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -768,6 +791,7 @@ function ConfirmDialog({ title, message, confirmLabel, danger, submitting, onCon
   title: string; message: string; confirmLabel: string; danger: boolean;
   submitting: boolean; onConfirm: () => void; onCancel: () => void;
 }) {
+  useEscClose(onCancel);
   return (
     <>
       <div className="sw-scrim" style={{ zIndex: 40 }} onClick={onCancel} />

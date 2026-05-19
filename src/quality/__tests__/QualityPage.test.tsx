@@ -39,7 +39,7 @@ describe("QualityPage", () => {
 
   it("renders the page header with title", () => {
     render(<QualityPage />);
-    expect(screen.getByText("金色年华 · 集团质量管理")).toBeInTheDocument();
+    expect(screen.getByText("金色年华 · 集团管理")).toBeInTheDocument();
   });
 
   it("shows running status line", () => {
