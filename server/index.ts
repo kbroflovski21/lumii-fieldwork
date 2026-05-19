@@ -19,6 +19,7 @@ import { serviceRecordsRoutes } from "./routes/serviceRecords";
 import { personaRoutes } from "./routes/persona";
 import { authRoutes } from "./routes/auth";
 import { adminRoutes } from "./routes/admin";
+import { siteRoutes } from "./routes/sites";
 import { requireAuth } from "./middleware/requireAuth";
 import { optionalAuth } from "./middleware/optionalAuth";
 
@@ -48,6 +49,7 @@ app.use("/api", authRoutes(jwtSecret));
 const authMw = requireAuth(jwtSecret);
 app.use("/api/admin", authMw);
 app.use("/api", adminRoutes());
+app.use("/api", siteRoutes());
 
 // Business routes — optional auth (attaches user if token present)
 const gyTokenSecret = process.env.GY_TOKEN_SECRET;

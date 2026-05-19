@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "../../../auth/AuthContext";
+import { SiteProvider } from "../../../auth/SiteContext";
 import { HomeArea } from "../HomeArea";
 import { RecordsArea } from "../RecordsArea";
 import { SchedulesArea } from "../SchedulesArea";
@@ -324,7 +325,7 @@ afterEach(() => {
 describe("SiteOperationsPage", () => {
   it("renders shell, six work areas, home sidebar highlights, and chat stream", async () => {
     mockSiteOperationsFetch();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     expect(screen.getByText("Lumii 站点运营助手")).toBeInTheDocument();
     const desktopNav = screen.getByLabelText("站点运营工作区");
@@ -363,7 +364,7 @@ describe("SiteOperationsPage", () => {
   it("sends a message via the command input", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await screen.findByRole("region", { name: "首页" });
 
@@ -379,7 +380,7 @@ describe("SiteOperationsPage", () => {
   it("toggles the home insight drawer state from the breadcrumb trigger", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await screen.findByRole("region", { name: "首页" });
     const insightPanel = screen.getByLabelText("首页高亮信息");
@@ -395,7 +396,7 @@ describe("SiteOperationsPage", () => {
   it("routes from a home recommended action to its target workspace", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await screen.findByRole("region", { name: "首页" });
     await user.click(screen.getByRole("button", { name: "复核服务记录" }));
@@ -407,7 +408,7 @@ describe("SiteOperationsPage", () => {
   it("covers 服务人员", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await user.click(screen.getAllByRole("button", { name: "服务人员" })[0]);
 
@@ -435,7 +436,7 @@ describe("SiteOperationsPage", () => {
   it("covers 设备", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await user.click(screen.getAllByRole("button", { name: "设备" })[0]);
 
@@ -457,7 +458,7 @@ describe("SiteOperationsPage", () => {
   it("covers 服务对象", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await user.click(screen.getAllByRole("button", { name: "服务对象" })[0]);
 
@@ -477,7 +478,7 @@ describe("SiteOperationsPage", () => {
   it("covers 服务排期", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await user.click(screen.getAllByRole("button", { name: "服务排期" })[0]);
 
@@ -491,7 +492,7 @@ describe("SiteOperationsPage", () => {
   it("covers 服务记录", async () => {
     mockSiteOperationsFetch();
     const user = userEvent.setup();
-    render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+    render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
     await user.click(screen.getAllByRole("button", { name: "服务记录" })[0]);
 
@@ -636,7 +637,7 @@ describe("SiteOperationsPage", () => {
 
       mockSiteOperationsFetch({ "/api/site-operations/home": Response.json({}, { status: 500 }) });
       const user = userEvent.setup();
-      render(<AuthProvider><SiteOperationsPage /></AuthProvider>);
+      render(<AuthProvider><SiteProvider><SiteOperationsPage /></SiteProvider></AuthProvider>);
 
       expect(await screen.findByText("加载失败")).toBeInTheDocument();
       await user.click(screen.getAllByRole("button", { name: "服务人员" })[0]);

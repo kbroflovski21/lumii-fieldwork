@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
-import { Bot, CalendarDays, ClipboardList, FileText, Smartphone, UserRound, UsersRound } from "lucide-react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
+import { Bot, CalendarDays, ChevronDown, ClipboardList, FileText, Smartphone, UserRound, UsersRound } from "lucide-react";
 import { workAreas, type WorkAreaId } from "./contracts";
 import { CopilotPanel } from "./CopilotPanel";
 import { ProfileMenu } from "../../shared/ProfileMenu";
+import { useSite } from "../../auth/SiteContext";
 
 const icons = {
   home: Bot,
@@ -24,6 +25,18 @@ type SiteOperationsShellProps = {
 export function SiteOperationsShell({ activeArea, children, onSelectArea }: SiteOperationsShellProps) {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const showCopilot = activeArea !== "home";
+  const { currentSite, sites, selectSite } = useSite();
+  const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
+  const siteDropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!siteDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (siteDropRef.current && !siteDropRef.current.contains(e.target as Node)) setSiteDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [siteDropdownOpen]);
 
   return (
     <div className="site-operations-root">
@@ -42,6 +55,33 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
               运行中 · 今日服务 18 单
             </p>
           </div>
+          {currentSite && sites.length > 0 && (
+            <div className="site-operations-header__site-switcher" ref={siteDropRef}>
+              <button
+                className="site-operations-header__site-btn"
+                onClick={() => setSiteDropdownOpen(!siteDropdownOpen)}
+                type="button"
+              >
+                {currentSite.name}
+                {sites.length > 1 && <ChevronDown size={14} />}
+              </button>
+              {siteDropdownOpen && sites.length > 1 && (
+                <div className="site-operations-header__site-dropdown">
+                  {sites.map(s => (
+                    <button
+                      key={s.id}
+                      className="site-operations-header__site-option"
+                      data-active={s.id === currentSite.id}
+                      onClick={() => { selectSite(s); setSiteDropdownOpen(false); }}
+                      type="button"
+                    >
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="site-operations-header__actions">
             {showCopilot ? (
               <button

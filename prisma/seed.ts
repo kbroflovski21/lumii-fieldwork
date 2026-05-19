@@ -397,6 +397,22 @@ async function main() {
     });
     console.log("[seed] Seeded 3 default users");
   }
+
+  // ── Default Sites ──
+  const siteCount = await prisma.site.count();
+  if (siteCount === 0) {
+    await prisma.site.createMany({
+      data: [
+        { id: "site-001", name: "翠苑站", address: "杭州市西湖区翠苑街道翠苑一区", contactName: "张站长", contactPhone: "13900001001", orgId: "org-001" },
+        { id: "site-002", name: "三墩站", address: "杭州市西湖区三墩镇振华路", contactName: "李站长", contactPhone: "13900001002", orgId: "org-001" },
+        { id: "site-003", name: "古荡站", address: "杭州市西湖区古荡街道古荡新村", contactName: "王站长", contactPhone: "13900001003", orgId: "org-001" },
+        { id: "site-004", name: "文新站", address: "杭州市西湖区文新街道文鼎苑", contactName: "赵站长", contactPhone: "13900001004", orgId: "org-001" },
+      ],
+    });
+    // Assign operator to site-001
+    await prisma.siteUser.create({ data: { siteId: "site-001", userId: "user-op-001" } });
+    console.log("[seed] Seeded 4 sites + 1 site-user assignment");
+  }
 }
 
 main()

@@ -117,7 +117,37 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
 
+  siteUsers SiteUser[]
+
   @@map("users")
+}
+
+model Site {
+  id          String   @id @db.VarChar(64)
+  name        String   @db.VarChar(255)
+  address     String   @default("") @db.VarChar(500)
+  contactName String   @default("") @map("contact_name") @db.VarChar(255)
+  contactPhone String  @default("") @map("contact_phone") @db.VarChar(64)
+  orgId       String   @default("org-001") @map("org_id") @db.VarChar(64)
+  status      String   @default("active") @db.VarChar(32)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  siteUsers SiteUser[]
+
+  @@map("sites")
+}
+
+model SiteUser {
+  id     String @id @default(cuid()) @db.VarChar(64)
+  siteId String @map("site_id") @db.VarChar(64)
+  userId String @map("user_id") @db.VarChar(64)
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, userId])
+  @@map("site_users")
 }
 
 model SocialWorker {

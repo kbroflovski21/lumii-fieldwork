@@ -115,6 +115,63 @@ body {
   margin: 1px 0 0;
 }
 
+.site-operations-header__site-switcher {
+  position: relative;
+  margin-left: auto;
+}
+.site-operations-header__site-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #F9FAFB;
+  color: #0F172A;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.site-operations-header__site-btn:hover {
+  background: #EFF6FF;
+  border-color: #0052CC;
+}
+.site-operations-header__site-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  min-width: 180px;
+  z-index: 50;
+  overflow: hidden;
+}
+.site-operations-header__site-option {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+}
+.site-operations-header__site-option:hover {
+  background: #F1F5F9;
+}
+.site-operations-header__site-option[data-active="true"] {
+  color: #0052CC;
+  font-weight: 600;
+  background: #EFF6FF;
+}
+
 .site-operations-header p span {
   background: #116b4c;
   border-radius: 3px;

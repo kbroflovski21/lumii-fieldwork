@@ -120,112 +120,19 @@ describe("QualityPage", () => {
     expect(link.closest("a")).toHaveAttribute("href", "/site-operations");
   });
 
-  it("can switch to records view via nav button", async () => {
+  it("can switch to sites view via nav button", async () => {
     render(<QualityPage />);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    // Find the records nav button (has title="服务记录")
-    const recordsBtn = screen.getByTitle("服务记录");
-    await user.click(recordsBtn);
-
-    // Should show records view
-    expect(screen.getByText("服务记录")).toBeInTheDocument();
-    expect(screen.getByText("查看所有站点的服务记录和质量数据")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("搜索社工或服务对象...")).toBeInTheDocument();
+    await user.click(screen.getByTitle("站点管理"));
+    expect(screen.getByText("站点管理")).toBeInTheDocument();
+    expect(screen.getByText("管理服务站点及运营人员分配")).toBeInTheDocument();
   });
 
-  it("records view shows table with correct columns", async () => {
+  it("can switch back to dashboard from sites", async () => {
     render(<QualityPage />);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    // Table headers
-    expect(screen.getByText("时间")).toBeInTheDocument();
-    expect(screen.getByText("社工")).toBeInTheDocument();
-    expect(screen.getByText("服务对象")).toBeInTheDocument();
-    expect(screen.getByText("服务项目")).toBeInTheDocument();
-    expect(screen.getByText("时长")).toBeInTheDocument();
-    expect(screen.getByText("状态")).toBeInTheDocument();
-  });
-
-  it("records view shows record data", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    // Check some record data - worker names appear in multiple records
-    expect(screen.getAllByText("王建国").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("张大伟").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("43 分钟")).toBeInTheDocument();
-  });
-
-  it("records view can filter by site", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    // Select site filter
-    const siteSelect = screen.getByDisplayValue("全部站点");
-    await user.selectOptions(siteSelect, "文新站");
-
-    // Only 文新站 records should remain (张伟明 records)
-    expect(screen.getAllByText("张伟明").length).toBeGreaterThanOrEqual(1);
-    // Other site workers should not appear in the records table
-    const workerCells = document.querySelectorAll(".quality-records-table__worker");
-    const workerNames = Array.from(workerCells).map(el => el.textContent);
-    expect(workerNames.every(n => n === "张伟明")).toBe(true);
-  });
-
-  it("records view can filter by status", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    // Select status filter
-    const statusSelect = screen.getByDisplayValue("全部状态");
-    await user.selectOptions(statusSelect, "异常");
-
-    // Should show only anomaly records
-    expect(screen.getByText("刘国强")).toBeInTheDocument();
-    // Normal records should be gone
-    expect(screen.queryByText("赵淑芬")).not.toBeInTheDocument();
-  });
-
-  it("records view can search by worker name", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    const searchInput = screen.getByPlaceholderText("搜索社工或服务对象...");
-    await user.type(searchInput, "周丽华");
-
-    // Only 周丽华 records should show
-    const workerCells = document.querySelectorAll(".quality-records-table__worker");
-    const workerNames = Array.from(workerCells).map(el => el.textContent);
-    expect(workerNames.length).toBeGreaterThan(0);
-    expect(workerNames.every(n => n === "周丽华")).toBe(true);
-  });
-
-  it("records view shows empty state when no records match", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("服务记录"));
-
-    const searchInput = screen.getByPlaceholderText("搜索社工或服务对象...");
-    await user.type(searchInput, "不存在的人");
-
-    expect(screen.getByText("无匹配记录")).toBeInTheDocument();
-  });
-
-  it("can switch back to dashboard from records", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    // Go to records
-    await user.click(screen.getByTitle("服务记录"));
-    expect(screen.getByText("查看所有站点的服务记录和质量数据")).toBeInTheDocument();
-
-    // Go back to dashboard
+    await user.click(screen.getByTitle("站点管理"));
+    expect(screen.getByText("管理服务站点及运营人员分配")).toBeInTheDocument();
     await user.click(screen.getByTitle("质量总览"));
     expect(screen.getByText("跨站点服务质量监测与分析")).toBeInTheDocument();
   });
