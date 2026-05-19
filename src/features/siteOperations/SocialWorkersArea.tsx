@@ -1,5 +1,5 @@
 import { useEscClose } from "./useEscClose";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
 import type {
   SocialWorker,
@@ -99,6 +99,16 @@ export function SocialWorkersArea({ resource, onMutate }: { resource: Resource<S
   const handleWorkerRefresh = useCallback(() => {
     onMutate?.();
   }, [onMutate]);
+
+  // Sync drawer worker with refreshed list data
+  useEffect(() => {
+    if (drawer.kind !== "closed" && "worker" in drawer) {
+      const fresh = workers.find(w => w.id === drawer.worker.id);
+      if (fresh && fresh !== drawer.worker) {
+        setDrawer(prev => prev.kind !== "closed" && "worker" in prev ? { ...prev, worker: fresh } : prev);
+      }
+    }
+  }, [workers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = workers.filter((w) => {
     if (statusFilter && w.status !== statusFilter) return false;

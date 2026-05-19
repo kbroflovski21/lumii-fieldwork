@@ -1188,7 +1188,7 @@
    ══════════════════════════════════════════════ */
 
 .cw-ai-fab {
-  position: fixed;
+  position: absolute;
   z-index: 70;
   bottom: calc(68px + env(safe-area-inset-bottom));
   right: 16px;
