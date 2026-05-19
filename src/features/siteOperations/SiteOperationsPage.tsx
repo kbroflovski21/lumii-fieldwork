@@ -8,12 +8,14 @@ import { SiteOperationsShell } from "./SiteOperationsShell";
 import { SmartBadgesArea } from "./SmartBadgesArea";
 import { SocialWorkersArea } from "./SocialWorkersArea";
 import { useSiteOperationsData } from "./useSiteOperationsData";
+import { useSite } from "../../auth/SiteContext";
 import "./siteOperations.css";
 import "../../shared/shell-profile.css";
 
 export function SiteOperationsPage() {
   const [activeArea, setActiveArea] = useState<WorkAreaId>("home");
-  const data = useSiteOperationsData(activeArea);
+  const { currentSite } = useSite();
+  const data = useSiteOperationsData(activeArea, currentSite?.id);
 
   return (
     <SiteOperationsShell activeArea={activeArea} onSelectArea={setActiveArea}>

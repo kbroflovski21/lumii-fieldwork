@@ -118,11 +118,6 @@ export function QualityPage() {
           </div>
         </div>
         <div className="quality-header__actions">
-          {user?.role === "org_admin" && (
-            <a href="/site-operations" className="quality-header__nav-link">
-              进入站点运营
-            </a>
-          )}
           <button
             className="copilot-toggle"
             data-active={copilotOpen}
@@ -358,6 +353,7 @@ function SitesView() {
                   <td>{s.operators.length > 0 ? s.operators.map(o => o.name).join("、") : <span style={{ color: "var(--quality-text-muted)" }}>未分配</span>}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
+                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); window.open(`/site-operations?siteId=${s.id}`, "_blank"); }}>进入站点</button>
                       <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setEditingSite(true); setDetailSite(s); }}>编辑</button>
                       <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setConfirmAction({ site: s }); }}>删除</button>
                     </div>

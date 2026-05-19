@@ -12,6 +12,7 @@ interface SiteContextValue {
   currentSite: SiteInfo | null;
   loading: boolean;
   needsSelection: boolean;
+  noSiteAssigned: boolean;
   selectSite: (site: SiteInfo) => void;
 }
 
@@ -63,9 +64,10 @@ export function SiteProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const needsSelection = user?.role === "site_operator" && sites.length > 1 && !currentSite;
+  const noSiteAssigned = !loading && user?.role === "site_operator" && sites.length === 0;
 
   return (
-    <SiteContext.Provider value={{ sites, currentSite, loading, needsSelection, selectSite }}>
+    <SiteContext.Provider value={{ sites, currentSite, loading, needsSelection, noSiteAssigned, selectSite }}>
       {children}
     </SiteContext.Provider>
   );

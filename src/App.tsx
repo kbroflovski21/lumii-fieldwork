@@ -47,7 +47,7 @@ function SiteSelectorModal({ sites, onSelect }: { sites: SiteInfo[]; onSelect: (
 
 function AppRoutes() {
   const { user, loading } = useAuth();
-  const { needsSelection, sites, selectSite, loading: siteLoading } = useSite();
+  const { needsSelection, noSiteAssigned, sites, selectSite, loading: siteLoading } = useSite();
 
   if (loading || siteLoading) {
     return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", color: "#667386" }}>加载中...</div>;
@@ -71,9 +71,34 @@ function AppRoutes() {
 
   if (!user) return <LoginPage />;
 
+  // No site assigned — show error
+  if (noSiteAssigned) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#F7F9FB" }}>
+        <div style={{ textAlign: "center", maxWidth: 400, padding: 40 }}>
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B42318" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#0F172A" }}>暂无站点权限</h2>
+          <p style={{ margin: "0 0 24px", fontSize: 14, color: "#64748B", lineHeight: 1.6 }}>您的账号尚未分配到任何站点。请联系集团管理员将您的账号分配到对应的运营站点。</p>
+          <button onClick={() => { localStorage.removeItem("gy_auth_token"); window.location.reload(); }} style={{ padding: "10px 24px", background: "#0052CC", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>退出登录</button>
+        </div>
+      </div>
+    );
+  }
+
   // Site selector for operators with multiple sites
   if (needsSelection) {
     return <SiteSelectorModal sites={sites} onSelect={selectSite} />;
+  }
+
+  // Admin entering site-operations with ?siteId= parameter
+  if (path.startsWith("/site-operations") && user.role === "org_admin") {
+    const urlSiteId = new URLSearchParams(window.location.search).get("siteId");
+    if (urlSiteId) {
+      const site = sites.find(s => s.id === urlSiteId);
+      if (site) selectSite(site);
+    }
   }
 
   if (path === "/" || path === "/login") {

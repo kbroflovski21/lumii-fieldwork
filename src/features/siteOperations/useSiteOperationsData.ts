@@ -20,7 +20,7 @@ export type Resource<T> =
 const idle = { status: "idle" } as const;
 const loading = { status: "loading" } as const;
 
-export function useSiteOperationsData(activeArea: WorkAreaId) {
+export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   const [home, setHome] = useState<Resource<SiteOperationsHomeResponse>>(idle);
   const [socialWorkers, setSocialWorkers] = useState<Resource<SocialWorkersBundle>>(idle);
   const [smartBadges, setSmartBadges] = useState<Resource<SmartBadgesResponse>>(idle);
@@ -45,7 +45,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     let cancelled = false;
     setHome(loading);
     siteOperationsApi
-      .getHome()
+      .getHome(siteId)
       .then((data) => { if (!cancelled) setHome({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setHome({ status: "error", error: error instanceof Error ? error.message : "首页数据加载失败" }); });
     return () => { cancelled = true; };
@@ -56,7 +56,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     if (activeArea === "social_workers" && socialWorkers.status === "idle") {
       setSocialWorkers(loading);
       siteOperationsApi
-        .getSocialWorkers()
+        .getSocialWorkers(siteId)
         .then((data) => setSocialWorkers({ status: "success", data }))
         .catch((error: unknown) => setSocialWorkers({ status: "error", error: error instanceof Error ? error.message : "服务人员数据加载失败" }));
     }
@@ -64,7 +64,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     if (activeArea === "smart_badges" && smartBadges.status === "idle") {
       setSmartBadges(loading);
       siteOperationsApi
-        .getSmartBadges()
+        .getSmartBadges(siteId)
         .then((data) => setSmartBadges({ status: "success", data }))
         .catch((error: unknown) => setSmartBadges({ status: "error", error: error instanceof Error ? error.message : "设备数据加载失败" }));
     }
@@ -72,7 +72,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     if (activeArea === "service_schedules" && serviceSchedules.status === "idle") {
       setServiceSchedules(loading);
       siteOperationsApi
-        .getServiceScheduleOccurrences()
+        .getServiceScheduleOccurrences(siteId)
         .then((data) => setServiceSchedules({ status: "success", data }))
         .catch((error: unknown) => setServiceSchedules({ status: "error", error: error instanceof Error ? error.message : "排期数据加载失败" }));
     }
@@ -80,7 +80,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     if (activeArea === "service_records" && serviceRecords.status === "idle") {
       setServiceRecords(loading);
       siteOperationsApi
-        .getServiceRecords()
+        .getServiceRecords(siteId)
         .then((data) => setServiceRecords({ status: "success", data }))
         .catch((error: unknown) => setServiceRecords({ status: "error", error: error instanceof Error ? error.message : "记录数据加载失败" }));
     }
@@ -88,7 +88,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId) {
     if (activeArea === "service_objects" && serviceObjects.status === "idle") {
       setServiceObjects(loading);
       siteOperationsApi
-        .getServiceObjects()
+        .getServiceObjects(siteId)
         .then((data) => setServiceObjects({ status: "success", data }))
         .catch((error: unknown) => setServiceObjects({ status: "error", error: error instanceof Error ? error.message : "对象数据加载失败" }));
     }

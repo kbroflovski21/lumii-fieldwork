@@ -54,8 +54,9 @@ async function parseJson<T>(response: Response, path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { headers: { Accept: "application/json" } });
+async function getJson<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = params ? `${path}?${new URLSearchParams(params)}` : path;
+  const response = await fetch(url, { headers: { Accept: "application/json" } });
   return parseJson<T>(response, path);
 }
 
@@ -68,10 +69,14 @@ async function sendJson<T>(path: string, method: "POST" | "PATCH" | "PUT", body?
   return parseJson<T>(response, path);
 }
 
-export const siteOperationsApi = {
-  getHome: () => getJson<SiteOperationsHomeResponse>("/api/site-operations/home"),
+function siteParams(siteId?: string): Record<string, string> | undefined {
+  return siteId ? { siteId } : undefined;
+}
 
-  getSocialWorkers: () => getJson<SocialWorkersResponse>("/api/social-workers"),
+export const siteOperationsApi = {
+  getHome: (siteId?: string) => getJson<SiteOperationsHomeResponse>("/api/site-operations/home", siteParams(siteId)),
+
+  getSocialWorkers: (siteId?: string) => getJson<SocialWorkersResponse>("/api/social-workers", siteParams(siteId)),
   createSocialWorker: (request: CreateSocialWorkerRequest) =>
     sendJson<SocialWorker>("/api/social-workers", "POST", request),
   updateSocialWorker: (id: string, request: UpdateSocialWorkerRequest) =>
@@ -80,7 +85,7 @@ export const siteOperationsApi = {
   updateSocialWorkerBadgeBinding: (id: string, request: UpdateWorkerBadgeBindingRequest) =>
     sendJson<SocialWorker>(`/api/social-workers/${id}/badge-binding`, "PUT", request),
 
-  getSmartBadges: () => getJson<SmartBadgesResponse>("/api/smart-badges"),
+  getSmartBadges: (siteId?: string) => getJson<SmartBadgesResponse>("/api/smart-badges", siteParams(siteId)),
   getSmartBadge: (id: string) => getJson<SmartBadge>(`/api/smart-badges/${id}`),
   getSmartBadgeServiceRecords: (id: string) =>
     getJson<ServiceRecordsResponse>(`/api/smart-badges/${id}/service-records`),
@@ -89,7 +94,7 @@ export const siteOperationsApi = {
   updateSmartBadge: (id: string, request: UpdateSmartBadgeRequest) =>
     sendJson<SmartBadge>(`/api/smart-badges/${id}`, "PATCH", request),
 
-  getServiceObjects: () => getJson<ServiceObjectsResponse>("/api/service-objects"),
+  getServiceObjects: (siteId?: string) => getJson<ServiceObjectsResponse>("/api/service-objects", siteParams(siteId)),
   getServiceObject: (id: string) => getJson<ServiceObject>(`/api/service-objects/${id}`),
   createServiceObject: (request: CreateServiceObjectRequest) =>
     sendJson<ServiceObjectMutationResult>("/api/service-objects", "POST", request),
@@ -111,9 +116,9 @@ export const siteOperationsApi = {
   updateServicePlanException: (id: string, request: UpdateServicePlanExceptionRequest) =>
     sendJson<ServicePlan>(`/api/service-plan-exceptions/${id}`, "PATCH", request),
 
-  getServiceScheduleOccurrences: () =>
-    getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences"),
-  getServiceSchedules: () => getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences"),
+  getServiceScheduleOccurrences: (siteId?: string) =>
+    getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", siteParams(siteId)),
+  getServiceSchedules: (siteId?: string) => getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", siteParams(siteId)),
   createOneTimeServiceSchedule: (request: CreateOneTimeServiceScheduleRequest) =>
     sendJson<OneTimeScheduleResult>("/api/service-schedule-occurrences", "POST", request),
   getServiceScheduleOccurrence: (id: string) =>
@@ -121,7 +126,7 @@ export const siteOperationsApi = {
   updateServiceScheduleOccurrence: (id: string, request: UpdateServiceScheduleOccurrenceRequest) =>
     sendJson<ScheduleAdjustmentResult>(`/api/service-schedule-occurrences/${id}`, "PATCH", request),
 
-  getServiceRecords: () => getJson<ServiceRecordsResponse>("/api/service-records"),
+  getServiceRecords: (siteId?: string) => getJson<ServiceRecordsResponse>("/api/service-records", siteParams(siteId)),
   getServiceRecord: (id: string) => getJson<ServiceRecord>(`/api/service-records/${id}`),
   getServiceRecordAudio: (id: string) => getJson<ServiceAudioAsset>(`/api/service-records/${id}/audio`),
   exportServiceRecords: (request: ExportServiceRecordsRequest) =>
