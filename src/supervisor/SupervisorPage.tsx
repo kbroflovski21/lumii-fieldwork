@@ -23,6 +23,7 @@ interface StdFolder {
 }
 
 type DocType = "sop" | "supervision" | "report";
+type ActiveLayer = "sop" | "ai";
 
 interface ChatMessage {
   id: string;
@@ -31,7 +32,15 @@ interface ChatMessage {
   timestamp: string;
 }
 
-/* ── Initial seed data (3 folders) ── */
+interface GeneratePreview {
+  docType: "supervision" | "report";
+  folderId: string;
+  content: string;
+  basedOnSopVersion: number;
+  status: "generating" | "preview";
+}
+
+/* ── Initial seed data ── */
 
 const GENERAL_SOP = `1. 上门服务人员必须在开始服务时自报家门（姓名、所属机构），并确认被服务人员身份
 2. 服务过程中不得向被服务人员推销任何商业产品、保健品、保险或理财
@@ -164,12 +173,49 @@ function mockAiReply(text: string): string {
   return `收到您的消息：「${text}」。目前 AI 功能为模拟状态，后续将接入 LLM API 提供智能回复。`;
 }
 
+function mockGenerateDoc(sopContent: string, docType: "supervision" | "report"): string {
+  if (docType === "supervision") {
+    return `基于当前 SOP 自动生成的实时督导要求：
+
+1. 服务开始时检查是否按规范完成身份确认和开场流程
+2. 监测服务过程中的关键操作步骤是否遗漏
+3. 关注安全隐患和违规行为
+4. 服务结束前检查是否完成总结和满意度询问
+
+（此为 AI 模拟生成，后续将接入 LLM API）`;
+  }
+  return `基于当前 SOP 自动生成的服务后报告要求：
+
+1. 提取服务基本信息（时间、地点、人员）
+2. 逐项核对 SOP 要求的执行情况
+3. 记录服务过程中的异常事件
+4. 评估整体合规性
+5. 生成改进建议
+
+（此为 AI 模拟生成，后续将接入 LLM API）`;
+}
+
 /* ══════════════════════════════════════════════ */
 
 let nextMsgId = 5000;
 function makeTimestamp(): string {
   return new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
 }
+
+function getFolderStatus(f: StdFolder): "complete" | "partial" | "empty" {
+  const hasSop = f.sop && f.sop.status === "complete";
+  const hasSv = f.supervision && f.supervision.status === "complete";
+  const hasRp = f.report && f.report.status === "complete";
+  if (hasSop && hasSv && hasRp) return "complete";
+  if (hasSop) return "partial";
+  return "empty";
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  complete: "完整",
+  partial: "部分",
+  empty: "待建",
+};
 
 export function SupervisorContentInner() {
   return (
@@ -182,10 +228,11 @@ export function SupervisorContentInner() {
 function SOPContent() {
   const [folders, setFolders] = useState<StdFolder[]>(buildInitialFolders);
   const [selectedFolder, setSelectedFolder] = useState("gen-ltci");
-  const [selectedDoc, setSelectedDoc] = useState<DocType>("sop");
+  const [activeLayer, setActiveLayer] = useState<ActiveLayer>("sop");
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [editingDocType, setEditingDocType] = useState<DocType | null>(null);
   const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [serviceCollapsed, setServiceCollapsed] = useState(false);
   const [dirCollapsed, setDirCollapsed] = useState(false);
@@ -205,25 +252,36 @@ function SOPContent() {
   /* Copilot */
   const [copilotOpen, setCopilotOpen] = useState(false);
 
-  /* Profile menu handled by shared ProfileMenu component */
-
   /* Confirmation modal */
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
     message: string;
     onConfirm: () => void;
+    confirmLabel?: string;
+    danger?: boolean;
   } | null>(null);
+
+  /* Generate preview */
+  const [generatePreview, setGeneratePreview] = useState<GeneratePreview | null>(null);
+
+  /* AI layer: which doc is being viewed in version history */
+  const [aiViewingDoc, setAiViewingDoc] = useState<"supervision" | "report" | null>(null);
+  const [aiViewingVersion, setAiViewingVersion] = useState<number | null>(null);
 
   /* Derived */
   const folder = folders.find((f) => f.id === selectedFolder);
-  const doc = folder ? folder[selectedDoc] : null;
+  const sopDoc = folder?.sop ?? null;
 
-  /* Reset editing state on selection change */
+  /* Reset state on folder change */
   useEffect(() => {
     setIsEditing(false);
+    setEditingDocType(null);
     setViewingVersion(null);
-    if (doc) setEditContent(doc.content);
-  }, [selectedFolder, selectedDoc]); // eslint-disable-line react-hooks/exhaustive-deps
+    setGeneratePreview(null);
+    setAiViewingDoc(null);
+    setAiViewingVersion(null);
+    if (folder?.sop) setEditContent(folder.sop.content);
+  }, [selectedFolder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Auto-scroll chat */
   useEffect(() => {
@@ -243,8 +301,6 @@ function SOPContent() {
       pushChat("user", userText);
       setIsTyping(true);
       setCopilotOpen(true);
-
-      // Mock: simulate async reply
       setTimeout(() => {
         pushChat("agent", mockAiReply(userText));
         setIsTyping(false);
@@ -273,13 +329,13 @@ function SOPContent() {
   );
 
   /* ── Save document edit ── */
-  const handleSave = () => {
+  const handleSave = (docType: DocType) => {
     if (!folder) return;
     setFolders((prev) =>
       prev.map((f) => {
         if (f.id !== folder.id) return f;
         const updated = { ...f };
-        const oldDoc = f[selectedDoc];
+        const oldDoc = f[docType];
         const newVersion = (oldDoc?.version ?? 0) + 1;
         const newDoc: StdDoc = {
           status: "complete",
@@ -291,27 +347,81 @@ function SOPContent() {
             { version: newVersion, date: new Date().toISOString().slice(0, 10), summary: "手动编辑" },
           ],
         };
-        updated[selectedDoc] = newDoc;
+        updated[docType] = newDoc;
         return updated;
       }),
     );
     setIsEditing(false);
+    setEditingDocType(null);
+  };
+
+  /* ── Generate and confirm flow ── */
+  const handleGenerate = (docType: "supervision" | "report") => {
+    if (!folder || !sopDoc) return;
+    setGeneratePreview({
+      docType,
+      folderId: folder.id,
+      content: "",
+      basedOnSopVersion: sopDoc.version,
+      status: "generating",
+    });
+    // Mock async generation
+    setTimeout(() => {
+      setGeneratePreview((prev) => {
+        if (!prev || prev.folderId !== folder.id || prev.docType !== docType) return prev;
+        return {
+          ...prev,
+          content: mockGenerateDoc(sopDoc.content, docType),
+          status: "preview",
+        };
+      });
+    }, 1500);
+  };
+
+  const handleAcceptGenerate = () => {
+    if (!generatePreview || !folder) return;
+    const { docType, content, basedOnSopVersion } = generatePreview;
+    setFolders((prev) =>
+      prev.map((f) => {
+        if (f.id !== folder.id) return f;
+        const updated = { ...f };
+        const oldDoc = f[docType];
+        const newVersion = (oldDoc?.version ?? 0) + 1;
+        updated[docType] = {
+          status: "complete",
+          content,
+          source: "ai_generated",
+          version: newVersion,
+          history: [
+            ...(oldDoc?.history ?? []),
+            { version: newVersion, date: new Date().toISOString().slice(0, 10), summary: `AI 基于 SOP v${basedOnSopVersion} 生成` },
+          ],
+        };
+        return updated;
+      }),
+    );
+    setGeneratePreview(null);
+  };
+
+  const handleDiscardGenerate = () => {
+    setGeneratePreview(null);
   };
 
   /* ── Directory helpers ── */
   const generalFolders = folders.filter((f) => f.type === "general");
   const serviceFolders = folders.filter((f) => f.type === "service");
 
-  const selectFile = (folderId: string, docType: DocType) => {
+  const selectFolder = (folderId: string) => {
     setSelectedFolder(folderId);
-    setSelectedDoc(docType);
     setIsEditing(false);
+    setEditingDocType(null);
     setViewingVersion(null);
-    const target = folders.find((ff) => ff.id === folderId);
-    if (target && target[docType]) setEditContent(target[docType]!.content);
+    setGeneratePreview(null);
+    setAiViewingDoc(null);
+    setAiViewingVersion(null);
   };
 
-  /* ── Folder CRUD from directory ── */
+  /* ── Folder CRUD ── */
   const handleFolderAction = (action: string, f: StdFolder, newName?: string) => {
     if (action === "rename_confirm" && newName) {
       setFolders((prev) => prev.map((ff) => (ff.id === f.id ? { ...ff, name: newName } : ff)));
@@ -319,6 +429,7 @@ function SOPContent() {
       setConfirmModal({
         title: `删除「${f.name}」`,
         message: "该规范下的所有文件（SOP、督导要求、报告要求）将全部删除，此操作不可撤销。",
+        danger: true,
         onConfirm: () => {
           setFolders((prev) => prev.filter((ff) => ff.id !== f.id));
           if (selectedFolder === f.id) setSelectedFolder("");
@@ -335,7 +446,6 @@ function SOPContent() {
       draggingRef.current = side;
       const startX = e.clientX;
       const startW = side === "left" ? dirWidth : chatWidth;
-
       const onMove = (ev: MouseEvent) => {
         const delta = ev.clientX - startX;
         if (side === "left") setDirWidth(Math.max(180, Math.min(400, startW + delta)));
@@ -356,10 +466,10 @@ function SOPContent() {
     [dirWidth, chatWidth],
   );
 
-  /* ── Version history helpers ── */
-  const viewingDoc = viewingVersion !== null && doc ? doc.history.find((h) => h.version === viewingVersion) : null;
-
-  /* ══════════════════════════════════════════════ */
+  /* ── Breadcrumb ── */
+  const breadcrumb = folder
+    ? `${folder.type === "general" ? "通用规范" : "服务项目规范"} / ${folder.name}`
+    : "";
 
   return (
     <>
@@ -367,12 +477,7 @@ function SOPContent() {
         {/* LEFT: Directory */}
         {dirCollapsed ? (
           <div className="sv-dir sv-dir--collapsed">
-            <button
-              className="sv-panel-hdr__toggle"
-              onClick={() => setDirCollapsed(false)}
-              aria-label="展开目录"
-              type="button"
-            >
+            <button className="sv-panel-hdr__toggle" onClick={() => setDirCollapsed(false)} type="button">
               <ChevronRightIcon />
             </button>
           </div>
@@ -380,12 +485,7 @@ function SOPContent() {
           <div className="sv-dir" style={{ width: dirWidth, flexShrink: 0 }}>
             <div className="sv-panel-hdr">
               <span className="sv-panel-hdr__title">目录</span>
-              <button
-                className="sv-panel-hdr__toggle"
-                onClick={() => setDirCollapsed(true)}
-                aria-label="折叠目录"
-                type="button"
-              >
+              <button className="sv-panel-hdr__toggle" onClick={() => setDirCollapsed(true)} type="button">
                 <ChevronLeftIcon />
               </button>
             </div>
@@ -396,8 +496,7 @@ function SOPContent() {
                 collapsed={generalCollapsed}
                 onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
                 selectedFolder={selectedFolder}
-                selectedDoc={selectedDoc}
-                onSelect={selectFile}
+                onSelect={selectFolder}
                 onAdd={() => sendToLLM("我想添加一个新的通用规范")}
                 onFolderAction={handleFolderAction}
               />
@@ -408,8 +507,7 @@ function SOPContent() {
                 collapsed={serviceCollapsed}
                 onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
                 selectedFolder={selectedFolder}
-                selectedDoc={selectedDoc}
-                onSelect={selectFile}
+                onSelect={selectFolder}
                 onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
                 onFolderAction={handleFolderAction}
               />
@@ -420,138 +518,116 @@ function SOPContent() {
         {/* Drag handle left */}
         <div className="sv-drag-handle" onMouseDown={handleMouseDown("left")} />
 
-        {/* MIDDLE: Document view */}
+        {/* CONTENT AREA */}
         <div className="sv-doc">
-          <div className="sv-panel-hdr">
-            <span className="sv-panel-hdr__title">文档</span>
-          </div>
-
-            {viewingVersion !== null && doc ? (
-              /* Version history view */
-              <div className="sv-doc__version-view">
-                <div className="sv-doc__version-header">
-                  <div>
-                    <div className="sv-doc__version-name">{folder!.name} — {DOC_LABELS[selectedDoc]}</div>
-                    <div className="sv-doc__version-label">查看历史版本 v{viewingVersion}</div>
-                  </div>
-                  <button onClick={() => setViewingVersion(null)} className="sv-btn sv-btn--primary">
-                    返回最新版本 (v{doc.version})
-                  </button>
-                </div>
-                <div className="sv-doc__version-pills">
-                  {doc.history.map((h) => (
-                    <button
-                      key={h.version}
-                      onClick={() => setViewingVersion(h.version)}
-                      className="sv-version-pill"
-                      data-active={h.version === viewingVersion}
-                    >
-                      v{h.version} · {h.date}
-                    </button>
-                  ))}
-                </div>
-                <div className="sv-doc__body">
-                  <div className="sv-doc__body-meta">{viewingDoc?.summary ?? ""}</div>
-                  <div className="sv-doc__body-content sv-doc__body-content--faded">{doc.content}</div>
-                  <div className="sv-doc__body-note">
-                    注：历史版本内容为快照展示。完整版本差异对比请通过 AI 助手查询。
-                  </div>
-                </div>
+          {/* Layer toggle bar */}
+          {folder && (
+            <div className="sv-layer-bar">
+              <span className="sv-layer-bar__breadcrumb">{breadcrumb}</span>
+              <div className="sv-layer-toggle">
+                <button
+                  className={`sv-layer-btn ${activeLayer === "sop" ? "sv-layer-btn--active" : ""}`}
+                  onClick={() => { setActiveLayer("sop"); setGeneratePreview(null); }}
+                >
+                  {activeLayer === "sop" && <span className="sv-layer-btn__dot sv-layer-btn__dot--accent" />}
+                  规范文档
+                </button>
+                <button
+                  className={`sv-layer-btn ${activeLayer === "ai" ? "sv-layer-btn--ai-active" : ""}`}
+                  onClick={() => { setActiveLayer("ai"); setIsEditing(false); setViewingVersion(null); }}
+                >
+                  {activeLayer === "ai" && <span className="sv-layer-btn__dot sv-layer-btn__dot--white" />}
+                  AI 督导配置
+                </button>
               </div>
-            ) : folder && doc ? (
-              /* Normal document view */
-              <>
-                <div className="sv-doc__toolbar">
-                  <div>
-                    <div className="sv-doc__toolbar-name">{folder.name}</div>
-                    <div className="sv-doc__toolbar-meta">
-                      <span>{DOC_LABELS[selectedDoc]}</span>
-                      <span className="sv-tag sv-tag--ai">v{doc.version}</span>
-                      {doc.source === "ai_generated" && <span className="sv-tag sv-tag--ai">AI 生成</span>}
-                    </div>
-                  </div>
-                  <div className="sv-doc__toolbar-actions">
-                    {isEditing ? (
-                      <>
-                        <button onClick={handleSave} className="sv-btn sv-btn--primary">保存</button>
-                        <button
-                          onClick={() => { setIsEditing(false); setEditContent(doc.content); }}
-                          className="sv-btn sv-btn--muted"
-                        >
-                          取消
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => setViewingVersion(doc.history.length > 0 ? doc.history[0].version : doc.version)}
-                          className="sv-btn sv-btn--ai-outline"
-                        >
-                          v{doc.version} 历史
-                        </button>
-                        <button onClick={() => setIsEditing(true)} className="sv-btn sv-btn--accent-outline">
-                          编辑
-                        </button>
-                        <button
-                          onClick={() => {
-                            setConfirmModal({
-                              title: "删除文档",
-                              message:
-                                selectedDoc === "sop"
-                                  ? `确定要删除「${folder.name}」的 SOP 文档吗？删除后，督导要求和报告要求将无法对应到 SOP。`
-                                  : `确定要删除「${folder.name}」的「${DOC_LABELS[selectedDoc]}」文档吗？删除后可通过 AI 基于 SOP 重新生成。`,
-                              onConfirm: () => {
-                                setFolders((prev) =>
-                                  prev.map((ff) => {
-                                    if (ff.id !== folder.id) return ff;
-                                    const u = { ...ff };
-                                    u[selectedDoc] = null;
-                                    return u;
-                                  }),
-                                );
-                                setConfirmModal(null);
-                              },
-                            });
-                          }}
-                          className="sv-btn sv-btn--danger-outline"
-                        >
-                          删除文档
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="sv-doc__body">
-                  {isEditing ? (
-                    <textarea
-                      className="sv-doc__editor"
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                    />
-                  ) : (
-                    <div className="sv-doc__body-content">{doc.content}</div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="sv-doc__empty">在左侧目录中选择一个文件</div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* SOP Layer */}
+          {activeLayer === "sop" && (
+            <>
+              {viewingVersion !== null && sopDoc ? (
+                <SopVersionView
+                  folder={folder!}
+                  doc={sopDoc}
+                  viewingVersion={viewingVersion}
+                  onBack={() => setViewingVersion(null)}
+                  onSelectVersion={setViewingVersion}
+                />
+              ) : folder && sopDoc ? (
+                <SopDocView
+                  folder={folder}
+                  doc={sopDoc}
+                  isEditing={isEditing && editingDocType === "sop"}
+                  editContent={editContent}
+                  onEditContentChange={setEditContent}
+                  onStartEdit={() => { setIsEditing(true); setEditingDocType("sop"); setEditContent(sopDoc.content); }}
+                  onSave={() => handleSave("sop")}
+                  onCancelEdit={() => { setIsEditing(false); setEditingDocType(null); setEditContent(sopDoc.content); }}
+                  onViewHistory={() => setViewingVersion(sopDoc.history.length > 0 ? sopDoc.history[0].version : sopDoc.version)}
+                  onDelete={() => {
+                    setConfirmModal({
+                      title: "删除 SOP 文档",
+                      message: `确定要删除「${folder.name}」的 SOP 文档吗？删除后，督导要求和报告要求将无法对应到 SOP。`,
+                      danger: true,
+                      onConfirm: () => {
+                        setFolders((prev) =>
+                          prev.map((ff) => {
+                            if (ff.id !== folder.id) return ff;
+                            return { ...ff, sop: null };
+                          }),
+                        );
+                        setConfirmModal(null);
+                      },
+                    });
+                  }}
+                />
+              ) : folder ? (
+                <div className="sv-doc__empty">该规范尚未创建 SOP 文档</div>
+              ) : (
+                <div className="sv-doc__empty">在左侧目录中选择一个规范</div>
+              )}
+            </>
+          )}
+
+          {/* AI Config Layer */}
+          {activeLayer === "ai" && folder && (
+            <AiConfigView
+              folder={folder}
+              generatePreview={generatePreview}
+              onGenerate={handleGenerate}
+              onAcceptGenerate={handleAcceptGenerate}
+              onDiscardGenerate={handleDiscardGenerate}
+              isEditing={isEditing}
+              editingDocType={editingDocType}
+              editContent={editContent}
+              onStartEdit={(dt: "supervision" | "report") => {
+                const doc = folder[dt];
+                if (!doc) return;
+                setIsEditing(true);
+                setEditingDocType(dt);
+                setEditContent(doc.content);
+              }}
+              onSave={(dt: DocType) => handleSave(dt)}
+              onCancelEdit={() => { setIsEditing(false); setEditingDocType(null); }}
+              onEditContentChange={setEditContent}
+              aiViewingDoc={aiViewingDoc}
+              aiViewingVersion={aiViewingVersion}
+              onViewVersion={(dt, v) => { setAiViewingDoc(dt); setAiViewingVersion(v); }}
+              onBackFromVersion={() => { setAiViewingDoc(null); setAiViewingVersion(null); }}
+            />
+          )}
+
+          {activeLayer === "ai" && !folder && (
+            <div className="sv-doc__empty">在左侧目录中选择一个规范</div>
+          )}
+        </div>
 
         {/* Drag handle right */}
-        {copilotOpen && (
-          <div className="sv-drag-handle" onMouseDown={handleMouseDown("right")} />
-        )}
+        {copilotOpen && <div className="sv-drag-handle" onMouseDown={handleMouseDown("right")} />}
 
-        {/* RIGHT: Built-in SOP AI chat */}
-        <div
-          className="sv-chat"
-          data-visible={copilotOpen}
-          style={{
-            width: chatWidth,
-            flexShrink: 0,
-          }}
-        >
+        {/* RIGHT: Chat */}
+        <div className="sv-chat" data-visible={copilotOpen} style={{ width: chatWidth, flexShrink: 0 }}>
           <div className="sv-chat__hdr">
             <span className="sv-chat__hdr-title">AI 助手</span>
           </div>
@@ -603,12 +679,7 @@ function SOPContent() {
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSubmit(); } }}
               placeholder="输入指令..."
             />
-            <button
-              onClick={handleSubmit}
-              disabled={!input.trim()}
-              className="sv-chat__send-btn"
-              aria-label="发送"
-            >
+            <button onClick={handleSubmit} disabled={!input.trim()} className="sv-chat__send-btn" aria-label="发送">
               <SendIcon />
             </button>
           </div>
@@ -624,7 +695,9 @@ function SOPContent() {
             <div className="sv-modal__body">{confirmModal.message}</div>
             <div className="sv-modal__actions">
               <button onClick={() => setConfirmModal(null)} className="sv-btn sv-btn--muted">取消</button>
-              <button onClick={confirmModal.onConfirm} className="sv-btn sv-btn--danger">确认删除</button>
+              <button onClick={confirmModal.onConfirm} className={`sv-btn ${confirmModal.danger ? "sv-btn--danger" : "sv-btn--primary"}`}>
+                {confirmModal.confirmLabel ?? "确认删除"}
+              </button>
             </div>
           </div>
         </div>
@@ -632,6 +705,487 @@ function SOPContent() {
     </>
   );
 }
+
+/* ═══ SOP Doc View ═══ */
+
+function SopDocView({
+  folder, doc, isEditing, editContent, onEditContentChange,
+  onStartEdit, onSave, onCancelEdit, onViewHistory, onDelete,
+}: {
+  folder: StdFolder;
+  doc: StdDoc;
+  isEditing: boolean;
+  editContent: string;
+  onEditContentChange: (v: string) => void;
+  onStartEdit: () => void;
+  onSave: () => void;
+  onCancelEdit: () => void;
+  onViewHistory: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <>
+      <div className="sv-doc__toolbar">
+        <div>
+          <div className="sv-doc__toolbar-name">{folder.name} — SOP</div>
+          <div className="sv-doc__toolbar-meta">
+            <span>v{doc.version}</span>
+            <span>·</span>
+            <span>{doc.source === "manual" ? "手动录入" : "AI 生成"}</span>
+          </div>
+        </div>
+        <div className="sv-doc__toolbar-actions">
+          {isEditing ? (
+            <>
+              <button onClick={onSave} className="sv-btn sv-btn--primary">保存</button>
+              <button onClick={onCancelEdit} className="sv-btn sv-btn--muted">取消</button>
+            </>
+          ) : (
+            <>
+              <button onClick={onViewHistory} className="sv-btn sv-btn--ai-outline">v{doc.version} 历史</button>
+              <button onClick={onStartEdit} className="sv-btn sv-btn--accent-outline">编辑</button>
+              <button onClick={onDelete} className="sv-btn sv-btn--danger-outline">删除</button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="sv-doc__body">
+        {isEditing ? (
+          <textarea
+            className="sv-doc__editor"
+            value={editContent}
+            onChange={(e) => onEditContentChange(e.target.value)}
+          />
+        ) : (
+          <div className="sv-doc__body-content">{doc.content}</div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ═══ SOP Version View ═══ */
+
+function SopVersionView({
+  folder, doc, viewingVersion, onBack, onSelectVersion,
+}: {
+  folder: StdFolder;
+  doc: StdDoc;
+  viewingVersion: number;
+  onBack: () => void;
+  onSelectVersion: (v: number) => void;
+}) {
+  const historyEntry = doc.history.find((h) => h.version === viewingVersion);
+  return (
+    <div className="sv-doc__version-view">
+      <div className="sv-doc__version-header">
+        <div>
+          <div className="sv-doc__version-name">{folder.name} — SOP</div>
+          <div className="sv-doc__version-label">查看历史版本 v{viewingVersion}</div>
+        </div>
+        <button onClick={onBack} className="sv-btn sv-btn--primary">返回最新版本 (v{doc.version})</button>
+      </div>
+      <div className="sv-doc__version-pills">
+        {doc.history.map((h) => (
+          <button
+            key={h.version}
+            onClick={() => onSelectVersion(h.version)}
+            className="sv-version-pill"
+            data-active={h.version === viewingVersion}
+          >
+            v{h.version} · {h.date}
+          </button>
+        ))}
+      </div>
+      <div className="sv-doc__body">
+        <div className="sv-doc__body-meta">{historyEntry?.summary ?? ""}</div>
+        <div className="sv-doc__body-content sv-doc__body-content--faded">{doc.content}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ AI Config View ═══ */
+
+function AiConfigView({
+  folder, generatePreview, onGenerate, onAcceptGenerate, onDiscardGenerate,
+  isEditing, editingDocType, editContent, onStartEdit, onSave, onCancelEdit, onEditContentChange,
+  aiViewingDoc, aiViewingVersion, onViewVersion, onBackFromVersion,
+}: {
+  folder: StdFolder;
+  generatePreview: GeneratePreview | null;
+  onGenerate: (dt: "supervision" | "report") => void;
+  onAcceptGenerate: () => void;
+  onDiscardGenerate: () => void;
+  isEditing: boolean;
+  editingDocType: DocType | null;
+  editContent: string;
+  onStartEdit: (dt: "supervision" | "report") => void;
+  onSave: (dt: DocType) => void;
+  onCancelEdit: () => void;
+  onEditContentChange: (v: string) => void;
+  aiViewingDoc: "supervision" | "report" | null;
+  aiViewingVersion: number | null;
+  onViewVersion: (dt: "supervision" | "report", v: number) => void;
+  onBackFromVersion: () => void;
+}) {
+  const sopDoc = folder.sop;
+  const svDoc = folder.supervision;
+  const rpDoc = folder.report;
+
+  return (
+    <div className="sv-ai-layer">
+      {/* Banner */}
+      <div className="sv-ai-banner">
+        <div className="sv-ai-banner__text">
+          以下配置用于 <strong>AI 督导系统</strong>（ASR + LLM + TTS 架构）。
+          「服务中督导要求」指导实时语音分析；「服务后报告要求」指导自动报告生成。
+          修改将直接影响 AI 对服务过程的判断逻辑，建议由技术专家审核后发布。
+        </div>
+      </div>
+
+      {/* Two cards */}
+      <div className="sv-ai-grid">
+        <AiDocCard
+          title="服务中实时督导要求"
+          docType="supervision"
+          doc={svDoc}
+          sopDoc={sopDoc}
+          generatePreview={generatePreview?.docType === "supervision" ? generatePreview : null}
+          onGenerate={() => onGenerate("supervision")}
+          onAcceptGenerate={onAcceptGenerate}
+          onDiscardGenerate={onDiscardGenerate}
+          isEditing={isEditing && editingDocType === "supervision"}
+          editContent={editContent}
+          onStartEdit={() => onStartEdit("supervision")}
+          onSave={() => onSave("supervision")}
+          onCancelEdit={onCancelEdit}
+          onEditContentChange={onEditContentChange}
+          viewingVersion={aiViewingDoc === "supervision" ? aiViewingVersion : null}
+          onViewVersion={(v) => onViewVersion("supervision", v)}
+          onBackFromVersion={onBackFromVersion}
+        />
+        <AiDocCard
+          title="服务后报告要求"
+          docType="report"
+          doc={rpDoc}
+          sopDoc={sopDoc}
+          generatePreview={generatePreview?.docType === "report" ? generatePreview : null}
+          onGenerate={() => onGenerate("report")}
+          onAcceptGenerate={onAcceptGenerate}
+          onDiscardGenerate={onDiscardGenerate}
+          isEditing={isEditing && editingDocType === "report"}
+          editContent={editContent}
+          onStartEdit={() => onStartEdit("report")}
+          onSave={() => onSave("report")}
+          onCancelEdit={onCancelEdit}
+          onEditContentChange={onEditContentChange}
+          viewingVersion={aiViewingDoc === "report" ? aiViewingVersion : null}
+          onViewVersion={(v) => onViewVersion("report", v)}
+          onBackFromVersion={onBackFromVersion}
+        />
+      </div>
+
+      {/* SOP reference */}
+      {sopDoc && <SopReference doc={sopDoc} />}
+    </div>
+  );
+}
+
+function AiDocCard({
+  title, docType, doc, sopDoc, generatePreview,
+  onGenerate, onAcceptGenerate, onDiscardGenerate,
+  isEditing, editContent, onStartEdit, onSave, onCancelEdit, onEditContentChange,
+  viewingVersion, onViewVersion, onBackFromVersion,
+}: {
+  title: string;
+  docType: "supervision" | "report";
+  doc: StdDoc | null;
+  sopDoc: StdDoc | null;
+  generatePreview: GeneratePreview | null;
+  onGenerate: () => void;
+  onAcceptGenerate: () => void;
+  onDiscardGenerate: () => void;
+  isEditing: boolean;
+  editContent: string;
+  onStartEdit: () => void;
+  onSave: () => void;
+  onCancelEdit: () => void;
+  onEditContentChange: (v: string) => void;
+  viewingVersion: number | null;
+  onViewVersion: (v: number) => void;
+  onBackFromVersion: () => void;
+}) {
+  // Version history view
+  if (viewingVersion !== null && doc) {
+    const historyEntry = doc.history.find((h) => h.version === viewingVersion);
+    return (
+      <div className="sv-ai-card">
+        <div className="sv-ai-card__header">
+          <div className="sv-ai-card__title">{title}</div>
+          <button onClick={onBackFromVersion} className="sv-btn sv-btn--muted sv-btn--sm">
+            返回最新
+          </button>
+        </div>
+        <div className="sv-ai-card__version-pills">
+          {doc.history.map((h) => (
+            <button
+              key={h.version}
+              onClick={() => onViewVersion(h.version)}
+              className="sv-version-pill"
+              data-active={h.version === viewingVersion}
+            >
+              v{h.version} · {h.date}
+            </button>
+          ))}
+        </div>
+        <div className="sv-ai-card__body">
+          <div className="sv-doc__body-meta">{historyEntry?.summary ?? ""}</div>
+          <div className="sv-ai-card__prompt sv-ai-card__prompt--faded">{doc.content}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Generate preview view
+  if (generatePreview) {
+    return (
+      <div className="sv-ai-card sv-ai-card--preview">
+        <div className="sv-ai-card__header">
+          <div className="sv-ai-card__title">
+            {title}
+            <span className="sv-ai-tag sv-ai-tag--preview">
+              {generatePreview.status === "generating" ? "生成中..." : "待确认"}
+            </span>
+          </div>
+        </div>
+        <div className="sv-ai-card__body">
+          {generatePreview.status === "generating" ? (
+            <div className="sv-ai-card__loading">
+              <div className="sv-typing">
+                <span className="sv-typing__dot" />
+                <span className="sv-typing__dot" style={{ animationDelay: "150ms" }} />
+                <span className="sv-typing__dot" style={{ animationDelay: "300ms" }} />
+              </div>
+              <span>AI 正在基于 SOP v{generatePreview.basedOnSopVersion} 生成...</span>
+            </div>
+          ) : (
+            <div className="sv-ai-card__prompt">{generatePreview.content}</div>
+          )}
+        </div>
+        {generatePreview.status === "preview" && (
+          <div className="sv-ai-card__footer">
+            <span className="sv-ai-card__footer-meta">基于 SOP v{generatePreview.basedOnSopVersion} 生成</span>
+            <div className="sv-ai-card__footer-actions">
+              <button onClick={onDiscardGenerate} className="sv-btn sv-btn--muted">放弃</button>
+              <button onClick={onAcceptGenerate} className="sv-btn sv-btn--primary">采用此版本</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Normal view
+  return (
+    <div className="sv-ai-card">
+      <div className="sv-ai-card__header">
+        <div className="sv-ai-card__title">
+          {title}
+          {doc && doc.source === "ai_generated" && <span className="sv-ai-tag">AI 生成</span>}
+        </div>
+        {doc && <span className="sv-ai-card__version">v{doc.version}</span>}
+      </div>
+      <div className="sv-ai-card__body">
+        {doc ? (
+          isEditing ? (
+            <textarea
+              className="sv-doc__editor"
+              value={editContent}
+              onChange={(e) => onEditContentChange(e.target.value)}
+            />
+          ) : (
+            <div className="sv-ai-card__prompt">{doc.content}</div>
+          )
+        ) : (
+          <div className="sv-ai-card__empty">
+            {sopDoc ? "尚未生成，点击下方按钮基于 SOP 生成" : "请先创建 SOP 文档"}
+          </div>
+        )}
+      </div>
+      <div className="sv-ai-card__footer">
+        <span className="sv-ai-card__footer-meta">
+          {doc ? `v${doc.version} · ${doc.source === "ai_generated" ? "AI 生成" : "手动编辑"}` : ""}
+        </span>
+        <div className="sv-ai-card__footer-actions">
+          {isEditing ? (
+            <>
+              <button onClick={onCancelEdit} className="sv-btn sv-btn--muted">取消</button>
+              <button onClick={onSave} className="sv-btn sv-btn--primary">保存</button>
+            </>
+          ) : (
+            <>
+              {doc && doc.history.length > 0 && (
+                <button onClick={() => onViewVersion(doc.history[0].version)} className="sv-btn sv-btn--ai-outline sv-btn--sm">
+                  v{doc.version} 历史
+                </button>
+              )}
+              {doc && <button onClick={onStartEdit} className="sv-btn sv-btn--muted">编辑</button>}
+              {sopDoc && (
+                <button onClick={onGenerate} className="sv-btn sv-btn--ai-outline">
+                  {doc ? "重新生成" : "生成"}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SopReference({ doc }: { doc: StdDoc }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="sv-sop-ref">
+      <button className="sv-sop-ref__header" onClick={() => setOpen(!open)}>
+        <span>参考：当前 SOP 文档 (v{doc.version})</span>
+        <span className="sv-sop-ref__hint">{open ? "收起" : "展开"}</span>
+      </button>
+      {open && (
+        <div className="sv-sop-ref__body">
+          {doc.content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══ Directory ═══ */
+
+function DirectorySection({
+  title, folders, collapsed, onToggleCollapse, selectedFolder, onSelect, onAdd, onFolderAction,
+}: {
+  title: string;
+  folders: StdFolder[];
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  selectedFolder: string;
+  onSelect: (folderId: string) => void;
+  onAdd: () => void;
+  onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
+}) {
+  return (
+    <div className="sv-dir-section">
+      <button onClick={onToggleCollapse} className="sv-dir-section__header">
+        <div className="sv-dir-section__header-left">
+          <span className={`sv-dir-section__chevron ${collapsed ? "" : "sv-dir-section__chevron--open"}`}>
+            <ChevronRightIcon />
+          </span>
+          <span className="sv-dir-section__title">{title}</span>
+        </div>
+        <span className="sv-dir-section__count">{folders.length}</span>
+      </button>
+      {!collapsed && (
+        <div className="sv-dir-section__list">
+          {folders.map((f) => (
+            <FolderItem
+              key={f.id}
+              folder={f}
+              isSelected={f.id === selectedFolder}
+              onSelect={() => onSelect(f.id)}
+              onFolderAction={onFolderAction}
+            />
+          ))}
+          <button onClick={onAdd} className="sv-dir-section__add-btn">
+            <PlusIcon />
+            添加{title}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FolderItem({
+  folder, isSelected, onSelect, onFolderAction,
+}: {
+  folder: StdFolder;
+  isSelected: boolean;
+  onSelect: () => void;
+  onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameName, setRenameName] = useState(folder.name);
+  const status = getFolderStatus(folder);
+
+  return (
+    <div className="sv-folder">
+      <div className="sv-folder__row">
+        <button
+          onClick={onSelect}
+          className={`sv-folder__btn ${isSelected ? "sv-folder__btn--selected" : ""}`}
+        >
+          {renaming ? (
+            <input
+              autoFocus
+              className="sv-folder__rename-input"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameName.trim()) {
+                  onFolderAction("rename_confirm", folder, renameName.trim());
+                  setRenaming(false);
+                }
+                if (e.key === "Escape") setRenaming(false);
+              }}
+              onBlur={() => setRenaming(false)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className={`sv-folder__name ${isSelected ? "sv-folder__name--selected" : ""}`}>
+              {folder.name}
+            </span>
+          )}
+          <span className={`sv-folder-status sv-folder-status--${status}`}>
+            {STATUS_LABELS[status]}
+          </span>
+        </button>
+        <div className="sv-folder__menu-anchor">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="sv-folder__menu-trigger"
+            aria-label="更多操作"
+          >
+            <DotsIcon />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="sv-folder__menu-backdrop" onClick={() => setMenuOpen(false)} />
+              <div className="sv-folder__menu">
+                <button
+                  onClick={() => { setMenuOpen(false); setRenaming(true); setRenameName(folder.name); }}
+                  className="sv-folder__menu-item"
+                >
+                  重命名
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onFolderAction("delete", folder); }}
+                  className="sv-folder__menu-item sv-folder__menu-item--danger"
+                >
+                  删除
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ SupervisorPage (standalone) ═══ */
 
 export function SupervisorPage() {
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -671,165 +1225,6 @@ export function SupervisorPage() {
   );
 }
 
-/* ── DirectorySection ── */
-
-function DirectorySection({
-  title, folders, collapsed, onToggleCollapse, selectedFolder, selectedDoc, onSelect, onAdd, onFolderAction,
-}: {
-  title: string;
-  folders: StdFolder[];
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-  selectedFolder: string;
-  selectedDoc: DocType;
-  onSelect: (folderId: string, docType: DocType) => void;
-  onAdd: () => void;
-  onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
-}) {
-  return (
-    <div className="sv-dir-section">
-      <button onClick={onToggleCollapse} className="sv-dir-section__header">
-        <div className="sv-dir-section__header-left">
-          <span className={`sv-dir-section__chevron ${collapsed ? "" : "sv-dir-section__chevron--open"}`}>
-            <ChevronRightIcon />
-          </span>
-          <span className="sv-dir-section__title">{title}</span>
-        </div>
-        <span className="sv-dir-section__count">{folders.length}</span>
-      </button>
-      {!collapsed && (
-        <div className="sv-dir-section__list">
-          {folders.map((f) => (
-            <FolderTreeItem
-              key={f.id}
-              folder={f}
-              selectedFolder={selectedFolder}
-              selectedDoc={selectedDoc}
-              onSelect={onSelect}
-              onFolderAction={onFolderAction}
-            />
-          ))}
-          <button onClick={onAdd} className="sv-dir-section__add-btn">
-            <PlusIcon />
-            添加{title}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── FolderTreeItem ── */
-
-function FolderTreeItem({
-  folder, selectedFolder, selectedDoc, onSelect, onFolderAction,
-}: {
-  folder: StdFolder;
-  selectedFolder: string;
-  selectedDoc: DocType;
-  onSelect: (folderId: string, docType: DocType) => void;
-  onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
-}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [renameName, setRenameName] = useState(folder.name);
-  const [expanded, setExpanded] = useState(folder.id === selectedFolder);
-  const isSelected = folder.id === selectedFolder;
-
-  return (
-    <div className="sv-folder">
-      <div className="sv-folder__row">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className={`sv-folder__btn ${isSelected ? "sv-folder__btn--selected" : ""}`}
-        >
-          <span className={`sv-folder__chevron ${expanded ? "sv-folder__chevron--open" : ""}`}>
-            <ChevronRightSmIcon />
-          </span>
-          <span className="sv-folder__icon">{expanded ? "📂" : "📁"}</span>
-          {renaming ? (
-            <input
-              autoFocus
-              className="sv-folder__rename-input"
-              value={renameName}
-              onChange={(e) => setRenameName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && renameName.trim()) {
-                  onFolderAction("rename_confirm", folder, renameName.trim());
-                  setRenaming(false);
-                }
-                if (e.key === "Escape") setRenaming(false);
-              }}
-              onBlur={() => setRenaming(false)}
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <span className={`sv-folder__name ${isSelected ? "sv-folder__name--selected" : ""}`}>
-              {folder.name}
-            </span>
-          )}
-        </button>
-        <div className="sv-folder__menu-anchor">
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-            className="sv-folder__menu-trigger"
-            aria-label="更多操作"
-          >
-            <DotsIcon />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="sv-folder__menu-backdrop" onClick={() => setMenuOpen(false)} />
-              <div className="sv-folder__menu">
-                <button
-                  onClick={() => { setMenuOpen(false); setRenaming(true); setRenameName(folder.name); }}
-                  className="sv-folder__menu-item"
-                >
-                  重命名
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onFolderAction("delete", folder); }}
-                  className="sv-folder__menu-item sv-folder__menu-item--danger"
-                >
-                  删除
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      {expanded && (
-        <div className="sv-folder__children">
-          {(["sop", "supervision", "report"] as DocType[]).map((dt) => {
-            const d = folder[dt];
-            const isSel = isSelected && selectedDoc === dt;
-            return (
-              <button
-                key={dt}
-                onClick={() => onSelect(folder.id, dt)}
-                className={`sv-folder__file ${isSel ? "sv-folder__file--selected" : ""}`}
-              >
-                <span className="sv-folder__file-icon">{"📄"}</span>
-                <span className={`sv-folder__file-name ${isSel ? "sv-folder__file-name--selected" : ""}`}>
-                  {DOC_LABELS[dt]}
-                </span>
-                {d ? (
-                  <>
-                    <span className="sv-folder__file-version">v{d.version}</span>
-                    <span className={`sv-folder__file-dot sv-folder__file-dot--${d.status === "complete" ? "ok" : "warn"}`} />
-                  </>
-                ) : (
-                  <span className="sv-folder__file-dot sv-folder__file-dot--empty" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Small components ── */
 
 function AiAvatar() {
@@ -855,16 +1250,13 @@ function RenderContent({ content }: { content: string }) {
   );
 }
 
-/* ── Inline SVG icons (no external deps) ── */
+/* ── Inline SVG icons ── */
 
 function ChevronLeftIcon() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>;
 }
 function ChevronRightIcon() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>;
-}
-function ChevronRightSmIcon() {
-  return <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>;
 }
 function DocIcon() {
   return <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
