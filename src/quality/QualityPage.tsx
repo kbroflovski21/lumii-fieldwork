@@ -286,10 +286,11 @@ function SitesView() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
   const [detailSite, setDetailSite] = useState<SiteData | null>(null);
+  const [editingSite, setEditingSite] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ site: SiteData } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
-  const [operatorTarget, setOperatorTarget] = useState<SiteData | null>(null);
+  const [search, setSearch] = useState("");
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
@@ -316,6 +317,12 @@ function SitesView() {
     setConfirmSubmitting(false);
   };
 
+  const filteredSites = sites.filter(s => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return s.name.toLowerCase().includes(q) || s.address.toLowerCase().includes(q) || s.contactName.toLowerCase().includes(q);
+  });
+
   return (
     <>
       {toast && <div className="quality-toast">{toast}</div>}
@@ -329,24 +336,29 @@ function SitesView() {
       </div>
 
       <div className="quality-table-wrap">
+        <div className="quality-toolbar">
+          <div className="quality-toolbar__search-wrap">
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索站点名称、地址、联系人..." className="quality-toolbar__search" />
+          </div>
+          <div className="quality-toolbar__spacer" />
+        </div>
         {loading ? (
           <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
         ) : (
           <table className="quality-records-table">
             <thead><tr>{["站点名称", "地址", "联系人", "联系电话", "运营人员", "操作"].map(h => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>
-              {sites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
-              {sites.map(s => (
-                <tr key={s.id} onDoubleClick={() => setDetailSite(s)} style={{ cursor: "pointer" }}>
-                  <td><a className="quality-users__link" onClick={e => { e.preventDefault(); setDetailSite(s); }} href="#">{s.name}</a></td>
+              {filteredSites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
+              {filteredSites.map(s => (
+                <tr key={s.id} onDoubleClick={() => { setEditingSite(false); setDetailSite(s); }} style={{ cursor: "pointer" }}>
+                  <td><a className="quality-users__link" onClick={e => { e.preventDefault(); setEditingSite(false); setDetailSite(s); }} href="#">{s.name}</a></td>
                   <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.address || "—"}</td>
                   <td>{s.contactName || "—"}</td>
                   <td>{s.contactPhone || "—"}</td>
                   <td>{s.operators.length > 0 ? s.operators.map(o => o.name).join("、") : <span style={{ color: "var(--quality-text-muted)" }}>未分配</span>}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setDetailSite(s); }}>编辑</button>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setOperatorTarget(s); }}>分配人员</button>
+                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setEditingSite(true); setDetailSite(s); }}>编辑</button>
                       <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setConfirmAction({ site: s }); }}>删除</button>
                     </div>
                   </td>
@@ -358,20 +370,15 @@ function SitesView() {
       </div>
 
       {detailSite && (
-        <SiteDetailModal site={detailSite} token={token!} onClose={() => setDetailSite(null)}
+        <SiteDetailModal site={detailSite} token={token!} onClose={() => { setDetailSite(null); setEditingSite(false); }}
           onSaved={() => { fetchSites(); showToast("站点信息已更新"); }}
-          onDelete={s => setConfirmAction({ site: s })} />
+          onDelete={s => setConfirmAction({ site: s })}
+          initialEditing={editingSite} />
       )}
 
       {showCreate && (
         <SiteCreateModal token={token!} onClose={() => setShowCreate(false)}
           onCreated={() => { fetchSites(); showToast("站点创建成功"); setShowCreate(false); }} />
-      )}
-
-      {operatorTarget && (
-        <OperatorAssignModal site={operatorTarget} token={token!}
-          onClose={() => setOperatorTarget(null)}
-          onSaved={() => { fetchSites(); showToast("人员分配已更新"); setOperatorTarget(null); }} />
       )}
 
       {confirmAction && (
@@ -382,11 +389,11 @@ function SitesView() {
   );
 }
 
-function SiteDetailModal({ site, token, onClose, onSaved, onDelete }: {
-  site: SiteData; token: string; onClose: () => void; onSaved: () => void; onDelete: (s: SiteData) => void;
+function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditing = false }: {
+  site: SiteData; token: string; onClose: () => void; onSaved: () => void; onDelete: (s: SiteData) => void; initialEditing?: boolean;
 }) {
   useEscClose(onClose);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [name, setName] = useState(site.name);
   const [address, setAddress] = useState(site.address);
   const [contactName, setContactName] = useState(site.contactName);
@@ -394,7 +401,35 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete }: {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setEditing(false); setError(""); }, [site]);
+  /* Inline operator assignment */
+  const [allOperators, setAllOperators] = useState<Array<{ id: string; username: string; name: string }>>([]);
+  const [selectedOps, setSelectedOps] = useState<Set<string>>(new Set(site.operators.map(o => o.id)));
+  const [opsLoading, setOpsLoading] = useState(false);
+
+  useEffect(() => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setEditing(initialEditing); setError(""); setSelectedOps(new Set(site.operators.map(o => o.id))); }, [site, initialEditing]);
+
+  useEffect(() => {
+    if (!editing) return;
+    setOpsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setAllOperators(data.users.filter((u: any) => u.role === "site_operator"));
+        }
+      } catch { /* ignore */ }
+      setOpsLoading(false);
+    })();
+  }, [editing, token]);
+
+  const toggleOp = (id: string) => {
+    setSelectedOps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleSave = async () => {
     if (!name.trim()) { setError("站点名称不能为空"); return; }
@@ -404,12 +439,18 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete }: {
         method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: name.trim(), address: address.trim(), contactName: contactName.trim(), contactPhone: contactPhone.trim() }),
       });
-      if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); } else { onSaved(); setEditing(false); }
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "更新失败"); setSubmitting(false); return; }
+      /* Save operator assignments */
+      await fetch(`/api/admin/sites/${site.id}/operators`, {
+        method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userIds: [...selectedOps] }),
+      });
+      onSaved(); setEditing(false);
     } catch { setError("网络错误"); }
     setSubmitting(false);
   };
 
-  const handleCancel = () => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setEditing(false); setError(""); };
+  const handleCancel = () => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setSelectedOps(new Set(site.operators.map(o => o.id))); setEditing(false); setError(""); };
 
   return (
     <>
@@ -431,7 +472,28 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete }: {
             <dl className="so-overview-item"><dt>联系人</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactName} onChange={e => setContactName(e.target.value)} /> : (site.contactName || "—")}</dd></dl>
             <dl className="so-overview-item"><dt>联系电话</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /> : (site.contactPhone || "—")}</dd></dl>
             <dl className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={address} onChange={e => setAddress(e.target.value)} /> : (site.address || "—")}</dd></dl>
-            <dl className="so-overview-item so-overview-item--full"><dt>运营人员</dt><dd>{site.operators.length > 0 ? site.operators.map(o => `${o.name} (${o.username})`).join("、") : "未分配"}</dd></dl>
+            <dl className="so-overview-item so-overview-item--full">
+              <dt>运营人员</dt>
+              <dd>
+                {editing ? (
+                  opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {allOperators.map(op => (
+                        <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                          <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
+                            <div style={{ fontSize: 12, color: "#64748B" }}>{op.username}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  site.operators.length > 0 ? site.operators.map(o => `${o.name} (${o.username})`).join("、") : "未分配"
+                )}
+              </dd>
+            </dl>
           </div>
         </div>
         <div className="quality-user-modal__footer">
@@ -616,10 +678,13 @@ function UsersView() {
   const [toast, setToast] = useState("");
 
   const [detailUser, setDetailUser] = useState<QualityUser | null>(null);
+  const [initialEditing, setInitialEditing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -639,8 +704,8 @@ function UsersView() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const openDetail = (u: QualityUser) => setDetailUser(u);
-  const closeDetail = () => setDetailUser(null);
+  const openDetail = (u: QualityUser, editMode = false) => { setInitialEditing(editMode); setDetailUser(u); };
+  const closeDetail = () => { setDetailUser(null); setInitialEditing(false); };
 
   const handleConfirm = async () => {
     if (!confirmAction) return;
@@ -668,6 +733,15 @@ function UsersView() {
     setConfirmSubmitting(false);
   };
 
+  const ROLE_FILTER_MAP: Record<string, string> = { "集团管理": "org_admin", "站点运营": "site_operator", "护理员": "careworker" };
+
+  const filteredUsers = users.filter(u => {
+    if (roleFilter && u.role !== ROLE_FILTER_MAP[roleFilter]) return false;
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+  });
+
   return (
     <>
       {toast && <div className="quality-toast">{toast}</div>}
@@ -681,22 +755,34 @@ function UsersView() {
       </div>
 
       <div className="quality-table-wrap">
+        <div className="quality-toolbar">
+          <div className="quality-toolbar__search-wrap">
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索用户名、姓名..." className="quality-toolbar__search" />
+          </div>
+          <div className="quality-toolbar__spacer" />
+          <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+            <option value="">全部角色</option>
+            <option value="集团管理">集团管理</option>
+            <option value="站点运营">站点运营</option>
+            <option value="护理员">护理员</option>
+          </select>
+        </div>
         {loading ? (
           <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
         ) : (
           <table className="quality-records-table">
             <thead>
               <tr>
-                {["用户名", "姓名", "角色", "手机号", "状态", "操作"].map(h => (
+                {["用户名", "姓名", "手机号", "角色", "状态", "操作"].map(h => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
               )}
-              {users.map(u => (
+              {filteredUsers.map(u => (
                 <tr key={u.id} onDoubleClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
                   <td>
                     <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openDetail(u); }} href="#">
@@ -704,8 +790,8 @@ function UsersView() {
                     </a>
                   </td>
                   <td className="quality-records-table__worker">{u.name}</td>
-                  <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
                   <td>{u.phone || "—"}</td>
+                  <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
                   <td>
                     <span className={`quality-status-badge quality-status-badge--${u.status === "active" ? "normal" : "anomaly"}`}>
                       {u.status === "active" ? "正常" : "已禁用"}
@@ -713,7 +799,7 @@ function UsersView() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openDetail(u); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openDetail(u, true); }}>编辑</button>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setResetTarget(u); }}>重置密码</button>
                       <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
                     </div>
@@ -734,6 +820,7 @@ function UsersView() {
           onSaved={() => { fetchUsers(); showToast("用户信息已更新"); }}
           onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
           onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
+          initialEditing={initialEditing}
         />
       )}
 
@@ -794,18 +881,18 @@ function useEscClose(onClose: () => void) {
   }, [onClose]);
 }
 
-function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete }: {
+function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, initialEditing = false }: {
   user: QualityUser; token: string; onClose: () => void; onSaved: () => void;
-  onToggle: (u: QualityUser) => void; onDelete: (u: QualityUser) => void;
+  onToggle: (u: QualityUser) => void; onDelete: (u: QualityUser) => void; initialEditing?: boolean;
 }) {
   useEscClose(onClose);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { setName(user.name); setPhone(user.phone); setEditing(false); setError(""); }, [user]);
+  useEffect(() => { setName(user.name); setPhone(user.phone); setEditing(initialEditing); setError(""); }, [user, initialEditing]);
 
   const handleSave = async () => {
     if (!name.trim()) { setError("姓名不能为空"); return; }
@@ -841,8 +928,8 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete }: 
           <div className="so-overview-grid">
             <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
             <dl className="so-overview-item"><dt>姓名</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : user.name}</dd></dl>
-            <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
             <dl className="so-overview-item"><dt>手机号</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /> : (user.phone || "—")}</dd></dl>
+            <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
             <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
             <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
           </div>
