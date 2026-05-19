@@ -96,6 +96,10 @@ export function SocialWorkersArea({ resource, onMutate }: { resource: Resource<S
     setDrawer({ kind: "closed" });
   }, [onMutate]);
 
+  const handleWorkerRefresh = useCallback(() => {
+    onMutate?.();
+  }, [onMutate]);
+
   const filtered = workers.filter((w) => {
     if (statusFilter && w.status !== statusFilter) return false;
     if (badgeFilter === "bound" && !w.preferredBadge) return false;
@@ -189,6 +193,7 @@ export function SocialWorkersArea({ resource, onMutate }: { resource: Resource<S
               onView={(worker) => setDrawer({ kind: "view", worker })}
               onWorkerCreated={handleWorkerCreated}
               onWorkerUpdated={handleWorkerUpdated}
+              onWorkerRefresh={handleWorkerRefresh}
             />
           </>
         ) : null}
@@ -437,7 +442,8 @@ function WorkerDrawer({
   onEdit,
   onView,
   onWorkerCreated,
-  onWorkerUpdated
+  onWorkerUpdated,
+  onWorkerRefresh
 }: {
   drawer: Exclude<DrawerMode, { kind: "closed" }>;
   mutationsDisabled: boolean;
@@ -446,8 +452,9 @@ function WorkerDrawer({
   onView: (worker: SocialWorker) => void;
   onWorkerCreated: () => void;
   onWorkerUpdated: () => void;
+  onWorkerRefresh: () => void;
 }) {
-  if (drawer.kind === "view") return <ViewModal mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.worker)} onMutate={onWorkerUpdated} worker={drawer.worker} />;
+  if (drawer.kind === "view") return <ViewModal mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.worker)} onMutate={onWorkerRefresh} worker={drawer.worker} />;
   if (drawer.kind === "edit") return <EditModal onCancel={() => onView(drawer.worker)} onClose={onClose} onSaved={onWorkerUpdated} worker={drawer.worker} />;
   return <CreateModal onClose={onClose} onCreated={onWorkerCreated} />;
 }
@@ -482,7 +489,18 @@ function ViewModal({
   const color = avatarColor(worker.name);
 
   const copyText = (text: string) => {
-    navigator.clipboard.writeText(text);
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch {
+      navigator.clipboard?.writeText(text);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -567,9 +585,9 @@ function ViewModal({
         {activeTab === "overview" && (
           <>
             <div className="so-tab-section">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
-                {!editingBasic && <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={mutationsDisabled} onClick={() => { setEditName(worker.name); setEditPhone(worker.phone); setEditQual(worker.qualificationLabels.join("、")); setEditingBasic(true); }} type="button">编辑</button>}
+                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(worker.name); setEditPhone(worker.phone); setEditQual(worker.qualificationLabels.join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
               <dl className="so-overview-grid" style={{ marginTop: 10 }}>
                 <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : worker.name}</dd></div>
@@ -586,69 +604,69 @@ function ViewModal({
             </div>
 
             <div className="so-tab-section">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>常用工牌</h4>
-                {!showBadgeSelect && <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={mutationsDisabled} onClick={() => setShowBadgeSelect(true)} type="button">更换</button>}
+                {!showBadgeSelect && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => setShowBadgeSelect(true)} type="button" title="更换工牌"><Edit3 size={14} /></button>}
               </div>
-              {showBadgeSelect ? (
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
-                  <select style={{ flex: 1, height: 36, borderRadius: 8, border: "1px solid #E5E7EB", padding: "0 10px", fontSize: 13 }} value={selectedBadge} onChange={e => setSelectedBadge(e.target.value)}>
-                    <option value="">无（取消绑定）</option>
-                    <option value="badge-021">FW-021</option>
-                    <option value="badge-026">FW-026</option>
-                    <option value="badge-030">FW-030</option>
-                    <option value="badge-031">FW-031</option>
-                    <option value="badge-032">FW-032</option>
-                    <option value="badge-033">FW-033</option>
-                  </select>
-                  <button className="sw-btn sw-btn--primary" style={{ height: 36, fontSize: 12 }} onClick={async () => {
-                    try { await siteOperationsApi.updateSocialWorkerBadgeBinding(worker.id, { preferredBadgeId: selectedBadge || undefined }); } catch {}
-                    setShowBadgeSelect(false);
-                    onMutate?.();
-                  }} type="button">确认</button>
-                  <button className="sw-btn sw-btn--secondary" style={{ height: 36, fontSize: 12 }} onClick={() => setShowBadgeSelect(false)} type="button">取消</button>
-                </div>
-              ) : worker.preferredBadge ? (
-                <dl className="so-overview-grid" style={{ marginTop: 10 }}>
-                  <div className="so-overview-item"><dt>设备编号</dt><dd>{worker.preferredBadge.deviceCode}</dd></div>
-                  <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(worker.preferredBadge.status)}>{statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}</span></dd></div>
-                  <div className="so-overview-item"><dt>最近同步</dt><dd>{worker.preferredBadge.lastSyncAt ? formatSyncTime(worker.preferredBadge.lastSyncAt) : "—"}</dd></div>
-                </dl>
-              ) : (
-                <p className="sw-text-muted" style={{ marginTop: 10 }}>未绑定常用工牌</p>
-              )}
+              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
+                <div className="so-overview-item"><dt>设备编号</dt><dd>
+                  {showBadgeSelect ? (
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)" }} value={selectedBadge} onChange={e => setSelectedBadge(e.target.value)}>
+                        <option value="">无</option>
+                        <option value="badge-021">FW-021</option>
+                        <option value="badge-026">FW-026</option>
+                        <option value="badge-030">FW-030</option>
+                        <option value="badge-031">FW-031</option>
+                        <option value="badge-032">FW-032</option>
+                        <option value="badge-033">FW-033</option>
+                      </select>
+                      <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
+                        try { await siteOperationsApi.updateSocialWorkerBadgeBinding(worker.id, { preferredBadgeId: selectedBadge || undefined }); } catch {}
+                        setShowBadgeSelect(false);
+                        onMutate?.();
+                      }} type="button">确认</button>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => setShowBadgeSelect(false)} type="button">取消</button>
+                    </div>
+                  ) : (worker.preferredBadge?.deviceCode ?? "—")}
+                </dd></div>
+                {!showBadgeSelect && worker.preferredBadge && (
+                  <>
+                    <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(worker.preferredBadge.status)}>{statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}</span></dd></div>
+                    <div className="so-overview-item"><dt>最近同步</dt><dd>{worker.preferredBadge.lastSyncAt ? formatSyncTime(worker.preferredBadge.lastSyncAt) : "—"}</dd></div>
+                  </>
+                )}
+              </dl>
             </div>
 
             <div className="so-tab-section">
               <h4 className="so-tab-section-title">登录账号</h4>
               {worker.account ? (
-                <>
-                  <dl className="so-overview-grid">
-                    <div className="so-overview-item"><dt>账号</dt><dd><strong>{worker.account.username}</strong></dd></div>
-                    <div className="so-overview-item"><dt>状态</dt><dd>
-                      {worker.account.mustChangePassword
-                        ? (worker.account.initialPassword ? <span style={{ color: "#D97706" }}>待激活</span> : <span style={{ color: "#EA580C" }}>待修改密码</span>)
-                        : <span style={{ color: "#16A34A" }}>已激活</span>}
-                    </dd></div>
-                    <div className="so-overview-item"><dt></dt><dd>
+                <dl className="so-overview-grid">
+                  <div className="so-overview-item"><dt>账号</dt><dd><strong>{worker.account.username}</strong></dd></div>
+                  <div className="so-overview-item"><dt>状态</dt><dd>
+                    {worker.account.mustChangePassword
+                      ? (worker.account.initialPassword ? <span style={{ color: "#D97706" }}>待激活</span> : <span style={{ color: "#EA580C" }}>待修改密码</span>)
+                      : <span style={{ color: "#16A34A" }}>已激活</span>}
+                  </dd></div>
+                  <div className="so-overview-item"><dt></dt><dd>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} disabled={resetPwdLoading} onClick={handleResetPassword} type="button">{resetPwdLoading ? "重置中..." : "重置密码"}</button>
-                    </dd></div>
-                  </dl>
-                  {worker.account.mustChangePassword && worker.account.initialPassword && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                      <span style={{ fontSize: 12, color: "#64748B" }}>默认密码:</span>
-                      <code style={{ fontFamily: "monospace", fontSize: 14 }}>{worker.account.initialPassword}</code>
-                      <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button" onClick={() => copyText(worker.account!.initialPassword!)}>{copied ? "已复制" : "复制"}</button>
-                    </div>
-                  )}
-                  {resetPwdResult && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: 8, background: "#EFF6FF", borderRadius: 6 }}>
-                      <span style={{ fontSize: 12, color: "#64748B" }}>新密码:</span>
-                      <code style={{ fontFamily: "monospace", fontSize: 14, color: "#0052CC" }}>{resetPwdResult}</code>
-                      <button className="sw-btn sw-btn--secondary" style={{ height: 22, fontSize: 10, padding: "0 6px" }} type="button" onClick={() => copyText(resetPwdResult)}>{copied ? "已复制" : "复制"}</button>
-                    </div>
-                  )}
-                </>
+                      {worker.account.mustChangePassword && worker.account.initialPassword && (
+                        <>
+                          <code style={{ fontFamily: "monospace", fontSize: 13, color: "#0F172A" }}>{worker.account.initialPassword}</code>
+                          <button style={{ background: "none", border: "1px solid #E5E7EB", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 6px", color: copied ? "#16A34A" : "#64748B" }} type="button" onClick={() => copyText(worker.account!.initialPassword!)}>{copied ? "✓ 已复制" : "复制"}</button>
+                        </>
+                      )}
+                      {resetPwdResult && (
+                        <>
+                          <code style={{ fontFamily: "monospace", fontSize: 13, color: "#0052CC" }}>{resetPwdResult}</code>
+                          <button style={{ background: "none", border: "1px solid #E5E7EB", borderRadius: 4, cursor: "pointer", fontSize: 11, padding: "2px 6px", color: copied ? "#16A34A" : "#64748B" }} type="button" onClick={() => copyText(resetPwdResult)}>{copied ? "✓ 已复制" : "复制"}</button>
+                        </>
+                      )}
+                    </span>
+                  </dd></div>
+                </dl>
               ) : (
                 <p className="sw-text-muted">暂无登录账号（创建服务人员时自动生成）</p>
               )}

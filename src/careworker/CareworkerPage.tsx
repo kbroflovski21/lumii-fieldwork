@@ -1702,6 +1702,7 @@ export function CareworkerPage() {
   const [mapAddress, setMapAddress] = useState<string | null>(null);
 
   // Restore session from localStorage on mount
+  const [restoredMustChange, setRestoredMustChange] = useState<{ token: string; worker: DemoWorker } | null>(null);
   useEffect(() => {
     const token = localStorage.getItem("gy_careworker_token");
     if (!token) return;
@@ -1709,12 +1710,12 @@ export function CareworkerPage() {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
         const u = data.user;
-        setWorker({
-          id: u.id,
-          name: u.name,
-          phone: u.phone || "",
-          site: (u.siteIds && u.siteIds[0]) || "site-001",
-        });
+        const w: DemoWorker = { id: u.id, name: u.name, phone: u.phone || "", site: (u.siteIds && u.siteIds[0]) || "site-001" };
+        if (data.mustChangePassword) {
+          setRestoredMustChange({ token, worker: w });
+        } else {
+          setWorker(w);
+        }
       })
       .catch(() => {
         localStorage.removeItem("gy_careworker_token");
@@ -1782,6 +1783,19 @@ export function CareworkerPage() {
     setServicingTaskId(null);
     localStorage.removeItem("gy_careworker_token");
   }, []);
+
+  // Force password change for restored session
+  if (restoredMustChange) {
+    return (
+      <ChangePasswordScreen
+        token={restoredMustChange.token}
+        onDone={() => {
+          setWorker(restoredMustChange.worker);
+          setRestoredMustChange(null);
+        }}
+      />
+    );
+  }
 
   // Login screen
   if (!worker) {

@@ -87,6 +87,7 @@ export function authRoutes(jwtSecret: string) {
     }
 
     res.json({
+      mustChangePassword: row.mustChangePassword,
       user: {
         id: row.id,
         username: row.username,
