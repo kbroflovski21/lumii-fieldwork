@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { authRoutes } from "../../server/routes/auth";
+import { adminRoutes } from "../../server/routes/admin";
 import { siteRoutes } from "../../server/routes/sites";
 import { requireAuth } from "../../server/middleware/requireAuth";
 import { prisma } from "../../server/db/prisma";
@@ -14,6 +15,8 @@ function createApp() {
   app.use(express.json());
   app.use("/api", authRoutes(JWT_SECRET));
   const authMw = requireAuth(JWT_SECRET);
+  app.use("/api/admin", authMw);
+  app.use("/api", adminRoutes());
   app.use("/api", authMw, siteRoutes());
   return app;
 }
