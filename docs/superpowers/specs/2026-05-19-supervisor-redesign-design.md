@@ -352,6 +352,8 @@ interface SupervisorState {
 - **前端目前使用 mock 数据** — 所有 folder/doc 数据内置于组件中，需接入后端 API 后替换
 - **添加规范目录** — 当前通过 AI 聊天面板触发（sendToLLM），后续可考虑直接调用 POST /api/standards
 - **CSS 变量作用域** — `sv-content-standalone` 上已重复声明 CSS 变量，确保嵌入 QualityPage 时样式正确
+- **统一 Tab 标题** — 嵌入 QualityPage 时，规范管理 Tab 使用 `quality-records__header` 显示标题「规范管理」+ 描述，与其他 Tab（质量总览、站点管理、用户管理）UI 风格统一；容器使用 `quality-content--sop` 修饰符切换为 flex 布局，使 `sv-content-standalone` 撑满高度
+- **sv-main flex 修复** — `sv-main` 添加 `flex: 1` 使其在 flex 父容器中正确撑满宽度
 
 ## 11. 不在范围内
 

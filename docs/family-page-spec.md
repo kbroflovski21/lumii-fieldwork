@@ -181,7 +181,9 @@ POST /api/family/contacts/:id/reject    — 拒绝待审核绑定
 | 组件 | 状态 |
 |------|------|
 | H5 前端页面（全部状态流） | 已实现 |
+| H5 服务反馈功能（Modal + 提交） | 已实现（前端 mock） |
 | 后端 API 端点 | 待实现（/api/family/*） |
+| 后端反馈 API（POST /api/family/feedback） | 待实现 |
 | FamilyContact.bindingStatus 字段 | 待新增 |
 | seed 数据（idNumber、wechatId） | 待补充 |
 | Dashboard 解绑/审核按钮 | 待实现 |
