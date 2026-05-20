@@ -44,7 +44,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   }, [resetAll]);
 
   useEffect(() => {
-    if (!siteId) { setHome(idle); return; }
+    // siteId may be undefined for org_admin viewing all sites
     let cancelled = false;
     setHome(loading);
     siteOperationsApi
