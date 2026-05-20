@@ -58,7 +58,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
       .catch((error: unknown) => { if (!cancelled) setHome({ status: "error", error: error instanceof Error ? error.message : "首页数据加载失败" }); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refetchKey]);
+  }, [refetchKey, siteId]);
 
   useEffect(() => {
     if (activeArea === "social_workers" && socialWorkers.status === "idle") {

@@ -86,6 +86,18 @@ export function SmartBadgesArea({ resource, onOpenRecords, onMutate }: { resourc
     setDrawer({ kind: "closed" });
   }, [onMutate]);
 
+  const handleBadgeRefresh = useCallback(() => {
+    onMutate?.();
+  }, [onMutate]);
+
+  // Sync drawer badge with refreshed list data
+  useEffect(() => {
+    if (drawer.kind === "view") {
+      const fresh = badges.find(b => b.id === drawer.badge.id);
+      if (fresh && fresh !== drawer.badge) setDrawer({ kind: "view", badge: fresh });
+    }
+  }, [badges]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = badges.filter((b) => {
     if (statusFilter && b.status !== statusFilter) return false;
     if (preferredFilter === "has" && !b.preferredWorkerId) return false;
@@ -163,7 +175,7 @@ export function SmartBadgesArea({ resource, onOpenRecords, onMutate }: { resourc
                 badge={drawer.badge}
                 mutationsDisabled={mutationsDisabled}
                 onClose={() => setDrawer({ kind: "closed" })}
-                onUpdated={handleBadgeUpdated}
+                onUpdated={handleBadgeRefresh}
                 onOpenRecords={onOpenRecords}
               />
             ) : (

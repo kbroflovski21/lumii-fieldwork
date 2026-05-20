@@ -701,35 +701,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               )}
             </div>
 
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">家属联系人</h4>
-              {obj.familyContacts.length > 0 ? (
-                <div className="so-family-list">
-                  {obj.familyContacts.map(c => (
-                    <div className="so-family-row" key={c.id}>
-                      <div className="so-family-row__info">
-                        <strong>{c.name}</strong>
-                        <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
-                      </div>
-                      <div className="so-family-row__sub">
-                        <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
-                          {subscriptionLabel[c.subscriptionStatus]}
-                        </span>
-                        {c.lastPushedAt && <small className="sw-text-muted">{formatTime(c.lastPushedAt)}</small>}
-                        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px", marginLeft: 8 }}
-                          disabled={mutationsDisabled}
-                          onClick={async () => {
-                            const token = localStorage.getItem("gy_auth_token");
-                            await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-                            onUpdated();
-                          }}
-                          type="button">删除</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="sw-text-muted">暂无家属联系人</p>}
-            </div>
+            <FamilySection obj={obj} mutationsDisabled={mutationsDisabled} onUpdated={onUpdated} />
           </>
         )}
 
@@ -935,6 +907,115 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
         </div>
       </div>
 
+    </div>
+  );
+}
+
+/* ── Family Section ── */
+
+function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObject; mutationsDisabled: boolean; onUpdated: () => void }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", relation: "", phone: "", wechatId: "" });
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async () => {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("gy_auth_token");
+      await fetch(`/api/service-objects/${obj.id}/family-contacts`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      });
+      setShowAdd(false);
+      setForm({ name: "", relation: "", phone: "", wechatId: "" });
+      onUpdated();
+    } catch {}
+    setSaving(false);
+  };
+
+  const handleEdit = async (id: string) => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("gy_auth_token");
+      await fetch(`/api/family-contacts/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      });
+      setEditId(null);
+      onUpdated();
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div className="so-tab-section">
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>家属联系人</h4>
+        {!showAdd && !editId && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#0052CC", padding: 2, display: "flex", fontSize: 12, gap: 2, alignItems: "center" }} disabled={mutationsDisabled} onClick={() => { setForm({ name: "", relation: "", phone: "", wechatId: "" }); setShowAdd(true); }} type="button"><Plus size={14} /> 添加</button>}
+      </div>
+
+      {showAdd && (
+        <div style={{ marginTop: 10, padding: 12, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <input className="quality-user-modal__inline-input" placeholder="姓名 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <input className="quality-user-modal__inline-input" placeholder="关系（如：女儿）" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} />
+            <input className="quality-user-modal__inline-input" placeholder="电话" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            <input className="quality-user-modal__inline-input" placeholder="微信号" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} />
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowAdd(false)} type="button">取消</button>
+            <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={saving} onClick={handleAdd} type="button">{saving ? "保存中..." : "添加"}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="so-family-list" style={{ marginTop: 10 }}>
+        {obj.familyContacts.map(c => (
+          <div className="so-family-row" key={c.id}>
+            {editId === c.id ? (
+              <div style={{ flex: 1, padding: 8, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                  <input className="quality-user-modal__inline-input" placeholder="姓名" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                  <input className="quality-user-modal__inline-input" placeholder="关系" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} />
+                  <input className="quality-user-modal__inline-input" placeholder="电话" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  <input className="quality-user-modal__inline-input" placeholder="微信号" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} />
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditId(null)} type="button">取消</button>
+                  <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={saving} onClick={() => handleEdit(c.id)} type="button">{saving ? "保存中..." : "保存"}</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="so-family-row__info">
+                  <strong>{c.name}</strong>
+                  <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
+                </div>
+                <div className="so-family-row__sub">
+                  <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
+                    {subscriptionLabel[c.subscriptionStatus]}
+                  </span>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex", marginLeft: 8 }}
+                    disabled={mutationsDisabled}
+                    onClick={() => { setForm({ name: c.name, relation: c.relation, phone: c.phone, wechatId: c.wechatId ?? "" }); setEditId(c.id); }}
+                    type="button" title="编辑"><Edit3 size={13} /></button>
+                  <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px" }}
+                    disabled={mutationsDisabled}
+                    onClick={async () => {
+                      const token = localStorage.getItem("gy_auth_token");
+                      await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                      onUpdated();
+                    }}
+                    type="button">删除</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+        {obj.familyContacts.length === 0 && !showAdd && <p className="sw-text-muted">暂无家属联系人</p>}
+      </div>
     </div>
   );
 }

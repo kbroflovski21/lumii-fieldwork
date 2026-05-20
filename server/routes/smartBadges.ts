@@ -55,7 +55,15 @@ export function smartBadgesRoutes() {
     const b = req.body;
     const data: any = {};
     if (b.status !== undefined) data.status = b.status;
-    if (b.preferredWorkerId !== undefined) data.preferredWorkerId = b.preferredWorkerId;
+    if (b.preferredWorkerId !== undefined) {
+      data.preferredWorkerId = b.preferredWorkerId || null;
+      if (b.preferredWorkerId) {
+        const worker = await prisma.socialWorker.findFirst({ where: { id: b.preferredWorkerId } });
+        data.preferredWorkerName = worker?.name ?? null;
+      } else {
+        data.preferredWorkerName = null;
+      }
+    }
     if (Object.keys(data).length > 0) {
       await prisma.smartBadge.update({ where: { id: req.params.id }, data });
     }

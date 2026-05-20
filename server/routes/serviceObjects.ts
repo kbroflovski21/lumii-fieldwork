@@ -140,6 +140,35 @@ export function serviceObjectsRoutes() {
     res.json({ ok: true });
   });
 
+  r.post("/service-objects/:id/family-contacts", async (req, res) => {
+    const b = req.body;
+    if (!b.name) { res.status(400).json({ error: "姓名为必填" }); return; }
+    const contact = await prisma.familyContact.create({
+      data: {
+        id: genId("family"),
+        serviceObjectId: req.params.id,
+        name: b.name,
+        relation: b.relation ?? "",
+        phone: b.phone ?? "",
+        wechatId: b.wechatId ?? null,
+      },
+    });
+    res.status(201).json(contact);
+  });
+
+  r.patch("/family-contacts/:id", async (req, res) => {
+    const b = req.body;
+    const data: any = {};
+    if (b.name !== undefined) data.name = b.name;
+    if (b.relation !== undefined) data.relation = b.relation;
+    if (b.phone !== undefined) data.phone = b.phone;
+    if (b.wechatId !== undefined) data.wechatId = b.wechatId;
+    if (Object.keys(data).length > 0) {
+      await prisma.familyContact.update({ where: { id: req.params.id }, data });
+    }
+    res.json({ ok: true });
+  });
+
   r.put("/service-objects/:id/family-subscriptions", async (req, res) => {
     res.json({ ok: true, id: req.params.id, message: "updated" });
   });
