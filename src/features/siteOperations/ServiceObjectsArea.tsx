@@ -1002,10 +1002,26 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
                     disabled={mutationsDisabled}
                     onClick={() => { setForm({ name: c.name, relation: c.relation, phone: c.phone, wechatId: c.wechatId ?? "" }); setEditId(c.id); }}
                     type="button">编辑</button>
-                  <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 10px" }}
-                    disabled={mutationsDisabled}
-                    onClick={() => setDeleteConfirmId(c.id)}
-                    type="button">删除</button>
+                  <div style={{ position: "relative" }}>
+                    <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 10px" }}
+                      disabled={mutationsDisabled}
+                      onClick={() => setDeleteConfirmId(deleteConfirmId === c.id ? null : c.id)}
+                      type="button">删除</button>
+                    {deleteConfirmId === c.id && (
+                      <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 13, color: "#B42318", marginBottom: 8 }}>确定删除「{c.name}」？</div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeleteConfirmId(null)} type="button">取消</button>
+                          <button className="sw-btn sw-btn--danger" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={async () => {
+                            const token = localStorage.getItem("gy_auth_token");
+                            await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                            setDeleteConfirmId(null);
+                            onUpdated();
+                          }} type="button">确认删除</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
@@ -1014,23 +1030,6 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
         {obj.familyContacts.length === 0 && !showAdd && <p className="sw-text-muted">暂无家属联系人</p>}
       </div>
 
-      {deleteConfirmId && (() => {
-        const contact = obj.familyContacts.find(c => c.id === deleteConfirmId);
-        return (
-          <div style={{ marginTop: 10, padding: 12, background: "#FEF2F2", borderRadius: 8, border: "1px solid #FECACA", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 13, color: "#B42318" }}>确定删除家属「{contact?.name}」？</span>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setDeleteConfirmId(null)} type="button">取消</button>
-              <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={async () => {
-                const token = localStorage.getItem("gy_auth_token");
-                await fetch(`/api/family-contacts/${deleteConfirmId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-                setDeleteConfirmId(null);
-                onUpdated();
-              }} type="button">确认删除</button>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
