@@ -51,3 +51,45 @@
 - **描述：** 站点管理和用户管理的"编辑"按钮点击后打开详情 modal，但 modal 默认进入查看模式而非编辑模式，用户需要再次点击 modal 内的编辑按钮才能修改。
 - **影响：** 用户体验不直观，"编辑"按钮行为与预期不符。
 - **修复：** SiteDetailModal 和 UserDetailModal 新增 `initialEditing` prop；列表中的"编辑"按钮传入 `initialEditing=true`，直接进入编辑模式。
+
+## Bug 8: Home page stuck on "首页数据加载中"
+
+- **描述：** 站点运营首页一直显示"首页数据加载中"，无法加载数据。
+- **根因：** useSiteOperationsData 中存在多个问题：(1) resetAll effect 和 home fetch effect 在同一渲染周期执行，导致 status check 为 stale 状态 (2) siteId 不在 home effect 的依赖数组中 (3) siteId 为 undefined 时跳过 fetch，导致没有选择站点的 admin 无法加载数据。
+- **修复：** 移除 siteId 变化时的 resetAll；home effect 依赖 [siteId, refetchKey]，去除 idle check；允许不带 siteId 的 fetch 请求（admin 场景）。
+
+## Bug 9: Badge worker save not reflecting
+
+- **描述：** 在智能工牌 modal 中修改首选服务人员后，保存不生效，显示的值未更新。
+- **根因：** PATCH /smart-badges/:id 只更新了 preferredWorkerId 而没有同步更新 preferredWorkerName；Drawer 持有保存前的 stale badge 数据。
+- **修复：** 后端在更新 preferredWorkerId 时查询 worker name 并同步写入 preferredWorkerName；前端添加 drawer sync effect，使用 refresh（不关闭 drawer）回调。
+
+## Bug 10: Inline edit save not refreshing in admin modals
+
+- **描述：** 在站点管理/用户管理 modal 中 inline edit 保存后，显示的值没有刷新。
+- **根因：** detailSite/detailUser state 在 fetchSites/fetchUsers 刷新列表后仍持有 stale 对象。
+- **修复：** 添加 useEffect 在列表数据刷新后同步更新 detailSite/detailUser 状态。
+
+## Bug 11: Staging white screen after pull
+
+- **描述：** Staging 环境拉取新代码后出现白屏。
+- **根因：** 新代码引入了 recharts 依赖（用于质量管理 dashboard），但部署时没有执行 npm install 就直接 build。
+- **修复：** 安装 recharts 依赖，重新 build 并部署。
+
+## Bug 12: Copy button not working on HTTP
+
+- **描述：** 护工账号密码的复制按钮点击无反应。
+- **根因：** navigator.clipboard.writeText 需要 HTTPS 环境；staging 使用 HTTP 协议。
+- **修复：** 添加 fallback 方案，使用 document.execCommand("copy") + textarea 元素；显示 "✓ 已复制" 反馈。
+
+## Bug 13: Careworker forced password change not triggering
+
+- **描述：** 设置了 mustChangePassword=true 的用户可以通过 auto-restore session 绕过密码修改。
+- **根因：** /api/auth/me 接口没有返回 mustChangePassword 字段；CareworkerPage 的 auto-restore 逻辑没有检查该标志。
+- **修复：** /api/auth/me 返回 mustChangePassword；CareworkerPage 在 session restore 时检查该字段，若为 true 显示 ChangePasswordScreen。
+
+## Bug 14: API error messages not reaching user
+
+- **描述：** 服务对象编辑时出错，前端只显示 "Request failed: /api/..." 而非实际错误信息。
+- **根因：** parseJson 函数在请求失败时抛出通用错误，没有先读取 response body 中的 JSON error 字段。
+- **修复：** 先读取 response.json().error 再抛出具体错误信息；将错误信息显示区域移到 footer 上方（始终可见）。

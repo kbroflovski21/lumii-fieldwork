@@ -68,12 +68,45 @@ DELETE /api/family-contacts/:id
 
 家属联系人列表中每行增加删除按钮，点击后确认删除。
 
-## 4. 文件变更
+## 4. 家属联系人 CRUD
+
+### 4.1 API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/service-objects/:id/family-contacts` | 创建家属联系人（name 必填） |
+| `PATCH` | `/api/family-contacts/:id` | 更新家属联系人（name, relation, phone, wechatId） |
+| `DELETE` | `/api/family-contacts/:id` | 删除家属联系人（404 if not found） |
+
+### 4.2 前端 UI
+
+- Inline 添加/编辑/删除，带 labeled fields（姓名、关系、电话、微信）
+- 删除确认使用 floating popover（浮动在按钮上方）
+- 无独立 page，所有操作在服务对象详情内完成
+
+## 5. Tab 结构调整
+
+原结构：
+- 基础信息
+- 家属联系人（独立 tab）
+- AI 洞察
+
+新结构：
+- **档案概览**：基础信息 + 家属联系人合并为一个 tab
+- **AI 洞察**：独立 tab
+
+### 5.1 EditModal 移除
+
+EditModal 组件已移除。所有编辑改为 inline pencil icon 模式：
+- 点击 section 标题旁的 Edit3 图标切换到编辑模式
+- Section 内显示 Save/Cancel 按钮
+- 保存后自动切回查看模式
+
+## 6. 文件变更
 
 | 文件 | 变更 |
 |------|------|
 | `prisma/schema.prisma` | ServiceObject 新增 idNumber，FamilyContact 新增 wechatId |
-| `server/routes/serviceObjects.ts` | POST/PATCH 校验 idNumber，GET 返回 idNumber |
-| `server/routes/familyContacts.ts` | 新增 DELETE /:id 端点 |
-| `src/features/siteOperations/ServiceObjectsArea.tsx` | 创建/编辑表单新增 idNumber 字段，详情显示 |
-| `src/features/siteOperations/FamilyContactsTab.tsx` | 显示微信号，增加删除按钮 |
+| `server/routes/serviceObjects.ts` | POST/PATCH 校验 idNumber，GET 返回 idNumber；新增 family-contacts CRUD 端点 |
+| `src/features/siteOperations/ServiceObjectsArea.tsx` | Tab 结构调整，inline edit，family contacts 合入档案概览 |
+| `src/features/siteOperations/FamilyContactsTab.tsx` | 显示微信号，增加删除按钮，inline add/edit |
