@@ -39,11 +39,6 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
     setRefetchKey(k => k + 1);
   }, []);
 
-  // Reset all data when siteId changes
-  useEffect(() => {
-    resetAll();
-  }, [siteId, resetAll]);
-
   const refetch = useCallback(() => {
     resetAll();
   }, [resetAll]);
@@ -56,7 +51,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
       .then((data) => { if (!cancelled) setHome({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setHome({ status: "error", error: error instanceof Error ? error.message : "首页数据加载失败" }); });
     return () => { cancelled = true; };
-  }, [refetchKey, siteId]);
+  }, [siteId, refetchKey]);
 
   useEffect(() => {
     if (activeArea === "social_workers" && socialWorkers.status === "idle") {
@@ -105,8 +100,18 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
     serviceSchedules.status,
     smartBadges.status,
     socialWorkers.status,
+    siteId,
     refetchKey
   ]);
+
+  // Reset non-home data when siteId changes
+  useEffect(() => {
+    setSocialWorkers(idle);
+    setSmartBadges(idle);
+    setServiceSchedules(idle);
+    setServiceRecords(idle);
+    setServiceObjects(idle);
+  }, [siteId]);
 
   return {
     home,
