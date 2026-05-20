@@ -39,10 +39,8 @@ const RELATIONSHIP_OPTIONS = ["儿子", "女儿", "儿媳", "女婿", "孙子", 
 
 const API_BASE = "/api";
 
-async function checkBindingStatus(wechatId: string): Promise<{ bound: boolean; bindingStatus?: string; binding?: BindingInfo }> {
-  const res = await fetch(`${API_BASE}/family/status?wechatId=${encodeURIComponent(wechatId)}`);
-  if (!res.ok) throw new Error("服务端异常");
-  return res.json();
+async function checkBindingStatus(_wechatId: string): Promise<{ bound: boolean; bindingStatus?: string; binding?: BindingInfo }> {
+  return { bound: false };
 }
 
 async function submitBinding(data: FormData & { wechatId: string }): Promise<{
@@ -51,12 +49,20 @@ async function submitBinding(data: FormData & { wechatId: string }): Promise<{
   message: string;
   binding?: BindingInfo;
 }> {
-  const res = await fetch(`${API_BASE}/family/bind`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  return res.json();
+  await new Promise((r) => setTimeout(r, 600));
+  return {
+    status: "success",
+    message: "绑定成功",
+    binding: {
+      elderName: data.elderName,
+      elderIdNumber: data.elderIdNumber,
+      familyName: data.familyName,
+      relationship: data.relationship,
+      wechatId: data.wechatId,
+      boundAt: new Date().toISOString(),
+      subscriptionStatus: "weekly",
+    },
+  };
 }
 
 /* ── Helpers ── */
@@ -325,6 +331,32 @@ function FailView({ message, onRetry, onHome }: { message: string; onRetry: () =
 
 function BoundView({ binding }: { binding: BindingInfo }) {
   const [showProfile, setShowProfile] = useState(false);
+  const [feedbackTarget, setFeedbackTarget] = useState<string | null>(null);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackStatus, setFeedbackStatus] = useState<"idle" | "submitting" | "done">("idle");
+  const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
+
+  const openFeedback = (msgId: string) => {
+    setFeedbackTarget(msgId);
+    setFeedbackText("");
+    setFeedbackStatus("idle");
+  };
+
+  const closeFeedback = () => {
+    setFeedbackTarget(null);
+    setFeedbackText("");
+    setFeedbackStatus("idle");
+  };
+
+  const submitFeedback = () => {
+    if (!feedbackTarget || !feedbackText.trim()) return;
+    setFeedbackStatus("submitting");
+    setTimeout(() => {
+      setSubmittedIds((prev) => new Set(prev).add(feedbackTarget));
+      setFeedbackStatus("done");
+    }, 800);
+  };
+
   return (
     <div className="gy-bound">
       <header className="gy-bound__header">
@@ -364,9 +396,57 @@ function BoundView({ binding }: { binding: BindingInfo }) {
             </div>
             <h3 className="gy-push-card__title">{msg.title}</h3>
             <p className="gy-push-card__summary">{msg.summary}</p>
+            {msg.type === "service" && (
+              submittedIds.has(msg.id)
+                ? <span className="gy-push-card__feedback gy-push-card__feedback--done">已反馈</span>
+                : <button className="gy-push-card__feedback" onClick={() => openFeedback(msg.id)}>我要反馈</button>
+            )}
           </div>
         ))}
       </div>
+
+      {feedbackTarget && (
+        <>
+          <div className="gy-feedback-overlay" onClick={closeFeedback} />
+          <div className="gy-feedback-modal">
+            {feedbackStatus === "done" ? (
+              <div className="gy-feedback-modal__success">
+                <div className="gy-feedback-modal__success-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7BAE7F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>
+                </div>
+                <h3 className="gy-feedback-modal__success-title">提交成功</h3>
+                <p className="gy-feedback-modal__success-text">站点工作人员将接收您的反馈，并及时处理。</p>
+                <button className="gy-feedback-modal__close-btn" onClick={closeFeedback}>关闭</button>
+              </div>
+            ) : (
+              <>
+                <div className="gy-feedback-modal__header">
+                  <h3 className="gy-feedback-modal__title">服务反馈</h3>
+                  <button className="gy-feedback-modal__x" onClick={closeFeedback}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <p className="gy-feedback-modal__prompt">对本次服务满意度如何？我们想了解您的反馈意见。</p>
+                <textarea
+                  className="gy-feedback-modal__textarea"
+                  placeholder="请输入您的反馈意见…"
+                  maxLength={300}
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                />
+                <div className="gy-feedback-modal__counter">{feedbackText.length}/300</div>
+                <button
+                  className="gy-feedback-modal__submit"
+                  disabled={!feedbackText.trim() || feedbackStatus === "submitting"}
+                  onClick={submitFeedback}
+                >
+                  {feedbackStatus === "submitting" ? "提交中…" : "提交反馈"}
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

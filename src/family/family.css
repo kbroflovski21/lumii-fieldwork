@@ -142,3 +142,34 @@
 .gy-push-card__date { font-size: 12px; color: var(--gy-text-muted); }
 .gy-push-card__title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
 .gy-push-card__summary { font-size: 13px; color: var(--gy-text-sec); line-height: 1.6; }
+
+/* ── Feedback link on service cards ── */
+.gy-push-card__feedback { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 500; color: var(--gy-primary); background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; }
+.gy-push-card__feedback:active { opacity: 0.7; }
+.gy-push-card__feedback--done { display: inline-block; margin-top: 10px; font-size: 13px; color: var(--gy-text-muted); cursor: default; }
+
+/* ── Feedback Modal ── */
+.gy-feedback-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 100; animation: gy-fade-in 0.2s ease-out; }
+@keyframes gy-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.gy-feedback-modal { position: fixed; bottom: 0; left: 0; right: 0; background: var(--gy-surface); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); z-index: 101; animation: gy-slide-up 0.25s ease-out; max-width: 420px; margin: 0 auto; }
+@keyframes gy-slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.gy-feedback-modal__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.gy-feedback-modal__title { font-size: 17px; font-weight: 700; color: var(--gy-text); margin: 0; }
+.gy-feedback-modal__x { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; background: var(--gy-line); border-radius: 50%; color: var(--gy-text-muted); cursor: pointer; }
+.gy-feedback-modal__x:active { background: #e5ddd6; }
+.gy-feedback-modal__prompt { font-size: 14px; color: var(--gy-text-sec); line-height: 1.6; margin-bottom: 14px; }
+.gy-feedback-modal__textarea { width: 100%; height: 120px; border: 1px solid var(--gy-line); border-radius: 12px; padding: 12px; font-size: 14px; font-family: inherit; color: var(--gy-text); background: var(--gy-bg); resize: none; outline: none; line-height: 1.6; }
+.gy-feedback-modal__textarea:focus { border-color: var(--gy-primary); box-shadow: 0 0 0 3px rgba(232, 115, 74, 0.1); }
+.gy-feedback-modal__textarea::placeholder { color: var(--gy-text-muted); }
+.gy-feedback-modal__counter { text-align: right; font-size: 12px; color: var(--gy-text-muted); margin-top: 6px; margin-bottom: 16px; }
+.gy-feedback-modal__submit { width: 100%; height: 48px; border: none; border-radius: 12px; background: var(--gy-primary); color: #fff; font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.gy-feedback-modal__submit:active { opacity: 0.9; }
+.gy-feedback-modal__submit:disabled { background: var(--gy-line); color: var(--gy-text-muted); cursor: not-allowed; }
+
+/* ── Feedback success state ── */
+.gy-feedback-modal__success { text-align: center; padding: 20px 0 10px; }
+.gy-feedback-modal__success-icon { margin-bottom: 16px; }
+.gy-feedback-modal__success-title { font-size: 18px; font-weight: 700; color: var(--gy-text); margin-bottom: 8px; }
+.gy-feedback-modal__success-text { font-size: 14px; color: var(--gy-text-sec); line-height: 1.6; margin-bottom: 24px; }
+.gy-feedback-modal__close-btn { width: 100%; height: 48px; border: 1px solid var(--gy-line); border-radius: 12px; background: var(--gy-surface); color: var(--gy-text); font-size: 16px; font-weight: 500; font-family: inherit; cursor: pointer; }
+.gy-feedback-modal__close-btn:active { background: var(--gy-bg); }
