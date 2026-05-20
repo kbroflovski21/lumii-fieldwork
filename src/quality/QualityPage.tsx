@@ -59,8 +59,8 @@ const MOCK_SITES = [
   { id: "site-004", name: "文新站" },
 ];
 
-function buildMockWorkers(): WorkerPeriodScore[] {
-  const workers = [
+function buildMockWorkers(period: Period): WorkerPeriodScore[] {
+  const monthData = [
     { id: "w1", name: "李明", siteId: "site-001", siteName: "翠苑站", count: 24, s: 34.2, a: 8.8, b: 6.2, c: 9.0, d: 10.2, prev: 32.5 },
     { id: "w2", name: "王芳", siteId: "site-001", siteName: "翠苑站", count: 18, s: 31.5, a: 8.2, b: 5.0, c: 8.3, d: 10.0, prev: 30.8 },
     { id: "w3", name: "张伟", siteId: "site-002", siteName: "三墩站", count: 22, s: 28.6, a: 7.5, b: 5.0, c: 7.1, d: 9.0, prev: 30.2 },
@@ -72,6 +72,19 @@ function buildMockWorkers(): WorkerPeriodScore[] {
     { id: "w9", name: "吴强", siteId: "site-001", siteName: "翠苑站", count: 16, s: 26.5, a: 7.0, b: 4.0, c: 7.5, d: 8.0, prev: 27.8 },
     { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 23, s: 32.1, a: 8.3, b: 6.0, c: 8.8, d: 9.0, prev: 31.0 },
   ];
+  const weekData = [
+    { id: "w1", name: "李明", siteId: "site-001", siteName: "翠苑站", count: 6, s: 35.0, a: 9.0, b: 6.5, c: 9.2, d: 10.3, prev: 33.8 },
+    { id: "w2", name: "王芳", siteId: "site-001", siteName: "翠苑站", count: 4, s: 30.2, a: 7.8, b: 5.0, c: 8.0, d: 9.4, prev: 31.5 },
+    { id: "w3", name: "张伟", siteId: "site-002", siteName: "三墩站", count: 5, s: 27.1, a: 7.0, b: 5.0, c: 6.6, d: 8.5, prev: 28.6 },
+    { id: "w4", name: "陈静", siteId: "site-002", siteName: "三墩站", count: 5, s: 36.5, a: 9.5, b: 8.0, c: 9.5, d: 9.5, prev: 35.8 },
+    { id: "w5", name: "刘洋", siteId: "site-003", siteName: "古荡站", count: 7, s: 34.2, a: 8.8, b: 6.0, c: 9.2, d: 10.2, prev: 33.0 },
+    { id: "w6", name: "赵敏", siteId: "site-003", siteName: "古荡站", count: 5, s: 37.1, a: 9.5, b: 8.2, c: 9.6, d: 9.8, prev: 36.4 },
+    { id: "w7", name: "孙磊", siteId: "site-004", siteName: "文新站", count: 3, s: 24.5, a: 6.5, b: 3.5, c: 7.2, d: 7.3, prev: 22.8 },
+    { id: "w8", name: "周婷", siteId: "site-004", siteName: "文新站", count: 5, s: 31.0, a: 8.0, b: 5.2, c: 8.6, d: 9.2, prev: 30.2 },
+    { id: "w9", name: "吴强", siteId: "site-001", siteName: "翠苑站", count: 4, s: 25.8, a: 6.8, b: 3.8, c: 7.2, d: 8.0, prev: 26.5 },
+    { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 6, s: 33.5, a: 8.6, b: 6.2, c: 9.0, d: 9.7, prev: 32.1 },
+  ];
+  const workers = period === "week" ? weekData : monthData;
   return workers.map((w) => ({
     socialWorkerId: w.id,
     socialWorkerName: w.name,
@@ -88,8 +101,8 @@ function buildMockWorkers(): WorkerPeriodScore[] {
   }));
 }
 
-function buildMockSiteScores(): SitePeriodScore[] {
-  const workers = buildMockWorkers();
+function buildMockSiteScores(period: Period): SitePeriodScore[] {
+  const workers = buildMockWorkers(period);
   const grouped = new Map<string, WorkerPeriodScore[]>();
   for (const w of workers) {
     const arr = grouped.get(w.siteId) || [];
@@ -114,16 +127,20 @@ function buildMockSiteScores(): SitePeriodScore[] {
   });
 }
 
-function buildMockTrend(_workerId: string): TrendPoint[] {
-  const months = ["2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"];
+function buildMockTrend(_workerId: string, period: Period): TrendPoint[] {
+  const labels = period === "week"
+    ? ["W06","W07","W08","W09","W10","W11","W12","W13","W14","W15","W16","W17"]
+    : ["2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"];
   const base = 28 + Math.random() * 6;
-  return months.map((m, i) => {
+  const countBase = period === "week" ? 3 : 15;
+  const countRange = period === "week" ? 5 : 12;
+  return labels.map((m, i) => {
     const s = +(base + (Math.random() - 0.3) * 4 + i * 0.3).toFixed(1);
     const a = +(s * 0.26).toFixed(1);
     const b = +(s * 0.16).toFixed(1);
     const c = +(s * 0.28).toFixed(1);
     const d = +(s * 0.30).toFixed(1);
-    return { label: m, avgS: Math.min(40, Math.max(10, s)), avgA: Math.min(10, a), avgB: Math.min(10, b), avgC: Math.min(10, c), avgD: Math.min(10, d), serviceCount: 15 + Math.floor(Math.random() * 12) };
+    return { label: m, avgS: Math.min(40, Math.max(10, s)), avgA: Math.min(10, a), avgB: Math.min(10, b), avgC: Math.min(10, c), avgD: Math.min(10, d), serviceCount: countBase + Math.floor(Math.random() * countRange) };
   });
 }
 
@@ -272,15 +289,22 @@ export function QualityPage() {
 
       {/* Main content — row 2, col 2 */}
       <div className="quality-main">
-        {view === "sop" ? (
-          <SupervisorContent />
-        ) : (
-          <div className="quality-content">
-            {view === "dashboard" && <DashboardView />}
-            {view === "sites" && <SitesView />}
-            {view === "users" && <UsersView />}
-          </div>
-        )}
+        <div className={`quality-content${view === "sop" ? " quality-content--sop" : ""}`}>
+          {view === "dashboard" && <DashboardView />}
+          {view === "sop" && (
+            <>
+              <div className="quality-records__header">
+                <div>
+                  <div className="quality-records__title">规范管理</div>
+                  <div className="quality-records__subtitle">维护服务规范文档与 AI 配置，确保服务质量标准统一</div>
+                </div>
+              </div>
+              <SupervisorContent />
+            </>
+          )}
+          {view === "sites" && <SitesView />}
+          {view === "users" && <UsersView />}
+        </div>
       </div>
 
       {/* CopilotPanel — row 2, col 3 */}
@@ -305,8 +329,8 @@ function DashboardView() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [detailWorker, setDetailWorker] = useState<WorkerPeriodScore | null>(null);
 
-  const allWorkers = useMemo(buildMockWorkers, []);
-  const siteScores = useMemo(buildMockSiteScores, []);
+  const allWorkers = useMemo(() => buildMockWorkers(period), [period]);
+  const siteScores = useMemo(() => buildMockSiteScores(period), [period]);
 
   const filteredWorkers = useMemo(() => {
     let list = siteFilter === "all" ? allWorkers : allWorkers.filter((w) => w.siteId === siteFilter);
@@ -349,6 +373,20 @@ function DashboardView() {
 
   const periodLabel = period === "month" ? "本月" : "本周";
   const prevLabel = period === "month" ? "上月" : "上周";
+
+  const periodDateLabel = useMemo(() => {
+    const now = new Date();
+    if (period === "month") {
+      return `${now.getFullYear()}年${now.getMonth() + 1}月`;
+    }
+    const oneJan = new Date(now.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((now.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return `${now.getFullYear()}年 第${weekNum}周（${mon.getMonth() + 1}/${mon.getDate()} - ${sun.getMonth() + 1}/${sun.getDate()}）`;
+  }, [period]);
 
   return (
     <>
@@ -403,6 +441,7 @@ function DashboardView() {
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
+          <span className="qd-period-date-label">{periodDateLabel}</span>
           <div className="qd-period-toggle">
             <button className={`qd-period-btn ${period === "week" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("week")}>周</button>
             <button className={`qd-period-btn ${period === "month" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("month")}>月</button>
@@ -506,7 +545,7 @@ function DashboardView() {
 
 function WorkerDetailModal({ worker, period, onClose }: { worker: WorkerPeriodScore; period: Period; onClose: () => void }) {
   useEscClose(onClose);
-  const trend = useMemo(() => buildMockTrend(worker.socialWorkerId), [worker.socialWorkerId]);
+  const trend = useMemo(() => buildMockTrend(worker.socialWorkerId, period), [worker.socialWorkerId, period]);
 
   return (
     <>
@@ -559,9 +598,9 @@ function WorkerDetailModal({ worker, period, onClose }: { worker: WorkerPeriodSc
                 <YAxis domain={[10, 40]} tick={{ fontSize: 11, fill: "#9CA3AF" }} tickLine={false} axisLine={false} width={35} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
-                  formatter={(value: number) => [value.toFixed(1), "S 分"]}
+                  formatter={(value) => [Number(value).toFixed(1), "S 分"]}
                 />
-                <Line type="monotone" dataKey="avgS" stroke="#0052CC" strokeWidth={2.5} dot={{ r: 3.5, fill: "#0052CC" }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="avgS" stroke="#EB6420" strokeWidth={2.5} dot={{ r: 3.5, fill: "#EB6420" }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -821,7 +860,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
             {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {allOperators.map(op => (
-                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "rgba(235,100,32,0.06)" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#EB6420" : "#E5E7EB"}` }}>
                     <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
@@ -957,7 +996,7 @@ function OperatorAssignModal({ site, token, onClose, onSaved }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {allOperators.map(op => (
-                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selected.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "rgba(235,100,32,0.06)" : "transparent", border: `1px solid ${selected.has(op.id) ? "#EB6420" : "#E5E7EB"}` }}>
                   <input type="checkbox" checked={selected.has(op.id)} onChange={() => toggle(op.id)} style={{ width: 16, height: 16 }} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>

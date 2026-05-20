@@ -18,26 +18,26 @@
 }
 
 .quality-page {
-  --quality-bg: #F7F9FB;
+  --quality-bg: #FFF8F5;
   --quality-surface: #FFFFFF;
-  --quality-surface-subtle: #F9FAFB;
-  --quality-line: #E5E7EB;
-  --quality-line-subtle: #F3F4F6;
-  --quality-text: #191C1E;
-  --quality-text-sec: #374151;
-  --quality-text-muted: #9CA3AF;
-  --quality-accent: #0052CC;
-  --quality-accent-soft: rgba(0, 82, 204, 0.08);
+  --quality-surface-subtle: #FFFAF7;
+  --quality-line: #F0EAE4;
+  --quality-line-subtle: #F5F0EB;
+  --quality-text: #2D2520;
+  --quality-text-sec: #5C524A;
+  --quality-text-muted: #A89E96;
+  --quality-accent: #EB6420;
+  --quality-accent-soft: rgba(235, 100, 32, 0.08);
   --quality-ai-accent: #6366F1;
   --quality-ai-avatar-bg: linear-gradient(135deg, #6366F1, #818CF8);
-  --quality-success-bg: #E0F4EC;
-  --quality-success-text: #116B4C;
-  --quality-warning-bg: #FFF1D6;
-  --quality-warning-text: #976000;
+  --quality-success-bg: #E8F5E9;
+  --quality-success-text: #2E7D32;
+  --quality-warning-bg: #FFF6E8;
+  --quality-warning-text: #E8A34A;
   --quality-danger-bg: #FEE2E2;
-  --quality-danger-text: #B42318;
-  --quality-muted-bg: #F3F4F6;
-  --quality-muted-text: #6B7280;
+  --quality-danger-text: #C9593A;
+  --quality-muted-bg: #F5F0EB;
+  --quality-muted-text: #8C8279;
 
   color: var(--quality-text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
@@ -184,6 +184,13 @@
   flex: 1;
   overflow: auto;
   padding: 20px 24px;
+}
+
+.quality-content--sop {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 /* ── Dashboard view ── */
@@ -756,13 +763,13 @@
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  border: 1.5px solid #0052CC;
+  border: 1.5px solid var(--quality-accent);
   border-radius: 8px;
   font-size: 14px;
   color: #0F172A;
   background: #fff;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0,82,204,0.1);
+  box-shadow: 0 0 0 3px rgba(235,100,32,0.1);
   font-family: inherit;
 }
 
@@ -869,9 +876,9 @@
 }
 .quality-modal__field input:focus,
 .quality-modal__field select:focus {
-  border-color: #0052CC;
+  border-color: var(--quality-accent);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0,82,204,0.1);
+  box-shadow: 0 0 0 3px rgba(235,100,32,0.1);
 }
 .quality-modal__error {
   padding: 8px 12px;
@@ -921,10 +928,10 @@
 }
 .quality-modal__btn--cancel:hover { background: #E5E7EB; }
 .quality-modal__btn--primary {
-  background: #0052CC;
+  background: var(--quality-accent);
   color: #fff;
 }
-.quality-modal__btn--primary:hover { background: #003D99; }
+.quality-modal__btn--primary:hover { background: #D4571A; }
 .quality-modal__btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .quality-modal__btn--danger {
   background: #DC2626;
@@ -953,6 +960,15 @@
 @keyframes quality-toast-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Period Date Label ── */
+
+.qd-period-date-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--quality-text-sec);
+  white-space: nowrap;
 }
 
 /* ── Period Toggle ── */
