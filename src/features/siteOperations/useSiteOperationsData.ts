@@ -44,6 +44,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   }, [resetAll]);
 
   useEffect(() => {
+    if (!siteId) { setHome(idle); return; }
     let cancelled = false;
     setHome(loading);
     siteOperationsApi
