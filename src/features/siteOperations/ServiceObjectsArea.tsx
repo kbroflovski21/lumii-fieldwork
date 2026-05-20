@@ -958,11 +958,11 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
 
       {showAdd && (
         <div style={{ marginTop: 10, padding: 12, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-            <input className="quality-user-modal__inline-input" placeholder="姓名 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <input className="quality-user-modal__inline-input" placeholder="关系（如：女儿）" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} />
-            <input className="quality-user-modal__inline-input" placeholder="电话" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-            <input className="quality-user-modal__inline-input" placeholder="微信号" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div className="sw-field"><span>姓名 *</span><input className="quality-user-modal__inline-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="sw-field"><span>关系</span><input className="quality-user-modal__inline-input" placeholder="如：女儿" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
+            <div className="sw-field"><span>电话</span><input className="quality-user-modal__inline-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+            <div className="sw-field"><span>微信号</span><input className="quality-user-modal__inline-input" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowAdd(false)} type="button">取消</button>
@@ -975,12 +975,12 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
         {obj.familyContacts.map(c => (
           <div className="so-family-row" key={c.id}>
             {editId === c.id ? (
-              <div style={{ flex: 1, padding: 8, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                  <input className="quality-user-modal__inline-input" placeholder="姓名" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                  <input className="quality-user-modal__inline-input" placeholder="关系" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} />
-                  <input className="quality-user-modal__inline-input" placeholder="电话" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-                  <input className="quality-user-modal__inline-input" placeholder="微信号" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} />
+              <div style={{ flex: 1, padding: 12, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                  <div className="sw-field"><span>姓名</span><input className="quality-user-modal__inline-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+                  <div className="sw-field"><span>关系</span><input className="quality-user-modal__inline-input" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
+                  <div className="sw-field"><span>电话</span><input className="quality-user-modal__inline-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+                  <div className="sw-field"><span>微信号</span><input className="quality-user-modal__inline-input" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditId(null)} type="button">取消</button>
@@ -993,15 +993,15 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
                   <strong>{c.name}</strong>
                   <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
                 </div>
-                <div className="so-family-row__sub">
+                <div className="so-family-row__sub" style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
                     {subscriptionLabel[c.subscriptionStatus]}
                   </span>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex", marginLeft: 8 }}
+                  <button className="quality-users__action-btn" style={{ height: 26, fontSize: 11, padding: "0 8px" }}
                     disabled={mutationsDisabled}
                     onClick={() => { setForm({ name: c.name, relation: c.relation, phone: c.phone, wechatId: c.wechatId ?? "" }); setEditId(c.id); }}
-                    type="button" title="编辑"><Edit3 size={13} /></button>
-                  <button className="sw-btn sw-btn--danger-ghost" style={{ height: 26, fontSize: 11, padding: "0 8px" }}
+                    type="button">编辑</button>
+                  <button className="quality-users__action-btn" style={{ height: 26, fontSize: 11, padding: "0 8px" }}
                     disabled={mutationsDisabled}
                     onClick={async () => {
                       const token = localStorage.getItem("gy_auth_token");
