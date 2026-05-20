@@ -49,7 +49,6 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   }, [resetAll]);
 
   useEffect(() => {
-    if (home.status !== "idle") return;
     let cancelled = false;
     setHome(loading);
     siteOperationsApi
@@ -57,7 +56,6 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
       .then((data) => { if (!cancelled) setHome({ status: "success", data }); })
       .catch((error: unknown) => { if (!cancelled) setHome({ status: "error", error: error instanceof Error ? error.message : "首页数据加载失败" }); });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchKey, siteId]);
 
   useEffect(() => {
