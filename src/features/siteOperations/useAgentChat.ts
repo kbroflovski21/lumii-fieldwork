@@ -139,11 +139,13 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
                 return updated;
               }
             }
-            // Dedup: if assistant message content matches last streamed message, update ID only
-            if (frame.role === "assistant") {
-              const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant" && !m.isStreaming);
-              if (lastAssistant && lastAssistant.content === frame.content) {
-                return prev.map((m) => m === lastAssistant ? { ...m, id: frame.id, timestamp: frame.timestamp } : m);
+            // Dedup: if assistant message with same content exists (from stream), update ID
+            if (frame.role === "assistant" && frame.content) {
+              const dup = prev.findIndex((m) => m.role === "assistant" && m.content === frame.content);
+              if (dup >= 0) {
+                const updated = [...prev];
+                updated[dup] = { ...updated[dup], id: frame.id, timestamp: frame.timestamp, isStreaming: false };
+                return updated;
               }
             }
             return [...prev, toMessage(frame)];
