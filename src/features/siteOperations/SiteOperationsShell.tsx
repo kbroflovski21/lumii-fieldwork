@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
-import { Bot, CalendarDays, ChevronDown, ClipboardList, FileText, Smartphone, UserRound, UsersRound } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { Bot, CalendarDays, ChevronDown, ChevronUp, ClipboardList, FileText, Smartphone, UserRound, UsersRound, X } from "lucide-react";
 import { workAreas, type WorkAreaId } from "./contracts";
 import { CopilotPanel } from "./CopilotPanel";
+import { useAgentChat } from "./useAgentChat";
 import { ProfileMenu } from "../../shared/ProfileMenu";
 import { useSite } from "../../auth/SiteContext";
 
@@ -14,7 +15,14 @@ const icons = {
   service_objects: UserRound
 } satisfies Record<WorkAreaId, typeof Bot>;
 
-const copilotAreaId = (area: WorkAreaId): string => area;
+const AREA_LABELS: Record<string, string> = {
+  home: "首页",
+  social_workers: "服务人员",
+  smart_badges: "设备",
+  service_objects: "服务对象",
+  service_schedules: "服务排期",
+  service_records: "服务记录",
+};
 
 type SiteOperationsShellProps = {
   activeArea: WorkAreaId;
@@ -24,10 +32,29 @@ type SiteOperationsShellProps = {
 
 export function SiteOperationsShell({ activeArea, children, onSelectArea }: SiteOperationsShellProps) {
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const showCopilot = activeArea !== "home";
   const { currentSite, sites, selectSite } = useSite();
   const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
   const siteDropRef = useRef<HTMLDivElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
+
+  const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
+
+  const { messages, connected, wip, handleSend, endRef } = useAgentChat({
+    agentId: "lumii-goldenyears",
+    sessionId: "copilot",
+    siteId: currentSite?.id,
+    getToken,
+  });
+
+  const sendWithContext = useCallback((content: string) => {
+    const label = AREA_LABELS[activeArea] ?? activeArea;
+    handleSend(`[ctx:${label}] ${content}`);
+  }, [activeArea, handleSend]);
+
+  const openCopilotWithMessage = useCallback((msg: string) => {
+    sendWithContext(msg);
+    setCopilotOpen(true);
+  }, [sendWithContext]);
 
   useEffect(() => {
     if (!siteDropdownOpen) return;
@@ -42,58 +69,84 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
     <div className="site-operations-root">
       <div
         className="site-operations-shell"
-        data-copilot-open={showCopilot && copilotOpen}
+        data-copilot-open={copilotOpen}
       >
         <header className="site-operations-header">
-          <div className="site-operations-header__logo">
-            <ClipboardList size={18} />
-          </div>
-          <div>
-            <h1>Lumii 站点运营助手</h1>
-            <p>
-              <span />
-              运行中 · 今日服务 18 单
-            </p>
-          </div>
-          {currentSite && sites.length > 0 && (
-            <div className="site-operations-header__site-switcher" ref={siteDropRef}>
+          {currentSite && sites.length > 0 ? (
+            <div className="so-site-picker" ref={siteDropRef}>
               <button
-                className="site-operations-header__site-btn"
-                onClick={() => setSiteDropdownOpen(!siteDropdownOpen)}
+                className="so-site-picker__trigger"
+                onClick={() => sites.length > 1 && setSiteDropdownOpen(!siteDropdownOpen)}
                 type="button"
+                data-open={siteDropdownOpen}
               >
-                {currentSite.name}
-                {sites.length > 1 && <ChevronDown size={14} />}
+                <span className="so-site-picker__avatar">{currentSite.name.charAt(0)}</span>
+                <span className="so-site-picker__name">{currentSite.name}</span>
+                {sites.length > 1 && (siteDropdownOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
               </button>
               {siteDropdownOpen && sites.length > 1 && (
-                <div className="site-operations-header__site-dropdown">
-                  {sites.map(s => (
-                    <button
-                      key={s.id}
-                      className="site-operations-header__site-option"
-                      data-active={s.id === currentSite.id}
-                      onClick={() => { selectSite(s); setSiteDropdownOpen(false); }}
-                      type="button"
-                    >
-                      {s.name}
+                <div className="so-site-picker__panel">
+                  <div className="so-site-picker__panel-header">
+                    <span>切换站点</span>
+                    <button type="button" className="so-site-picker__close" onClick={() => setSiteDropdownOpen(false)}>
+                      <X size={16} />
                     </button>
-                  ))}
+                  </div>
+                  <div className="so-site-picker__list">
+                    {sites.map(s => (
+                      <button
+                        key={s.id}
+                        className="so-site-picker__item"
+                        data-active={s.id === currentSite.id}
+                        onClick={() => { selectSite(s); setSiteDropdownOpen(false); }}
+                        type="button"
+                      >
+                        <span className="so-site-picker__item-avatar">{s.name.charAt(0)}</span>
+                        <span className="so-site-picker__item-info">
+                          <span className="so-site-picker__item-name">{s.name}</span>
+                          <span className="so-site-picker__item-meta">
+                            <span className="so-site-picker__dot" />
+                            运行中
+                          </span>
+                        </span>
+                        {s.id === currentSite.id && <span className="so-site-picker__badge">当前</span>}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
+          ) : (
+            <div className="so-site-picker">
+              <span className="so-site-picker__avatar" style={{ background: "#9CA3AF" }}>?</span>
+              <span className="so-site-picker__name" style={{ color: "#9CA3AF" }}>未选择站点</span>
+            </div>
           )}
+          <p className="so-site-picker__status">
+            <span className="so-site-picker__status-dot" />
+            运行中 · 今日服务 18 单
+          </p>
           <div className="site-operations-header__actions">
-            {showCopilot ? (
-              <button
-                className="copilot-toggle"
-                data-active={copilotOpen}
-                onClick={() => setCopilotOpen((prev) => !prev)}
-                type="button"
-                aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-              >
-                <Bot size={18} />
+            <form className="copilot-header-input" onSubmit={(e) => {
+              e.preventDefault();
+              const val = headerInputRef.current?.value.trim();
+              if (!val) { setCopilotOpen(true); return; }
+              openCopilotWithMessage(val);
+              if (headerInputRef.current) headerInputRef.current.value = "";
+            }}>
+              <Bot size={16} className="copilot-header-input__icon" />
+              <input
+                ref={headerInputRef}
+                type="text"
+                className="copilot-header-input__field"
+                placeholder="输入指令或问题..."
+              />
+              <button type="submit" className="copilot-header-input__send" aria-label="发送">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
               </button>
-            ) : null}
+            </form>
           </div>
         </header>
         <AreaNav
@@ -105,13 +158,26 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
           profileSlot={<ProfileMenu />}
         />
         <main className="site-operations-main">{children}</main>
-        {showCopilot ? (
-          <CopilotPanel
-            workAreaId={copilotAreaId(activeArea)}
-            isOpen={copilotOpen}
-            onClose={() => setCopilotOpen(false)}
-          />
-        ) : null}
+        <CopilotPanel
+          isOpen={copilotOpen}
+          onClose={() => setCopilotOpen(false)}
+          messages={messages}
+          connected={connected}
+          wip={wip}
+          endRef={endRef}
+          onSend={sendWithContext}
+          title="AI 助手"
+        />
+        {!copilotOpen && (
+          <button
+            className="copilot-mobile-fab"
+            onClick={() => setCopilotOpen(true)}
+            type="button"
+            aria-label="打开 AI 助手"
+          >
+            <Bot size={24} color="#fff" />
+          </button>
+        )}
         <AreaNav
           activeArea={activeArea}
           ariaLabel="站点运营移动工作区"

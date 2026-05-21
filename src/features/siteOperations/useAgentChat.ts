@@ -14,6 +14,7 @@ export interface ChatMessage {
 interface UseAgentChatOptions {
   agentId: string;
   sessionId: string;
+  siteId?: string;
   getToken: () => string;
 }
 
@@ -27,7 +28,7 @@ interface UseAgentChatReturn {
   endRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function useAgentChat({ agentId, sessionId, getToken }: UseAgentChatOptions): UseAgentChatReturn {
+export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentChatOptions): UseAgentChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [sending, setSending] = useState(false);
@@ -37,12 +38,12 @@ export function useAgentChat({ agentId, sessionId, getToken }: UseAgentChatOptio
   const turnActiveRef = useRef(false);
   const initReceivedRef = useRef(false);
 
-  // Auto-scroll when new messages arrive
+  // Auto-scroll when new messages arrive or wip changes
   useEffect(() => {
     if (typeof endRef.current?.scrollIntoView === "function") {
       endRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages, wip]);
 
   useEffect(() => {
     if (!agentId) return;
@@ -58,7 +59,8 @@ export function useAgentChat({ agentId, sessionId, getToken }: UseAgentChatOptio
       if (!token || closed) return;
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      cachedWsUrl = `${protocol}//${window.location.host}/api/ws/chat?agentId=${agentId}&sessionId=${sessionId}&token=${token}`;
+      const effectiveSession = siteId ? `${sessionId}:${siteId}` : sessionId;
+      cachedWsUrl = `${protocol}//${window.location.host}/api/ws/chat?agentId=${agentId}&sessionId=${effectiveSession}&token=${token}`;
       connect();
     }
 
@@ -130,13 +132,25 @@ export function useAgentChat({ agentId, sessionId, getToken }: UseAgentChatOptio
 
         case "message":
           if (frame.content?.startsWith(PROGRESS_PREFIX)) break;
-          // Echo dedup: match optimistic bubble by content
           setMessages((prev) => {
-            const idx = prev.findIndex((m) => m.sendStatus === "sending" && m.content === frame.content && m.role === "user");
-            if (idx >= 0) {
-              const updated = [...prev];
-              updated[idx] = { ...updated[idx], id: frame.id, sendStatus: "sent", timestamp: frame.timestamp };
-              return updated;
+            // Dedup: if this message ID already exists (from stream_end), skip
+            if (prev.some((m) => m.id === frame.id)) return prev;
+            // Echo dedup: match optimistic user bubble by content (strip [ctx:] prefix)
+            if (frame.role === "user") {
+              const stripped = (frame.content ?? "").replace(/^\[ctx:[^\]]*\]\s*/, "");
+              const idx = prev.findIndex((m) => m.sendStatus === "sending" && (m.content === frame.content || m.content === stripped) && m.role === "user");
+              if (idx >= 0) {
+                const updated = [...prev];
+                updated[idx] = { ...updated[idx], id: frame.id, sendStatus: "sent", timestamp: frame.timestamp };
+                return updated;
+              }
+            }
+            // Dedup: if assistant message content matches last streamed message, update ID only
+            if (frame.role === "assistant") {
+              const lastAssistant = [...prev].reverse().find((m) => m.role === "assistant" && !m.isStreaming);
+              if (lastAssistant && lastAssistant.content === frame.content) {
+                return prev.map((m) => m === lastAssistant ? { ...m, id: frame.id, timestamp: frame.timestamp } : m);
+              }
             }
             return [...prev, toMessage(frame)];
           });
@@ -194,18 +208,18 @@ export function useAgentChat({ agentId, sessionId, getToken }: UseAgentChatOptio
       clearInterval(healthCheckTimer);
       ws?.close();
     };
-  }, [agentId, sessionId, getToken]);
+  }, [agentId, sessionId, siteId, getToken]);
 
   const handleSend = useCallback((content: string) => {
     if (!content.trim() || !wsRef.current || wsRef.current.readyState !== 1) return;
     setSending(true);
     setWip(true);
 
-    // Optimistic UI
+    const displayContent = content.replace(/^\[ctx:[^\]]*\]\s*/, "");
     const optimistic: ChatMessage = {
       id: `opt-${Date.now()}`,
       role: "user",
-      content,
+      content: displayContent,
       msgType: "text",
       timestamp: new Date().toISOString(),
       sendStatus: "sending",

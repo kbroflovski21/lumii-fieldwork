@@ -25,7 +25,7 @@ export function ChatStream({ messages, wip, connected, endRef, compact }: ChatSt
           <div className="chat-bubble__body">
             <div className="chat-bubble__content">
               {msg.isStreaming && !msg.content ? (
-                <span className="chat-bubble__typing">思考中...</span>
+                <span className="chat-bubble__typing"><span /><span /><span /></span>
               ) : msg.role === "assistant" ? (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {msg.content}
@@ -49,7 +49,7 @@ export function ChatStream({ messages, wip, connected, endRef, compact }: ChatSt
           <div className="chat-bubble__avatar">AI</div>
           <div className="chat-bubble__body">
             <div className="chat-bubble__content">
-              <span className="chat-bubble__typing">正在思考...</span>
+              <span className="chat-bubble__typing"><span /><span /><span /></span>
             </div>
           </div>
         </div>

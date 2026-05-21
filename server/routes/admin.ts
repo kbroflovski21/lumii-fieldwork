@@ -16,8 +16,9 @@ export function adminRoutes() {
       return;
     }
 
+    const includeCareworker = req.query.include_careworker === "true";
     const rows = await prisma.user.findMany({
-      where: { orgId: user.orgId },
+      where: { orgId: user.orgId, ...(!includeCareworker && { role: { not: "careworker" } }) },
       orderBy: { createdAt: "desc" },
       select: { id: true, username: true, name: true, role: true, orgId: true, siteIds: true, phone: true, status: true, createdAt: true },
     });

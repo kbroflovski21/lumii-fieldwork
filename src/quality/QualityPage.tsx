@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { Bot, Edit3 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
+import { useAgentChat } from "../features/siteOperations/useAgentChat";
+import { ADMIN_COMMANDS } from "../features/siteOperations/CommandInput";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import "./quality.css";
@@ -232,10 +234,30 @@ type View = "dashboard" | "sop" | "sites" | "users";
    Main Page
    ═══════════════════════════════════════════════ */
 
+const VIEW_LABELS: Record<View, string> = {
+  dashboard: "质量总览",
+  sop: "规范管理",
+  sites: "站点管理",
+  users: "用户管理",
+};
+
 export function QualityPage() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("dashboard");
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const headerInputRef = useRef<HTMLInputElement>(null);
+
+  const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
+  const { messages, connected, wip, handleSend, endRef } = useAgentChat({
+    agentId: "lumii-goldenyears",
+    sessionId: "copilot:admin",
+    getToken,
+  });
+
+  const sendWithContext = useCallback((content: string) => {
+    const label = VIEW_LABELS[view] ?? view;
+    handleSend(`[ctx:${label}] ${content}`);
+  }, [view, handleSend]);
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
@@ -259,15 +281,27 @@ export function QualityPage() {
           </div>
         </div>
         <div className="quality-header__actions">
-          <button
-            className="copilot-toggle"
-            data-active={copilotOpen}
-            onClick={() => setCopilotOpen((prev) => !prev)}
-            type="button"
-            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-          >
-            <Bot size={18} />
-          </button>
+          <form className="copilot-header-input" onSubmit={(e) => {
+            e.preventDefault();
+            const val = headerInputRef.current?.value.trim();
+            if (!val) { setCopilotOpen(true); return; }
+            sendWithContext(val);
+            setCopilotOpen(true);
+            if (headerInputRef.current) headerInputRef.current.value = "";
+          }}>
+            <Bot size={16} className="copilot-header-input__icon" />
+            <input
+              ref={headerInputRef}
+              type="text"
+              className="copilot-header-input__field"
+              placeholder="输入指令或问题..."
+            />
+            <button type="submit" className="copilot-header-input__send" aria-label="发送">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </form>
         </div>
       </header>
 
@@ -309,9 +343,15 @@ export function QualityPage() {
 
       {/* CopilotPanel — row 2, col 3 */}
       <CopilotPanel
-        workAreaId="quality"
         isOpen={copilotOpen}
         onClose={() => setCopilotOpen(false)}
+        messages={messages}
+        connected={connected}
+        wip={wip}
+        endRef={endRef}
+        onSend={sendWithContext}
+        title="AI 助手"
+        commands={ADMIN_COMMANDS}
       />
 
     </div>
@@ -1066,7 +1106,7 @@ function UsersView() {
       const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users.filter((u: QualityUser) => u.role !== "careworker"));
+        setUsers(data.users);
       }
     } catch { /* ignore */ }
     setLoading(false);
