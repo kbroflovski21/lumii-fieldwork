@@ -31,6 +31,12 @@ export function smartBadgesRoutes() {
 
   r.post("/smart-badges/activations", async (req, res) => {
     const b = req.body;
+    const deviceCode = (b.deviceCode ?? "").trim();
+    if (!deviceCode) { res.status(400).json({ error: "工牌号不能为空" }); return; }
+
+    const existing = await prisma.smartBadge.findFirst({ where: { deviceCode } });
+    if (existing) { res.status(409).json({ error: `工牌号 ${deviceCode} 已存在，不能重复激活` }); return; }
+
     const id = genId("badge");
     const now = new Date().toISOString();
     const siteId = b.siteId ?? "site-001";
@@ -38,7 +44,7 @@ export function smartBadgesRoutes() {
     await prisma.smartBadge.create({
       data: {
         id,
-        deviceCode: b.deviceCode ?? `FW-${id.slice(-3)}`,
+        deviceCode,
         orgId: "org-001",
         siteId,
         siteName: site?.name ?? siteId,
