@@ -68,7 +68,7 @@ export function ChatStream({ messages, wip, connected, endRef, compact, onNaviga
               ) : msg.isStreaming && !msg.content ? (
                 <span className="chat-bubble__typing"><span /><span /><span /></span>
               ) : msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents} urlTransform={(url) => url}>
                   {msg.content}
                 </ReactMarkdown>
               ) : (
