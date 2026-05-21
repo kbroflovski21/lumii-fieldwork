@@ -16,11 +16,13 @@ interface CopilotPanelProps {
   wip: boolean;
   endRef: React.RefObject<HTMLDivElement | null>;
   onSend: (content: string) => void;
+  onNavigate?: (area: string, params: Record<string, string>) => void;
+  onCardAction?: (msgId: string | number, value: string) => void;
   title?: string;
   commands?: SlashCommand[];
 }
 
-export function CopilotPanel({ isOpen, onClose, messages, connected, wip, endRef, onSend, title, commands }: CopilotPanelProps) {
+export function CopilotPanel({ isOpen, onClose, messages, connected, wip, endRef, onSend, onNavigate, onCardAction, title, commands }: CopilotPanelProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
 
@@ -77,6 +79,8 @@ export function CopilotPanel({ isOpen, onClose, messages, connected, wip, endRef
             connected={connected}
             endRef={endRef}
             compact
+            onNavigate={onNavigate}
+            onCardAction={onCardAction}
           />
         </div>
         <footer className="copilot-panel__footer">

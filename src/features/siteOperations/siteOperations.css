@@ -6512,8 +6512,9 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 .chat-bubble__typing {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 0;
+  gap: 5px;
+  padding: 6px 2px;
+  min-height: 20px;
 }
 .chat-bubble__typing > span {
   width: 8px;
@@ -6528,6 +6529,62 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
   40% { transform: translateY(-8px); opacity: 1; }
 }
+/* gy:// smart link */
+.gy-link {
+  color: #6366F1;
+  cursor: pointer;
+  font-weight: 600;
+  border-bottom: 1px dashed #6366F1;
+  transition: opacity 0.15s;
+  display: inline;
+}
+.gy-link:hover { opacity: 0.7; }
+
+/* CardBubble (cb-*) */
+.cb-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+.cb-text {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+.cb-divider {
+  border: none;
+  border-top: 1px solid #F3F4F6;
+  margin: 0;
+}
+.cb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.cb-btn {
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  transition: all 0.15s;
+}
+.cb-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+.cb-btn--primary { background: #6366F1; color: #fff; border-color: #6366F1; }
+.cb-btn--primary:hover:not(:disabled) { background: #4F46E5; }
+.cb-btn--primary:disabled { background: #EEF2FF; color: #6366F1; }
+.cb-btn--danger { background: #DC2626; color: #fff; border-color: #DC2626; }
+.cb-btn--danger:hover:not(:disabled) { background: #B91C1C; }
+.cb-btn--danger:disabled { background: #FEF2F2; color: #DC2626; }
+.cb-btn--default { background: #F9FAFB; color: #374151; }
+.cb-btn--default:hover:not(:disabled) { background: #F3F4F6; }
+.cb-btn--default:disabled { background: #F9FAFB; color: #9CA3AF; }
+
 .chat-bubble__cursor {
   display: inline-block;
   width: 2px;

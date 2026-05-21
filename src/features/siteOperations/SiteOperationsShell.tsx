@@ -39,7 +39,7 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
 
   const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
 
-  const { messages, connected, wip, handleSend, endRef } = useAgentChat({
+  const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
     agentId: "lumii-goldenyears",
     sessionId: "copilot",
     siteId: currentSite?.id,
@@ -55,6 +55,10 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
     sendWithContext(msg);
     setCopilotOpen(true);
   }, [sendWithContext]);
+
+  const handleCopilotNavigate = useCallback((area: string, params: Record<string, string>) => {
+    if (area) onSelectArea(area as WorkAreaId);
+  }, [onSelectArea]);
 
   useEffect(() => {
     if (!siteDropdownOpen) return;
@@ -166,6 +170,8 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
           wip={wip}
           endRef={endRef}
           onSend={sendWithContext}
+          onNavigate={handleCopilotNavigate}
+          onCardAction={sendCardAction}
           title="AI 助手"
         />
         {!copilotOpen && (

@@ -24,7 +24,7 @@ interface UseAgentChatReturn {
   sending: boolean;
   wip: boolean;
   handleSend: (content: string) => void;
-  sendCardAction: (msgId: string, action: string) => void;
+  sendCardAction: (msgId: string | number, action: string) => void;
   endRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -122,12 +122,6 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
           setConnected(frame.connected);
           setWip(frame.wip);
           setMessages(frame.messages.map(toMessage));
-          // Restore in-flight streams
-          if (frame.in_flight?.length) {
-            for (const s of frame.in_flight) {
-              setMessages((prev) => [...prev, { id: s.msg_id, role: "assistant", content: s.content, msgType: "stream", timestamp: "", isStreaming: true }]);
-            }
-          }
           break;
 
         case "message":
@@ -229,9 +223,9 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
     wsRef.current.send(JSON.stringify({ type: "send", content }));
   }, []);
 
-  const sendCardAction = useCallback((msgId: string, action: string) => {
+  const sendCardAction = useCallback((msgId: string | number, action: string) => {
     if (!wsRef.current || wsRef.current.readyState !== 1) return;
-    wsRef.current.send(JSON.stringify({ type: "card_action", msg_id: msgId, action }));
+    wsRef.current.send(JSON.stringify({ type: "card_action", msg_id: String(msgId), action }));
   }, []);
 
   return { messages, connected, sending, wip, handleSend, sendCardAction, endRef };
