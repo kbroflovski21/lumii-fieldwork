@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { Bot, Edit3 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
+import { useAgentChat } from "../features/siteOperations/useAgentChat";
+import { ADMIN_COMMANDS } from "../features/siteOperations/CommandInput";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import "./quality.css";
@@ -91,10 +93,46 @@ function trendClass(label: string, up: boolean | null): string {
    Main Page
    ═══════════════════════════════════════════════ */
 
+const VIEW_LABELS: Record<View, string> = {
+  dashboard: "质量总览",
+  sop: "规范管理",
+  sites: "站点管理",
+  users: "用户管理",
+};
+
+const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard" };
+
 export function QualityPage() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("dashboard");
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const headerInputRef = useRef<HTMLInputElement>(null);
+
+  const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
+  const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
+    agentId: "lumii-goldenyears",
+    sessionId: "copilot:admin",
+    getToken,
+  });
+
+  const sendWithContext = useCallback((content: string) => {
+    const label = VIEW_LABELS[view] ?? view;
+    handleSend(`[ctx:${label}] ${content}`);
+  }, [view, handleSend]);
+
+  const handleAdminNavigate = useCallback((area: string, params: Record<string, string>) => {
+    const target = ADMIN_NAV_MAP[area];
+    if (target) {
+      setView(target);
+      setSearchFilter(params.search ?? "");
+    }
+  }, []);
+
+  const handleSelectView = useCallback((v: View) => {
+    setView(v);
+    setSearchFilter("");
+  }, []);
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
@@ -118,15 +156,27 @@ export function QualityPage() {
           </div>
         </div>
         <div className="quality-header__actions">
-          <button
-            className="copilot-toggle"
-            data-active={copilotOpen}
-            onClick={() => setCopilotOpen((prev) => !prev)}
-            type="button"
-            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
-          >
-            <Bot size={18} />
-          </button>
+          <form className="copilot-header-input" onSubmit={(e) => {
+            e.preventDefault();
+            const val = headerInputRef.current?.value.trim();
+            if (!val) { setCopilotOpen(true); return; }
+            sendWithContext(val);
+            setCopilotOpen(true);
+            if (headerInputRef.current) headerInputRef.current.value = "";
+          }}>
+            <Bot size={16} className="copilot-header-input__icon" />
+            <input
+              ref={headerInputRef}
+              type="text"
+              className="copilot-header-input__field"
+              placeholder="输入指令或问题..."
+            />
+            <button type="submit" className="copilot-header-input__send" aria-label="发送">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </form>
         </div>
       </header>
 
@@ -135,7 +185,7 @@ export function QualityPage() {
         {navItems.map((n) => (
           <button
             key={n.key}
-            onClick={() => setView(n.key)}
+            onClick={() => handleSelectView(n.key)}
             title={n.label}
             className="quality-rail__btn"
             data-active={view === n.key}
@@ -153,17 +203,25 @@ export function QualityPage() {
         ) : (
           <div className="quality-content">
             {view === "dashboard" && <DashboardView />}
-            {view === "sites" && <SitesView />}
-            {view === "users" && <UsersView />}
+            {view === "sites" && <SitesView initialSearch={searchFilter} />}
+            {view === "users" && <UsersView initialSearch={searchFilter} />}
           </div>
         )}
       </div>
 
       {/* CopilotPanel — row 2, col 3 */}
       <CopilotPanel
-        workAreaId="quality"
         isOpen={copilotOpen}
         onClose={() => setCopilotOpen(false)}
+        messages={messages}
+        connected={connected}
+        wip={wip}
+        endRef={endRef}
+        onSend={sendWithContext}
+        onNavigate={handleAdminNavigate}
+        onCardAction={sendCardAction}
+        title="AI 助手"
+        commands={ADMIN_COMMANDS}
       />
 
     </div>
@@ -302,7 +360,7 @@ interface SiteData {
   operators: Array<{ id: string; username: string; name: string; role: string }>;
 }
 
-function SitesView() {
+function SitesView({ initialSearch }: { initialSearch?: string }) {
   const { token } = useAuth();
   const [sites, setSites] = useState<SiteData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -312,7 +370,8 @@ function SitesView() {
   const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ site: SiteData } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch ?? "");
+  useEffect(() => { if (initialSearch) setSearch(initialSearch); }, [initialSearch]);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
@@ -715,7 +774,7 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
   careworker: "护理员",
 };
 
-function UsersView() {
+function UsersView({ initialSearch }: { initialSearch?: string }) {
   const { token } = useAuth();
   const [users, setUsers] = useState<QualityUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -727,7 +786,8 @@ function UsersView() {
   const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch ?? "");
+  useEffect(() => { if (initialSearch) setSearch(initialSearch); }, [initialSearch]);
   const [roleFilter, setRoleFilter] = useState("");
 
   const showToast = useCallback((msg: string) => {
