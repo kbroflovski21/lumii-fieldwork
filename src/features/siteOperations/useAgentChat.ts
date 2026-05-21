@@ -237,7 +237,7 @@ function toMessage(row: any): ChatMessage {
   return {
     id: row.id,
     role: row.role === "assistant" ? "assistant" : "user",
-    content: row.content,
+    content: row.role === "user" ? (row.content ?? "").replace(/^\[ctx:[^\]]*\]\s*/, "") : row.content,
     msgType: row.msg_type || "text",
     cardData: row.card_data ? (typeof row.card_data === "string" ? JSON.parse(row.card_data) : row.card_data) : undefined,
     timestamp: row.timestamp || row.created_at || "",

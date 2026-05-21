@@ -259,6 +259,12 @@ export function QualityPage() {
     handleSend(`[ctx:${label}] ${content}`);
   }, [view, handleSend]);
 
+  const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard" };
+  const handleAdminNavigate = useCallback((area: string, params: Record<string, string>) => {
+    const target = ADMIN_NAV_MAP[area];
+    if (target) setView(target);
+  }, []);
+
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
     { key: "sop", label: "规范管理", icon: <IconClipboardList /> },
@@ -350,6 +356,7 @@ export function QualityPage() {
         wip={wip}
         endRef={endRef}
         onSend={sendWithContext}
+        onNavigate={handleAdminNavigate}
         onCardAction={sendCardAction}
         title="AI 助手"
         commands={ADMIN_COMMANDS}
