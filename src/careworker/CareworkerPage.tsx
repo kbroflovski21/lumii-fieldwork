@@ -13,6 +13,7 @@ import {
   navigateCalendar,
 } from "./CalendarViews";
 import type { CalendarViewMode } from "./CalendarViews";
+import { HardwareSimulator } from "./HardwareSimulator";
 
 /* ─── Types ─── */
 
@@ -50,6 +51,8 @@ export interface ServiceTask {
   notes: string;
   serviceContext?: ServiceContext;
   report?: ServiceReport;
+  serviceObjectId?: string;
+  serviceObjectContext?: any;
 }
 
 interface ServiceContext {
@@ -931,7 +934,9 @@ function TaskDetailDrawer({
   onNavigate: (address: string) => void;
 }) {
   const [sopChecked, setSopChecked] = useState<Set<number>>(new Set());
+  const [expandedSop, setExpandedSop] = useState<number | null>(null);
   const sopSteps = task.report?.sopCheck.map(s => s.step) ?? getDefaultSopSteps(task.serviceType);
+  const sopDetails = getSopStepDetails(task.serviceType);
 
   // Pre-populate checked steps for completed tasks
   useEffect(() => {
@@ -944,13 +949,8 @@ function TaskDetailDrawer({
     }
   }, [task.id, task.report]);
 
-  const toggleSop = (idx: number) => {
-    if (task.status === "completed") return;
-    setSopChecked(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx); else next.add(idx);
-      return next;
-    });
+  const toggleSop = (_idx: number) => {
+    // SOP checklist is read-only — completion is determined by AI after recording
   };
 
   const isActiveService = isServicing === task.id;
@@ -999,20 +999,30 @@ function TaskDetailDrawer({
             )}
           </div>
 
-          {/* SOP checklist */}
+          {/* SOP checklist — tappable for details, AI-filled completion after service */}
           <div className="cw-sop-section">
-            <div className="cw-sop-section__title">SOP 执行清单</div>
+            <div className="cw-sop-section__title">SOP 执行清单{task.status === "pending" ? "（完成情况由AI自动分析）" : ""}</div>
             <div className="cw-sop-list">
               {sopSteps.map((step, idx) => {
                 const done = sopChecked.has(idx);
+                const detail = sopDetails[idx]?.detail;
+                const isExpanded = expandedSop === idx;
                 return (
-                  <div key={idx} className="cw-sop-item" onClick={() => toggleSop(idx)}>
+                  <div key={idx} className="cw-sop-item" onClick={() => setExpandedSop(isExpanded ? null : idx)} style={{ cursor: "pointer" }}>
                     <div className={`cw-sop-item__check ${done ? "cw-sop-item__check--done" : ""}`}>
-                      {done && <IconCheck />}
+                      {done ? <IconCheck /> : <span style={{ fontSize: 11, color: "#94A3B8" }}>{idx + 1}</span>}
                     </div>
-                    <span className={`cw-sop-item__label ${done ? "cw-sop-item__label--done" : ""}`}>
-                      {step}
-                    </span>
+                    <div style={{ flex: 1 }}>
+                      <span className={`cw-sop-item__label ${done ? "cw-sop-item__label--done" : ""}`}>
+                        {step}
+                      </span>
+                      {isExpanded && detail && (
+                        <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginTop: 6, paddingRight: 8 }}>
+                          {detail}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 10, color: "#CBD5E1", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
                   </div>
                 );
               })}
@@ -1303,17 +1313,73 @@ function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
 
 /* ─── Default SOP steps by service type ─── */
 
+interface SopStepDetail {
+  name: string;
+  detail: string;
+}
+
 function getDefaultSopSteps(serviceType: string): string[] {
-  const defaults: Record<string, string[]> = {
-    "探访关爱": ["确认身份", "健康状况询问", "生活照料检查", "心理关怀", "服务记录填写"],
-    "助餐": ["到达确认", "食材检查", "烹饪/加热", "摆餐与陪餐", "餐后清理", "记录"],
-    "助浴": ["安全评估", "水温确认", "协助沐浴", "皮肤检查", "记录"],
-    "助洁": ["到达确认", "清洁区域确认", "清洁执行", "物品归位", "服务总结"],
-    "健康监测": ["问候与身份确认", "健康状况询问", "生命体征检查", "服务总结与满意度询问"],
-    "常规探访": ["问候与身份确认", "健康状况询问", "生活环境检查", "心理关怀", "需求收集", "服务总结"],
-    "康复训练": ["评估", "热身", "训练执行", "放松", "记录"],
+  return (getSopStepDetails(serviceType) ?? []).map(s => s.name);
+}
+
+function getSopStepDetails(serviceType: string): SopStepDetail[] {
+  const defaults: Record<string, SopStepDetail[]> = {
+    "探访关爱": [
+      { name: "确认身份", detail: "到达后先自报姓名和机构，确认服务对象身份，出示工牌。观察对象精神面貌。" },
+      { name: "健康状况询问", detail: "询问近期身体状况：睡眠、食欲、疼痛、服药情况。如有血压计可测量血压。" },
+      { name: "生活照料检查", detail: "检查居家环境是否整洁安全，食物是否充足，水电煤气是否正常。注意跌倒风险。" },
+      { name: "心理关怀", detail: "关注情绪状态，耐心倾听。注意是否有孤独、焦虑、抑郁等情绪。鼓励参与社交活动。" },
+      { name: "服务记录填写", detail: "总结本次服务发现，记录健康观察和注意事项。告别时确认下次服务时间。" },
+    ],
+    "助餐": [
+      { name: "到达确认", detail: "到达后确认身份，了解今日饮食需求和禁忌。检查厨房卫生状况。" },
+      { name: "食材检查", detail: "检查食材新鲜度和保质期。确认是否有过敏食材。按低盐低糖低油标准准备。" },
+      { name: "烹饪/加热", detail: "按服务对象口味烹饪，注意食物软硬度适合老人咀嚼。确保食物温度适宜。" },
+      { name: "摆餐与陪餐", detail: "摆放餐具，协助就座。陪同用餐，观察进食量和咀嚼吞咽情况。" },
+      { name: "餐后清理", detail: "收拾餐桌，清洗餐具，整理厨房。确认服务对象餐后状态。" },
+      { name: "记录", detail: "记录进食量、食欲情况、特殊观察。提醒餐后服药（如有需要）。" },
+    ],
+    "助浴": [
+      { name: "安全评估", detail: "评估服务对象当日身体状况是否适合洗浴。检查浴室防滑设施和扶手。" },
+      { name: "水温确认", detail: "调节水温至38-40℃，请服务对象确认温度舒适。准备好干净衣物和浴巾。" },
+      { name: "协助沐浴", detail: "全程陪护，防止滑倒。注意保护隐私和尊严。根据需要协助清洗。" },
+      { name: "皮肤检查", detail: "洗浴过程中观察皮肤状况，注意是否有红肿、破损、压疮等异常。" },
+      { name: "记录", detail: "记录洗浴时长、皮肤状况、服务对象反馈。整理浴室恢复原状。" },
+    ],
+    "助洁": [
+      { name: "到达确认", detail: "到达后确认清洁区域和重点需求。了解物品摆放习惯，避免随意移动。" },
+      { name: "清洁区域确认", detail: "与服务对象确认需要清洁的房间和区域。注意贵重物品和私人物品。" },
+      { name: "清洁执行", detail: "按先卧室后客厅、先高后低的顺序清洁。使用对象家中的清洁用品。" },
+      { name: "物品归位", detail: "清洁后物品放回原位。垃圾分类处理。检查是否遗漏。" },
+      { name: "服务总结", detail: "请服务对象检查清洁效果。记录服务内容和特殊发现。" },
+    ],
+    "健康监测": [
+      { name: "问候与身份确认", detail: "到达后问候并确认身份。说明本次监测内容。" },
+      { name: "健康状况询问", detail: "询问近期身体感受、睡眠、饮食、排便等情况。了解服药依从性。" },
+      { name: "生命体征检查", detail: "测量血压、心率、血糖等指标。如有异常及时记录并告知对象。" },
+      { name: "服务总结与满意度询问", detail: "汇总监测结果，给出简单建议。询问服务满意度。" },
+    ],
+    "常规探访": [
+      { name: "问候与身份确认", detail: "到达后先自报姓名和机构，确认服务对象身份。" },
+      { name: "健康状况询问", detail: "询问近期身体状况、服药情况、有无不适。" },
+      { name: "生活环境检查", detail: "观察居家环境安全性，检查水电煤气、食物储备等。" },
+      { name: "心理关怀", detail: "关注情绪变化，耐心倾听，提供心理支持。" },
+      { name: "需求收集", detail: "了解是否有新的服务需求或困难需要帮助解决。" },
+      { name: "服务总结", detail: "总结本次探访发现，确认下次服务时间，礼貌告别。" },
+    ],
+    "康复训练": [
+      { name: "评估", detail: "评估当日身体状况和疼痛等级，确认是否适合训练。回顾上次训练记录。" },
+      { name: "热身", detail: "指导进行5-10分钟轻度活动，活动关节，预防运动损伤。" },
+      { name: "训练执行", detail: "按康复计划执行训练项目。注意动作规范，及时纠正。关注疼痛反馈。" },
+      { name: "放松", detail: "训练后进行拉伸和放松。按摩疲劳部位。确认无不适。" },
+      { name: "记录", detail: "记录训练内容、完成情况、疼痛等级变化和服务对象反馈。" },
+    ],
   };
-  return defaults[serviceType] ?? ["到达确认", "服务执行", "服务记录"];
+  return defaults[serviceType] ?? [
+    { name: "到达确认", detail: "到达后确认身份，了解服务需求。" },
+    { name: "服务执行", detail: "按照规范执行服务内容。" },
+    { name: "服务记录", detail: "记录服务内容和观察发现。" },
+  ];
 }
 
 /* ─── AI Assistant Component ─── */
@@ -1721,16 +1787,55 @@ export function CareworkerPage() {
         localStorage.removeItem("gy_careworker_token");
       });
   }, []);
+
+  const [apiTasks, setApiTasks] = useState<ServiceTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+
+  useEffect(() => {
+    if (!worker) { setTasksLoading(false); return; }
+    setTasksLoading(true);
+    const token = localStorage.getItem("gy_careworker_token");
+    fetch(`/api/service-schedule-occurrences?userId=${worker.id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then(res => res.json())
+      .then(data => {
+        const schedules = data.serviceSchedules ?? [];
+        const tasks: ServiceTask[] = schedules
+          .filter((s: any) => s.status !== "cancelled")
+          .map((s: any) => ({
+            id: s.id,
+            serviceType: s.serviceProject || "探访关爱",
+            recipientName: s.serviceObjectName || "",
+            workerName: worker.name,
+            date: s.serviceDate,
+            dayOfWeek: DAY_NAMES[new Date(s.serviceDate).getDay()],
+            startTime: s.startTime || "",
+            endTime: s.endTime || "",
+            location: s.addressSnapshot || s.address || "",
+            locationShort: (s.addressSnapshot || s.address || "").slice(-10),
+            status: (s.status === "completed" ? "completed" : "pending") as TaskStatus,
+            source: s.source === "service_plan" ? "周期计划" : "临时派单",
+            notes: s.notes || "",
+            serviceObjectId: s.serviceObjectId,
+            serviceObjectContext: s.serviceObjectContext,
+          }));
+        setApiTasks(tasks);
+        setTasksLoading(false);
+      })
+      .catch(() => { setApiTasks([]); setTasksLoading(false); });
+  }, [worker]);
+
   // Find the next pending task's start time for pre-service detection
   const nextPendingStart = useMemo(() => {
     const now = new Date();
     const todayDate = now.toISOString().slice(0, 10);
-    const pending = MOCK_TASKS.filter(t => t.date === todayDate && t.status === "pending");
+    const pending = apiTasks.filter(t => t.date === todayDate && t.status === "pending");
     if (pending.length === 0) return null;
     return pending.sort((a, b) => a.startTime.localeCompare(b.startTime))[0].startTime;
-  }, []);
+  }, [apiTasks]);
   const badge = useBadgeHook(nextPendingStart);
-  const serviceState = useServicePhase(servicingTaskId, MOCK_TASKS);
+  const serviceState = useServicePhase(servicingTaskId, apiTasks);
 
   // Calendar state with multi-view support (day/week/month)
   const today = useMemo(() => new Date(), []);
@@ -1741,13 +1846,13 @@ export function CareworkerPage() {
 
   const weekDates = useMemo(() => getWeekDates(currentDate), [currentDate]);
   const tasksForDate = useMemo(
-    () => MOCK_TASKS.filter(t => t.date === selectedDate),
-    [selectedDate],
+    () => apiTasks.filter(t => t.date === selectedDate),
+    [selectedDate, apiTasks],
   );
 
   const totalPending = useMemo(
-    () => MOCK_TASKS.filter(t => t.date === selectedDate && t.status === "pending").length,
-    [selectedDate],
+    () => apiTasks.filter(t => t.date === selectedDate && t.status === "pending").length,
+    [selectedDate, apiTasks],
   );
 
   const handleCalNavigate = useCallback((dir: number) => {
@@ -1769,7 +1874,7 @@ export function CareworkerPage() {
   }, [currentDate]);
 
   const handleStartService = useCallback((taskId: string) => {
-    setServicingTaskId(taskId);
+    window.location.href = `/careworker/hardware?scheduleId=${taskId}`;
   }, []);
 
   const handleStopService = useCallback((_taskId: string) => {
@@ -1800,6 +1905,23 @@ export function CareworkerPage() {
   // Login screen
   if (!worker) {
     return <LoginScreen onLogin={setWorker} />;
+  }
+
+  if (window.location.pathname.startsWith("/careworker/hardware")) {
+    if (tasksLoading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", color: "#667386" }}>加载任务中...</div>;
+    const params = new URLSearchParams(window.location.search);
+    const scheduleId = params.get("scheduleId");
+    const matchedTask = scheduleId ? apiTasks.find(t => t.id === scheduleId) : undefined;
+    const simTask = matchedTask ? {
+      scheduleId: matchedTask.id,
+      serviceObjectId: matchedTask.serviceObjectId ?? "",
+      serviceObjectName: matchedTask.recipientName,
+      serviceProject: matchedTask.serviceType,
+      clientContext: matchedTask.serviceObjectContext
+        ? `注意事项: ${JSON.stringify(matchedTask.serviceObjectContext.careNotes ?? [])}; 风险标签: ${JSON.stringify(matchedTask.serviceObjectContext.riskTags ?? [])}`
+        : "",
+    } : undefined;
+    return <HardwareSimulator worker={worker} task={simTask} />;
   }
 
   return (
@@ -1843,7 +1965,7 @@ export function CareworkerPage() {
                   weekDates={weekDates}
                   selectedDate={selectedDate}
                   todayStr={todayStr}
-                  tasks={MOCK_TASKS}
+                  tasks={apiTasks}
                   onSelect={setSelectedDate}
                 />
 
@@ -1872,7 +1994,7 @@ export function CareworkerPage() {
               <DayView
                 currentDate={currentDate}
                 todayStr={todayStr}
-                tasks={MOCK_TASKS}
+                tasks={apiTasks}
                 onSelectTask={setSelectedTask}
               />
             )}
@@ -1882,7 +2004,7 @@ export function CareworkerPage() {
                 currentDate={currentDate}
                 selectedDate={selectedDate}
                 todayStr={todayStr}
-                tasks={MOCK_TASKS}
+                tasks={apiTasks}
                 onSelectDate={setSelectedDate}
                 onSelectTask={setSelectedTask}
               />
@@ -1951,6 +2073,18 @@ export function CareworkerPage() {
 
       {/* AI Assistant */}
       <AiAssistant />
+
+      {/* Floating record button */}
+      <button
+        className="cw-float-record"
+        onClick={() => { window.location.href = "/careworker/hardware"; }}
+        title="开始录音"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="6" fill="currentColor" />
+          <circle cx="12" cy="12" r="10" />
+        </svg>
+      </button>
     </div>
   );
 }

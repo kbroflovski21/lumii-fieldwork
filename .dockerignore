@@ -1,0 +1,8 @@
+node_modules
+.git
+data/*.db
+tests
+docs
+deploy
+scripts
+*.md

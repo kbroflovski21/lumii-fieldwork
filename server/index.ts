@@ -21,8 +21,13 @@ import { personaRoutes } from "./routes/persona";
 import { authRoutes } from "./routes/auth";
 import { adminRoutes } from "./routes/admin";
 import { siteRoutes } from "./routes/sites";
+import { sopRoutes } from "./routes/sops";
+import { aiRoutes } from "./routes/ai";
+import { recordingRoutes, recordingInternalRoutes } from "./routes/recordings";
 import { requireAuth } from "./middleware/requireAuth";
 import { optionalAuth } from "./middleware/optionalAuth";
+import { requireServiceToken } from "./middleware/serviceAuth";
+import { internalRoutes } from "./routes/internal";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -61,6 +66,9 @@ app.use("/api", optAuth, smartBadgesRoutes());
 app.use("/api", optAuth, serviceObjectsRoutes());
 app.use("/api", optAuth, serviceSchedulesRoutes());
 app.use("/api", optAuth, serviceRecordsRoutes());
+app.use("/api", optAuth, sopRoutes());
+app.use("/api", optAuth, aiRoutes());
+app.use("/api", optAuth, recordingRoutes());
 app.use("/api", personaRoutes(
   process.env.WS_TOKEN ?? "dev-ws-token-change-in-prod",
   process.env.AGENT_ID ?? "lumii-goldenyears",
@@ -68,6 +76,11 @@ app.use("/api", personaRoutes(
 
 // Health check (public, no auth)
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Internal API (service-to-service, requires SERVICE_TOKEN)
+const serviceAuth = requireServiceToken();
+app.use("/api/internal", serviceAuth, internalRoutes());
+app.use("/api/internal", serviceAuth, recordingInternalRoutes());
 
 // Static file serving (production/staging)
 if (existsSync(STATIC_ROOT)) {

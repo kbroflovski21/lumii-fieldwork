@@ -8,4 +8,8 @@ tsconfig.tsbuildinfo
 .gstack/
 *.db-shm
 *.db-wal
+<<<<<<< Updated upstream
 generated/
+=======
+.env
+>>>>>>> Stashed changes

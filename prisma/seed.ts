@@ -196,16 +196,134 @@ async function main() {
   });
 
   // ── Service Schedules ──
+  const today = new Date().toISOString().slice(0, 10);
   await prisma.serviceSchedule.createMany({
     data: [
-      { id: "schedule-001", source: "service_plan", servicePlanId: "plan-001", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "助餐", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", mapDisplayPoint: { latitude: 31.292, longitude: 121.515, label: "控江路 1200 号" }, serviceDate: "2026-05-14", startTime: "14:00", endTime: "15:00", timeWindow: { start: "14:00", end: "15:00", label: "下午临时调整" }, assignedSocialWorkerId: "worker-002", assignedSocialWorkerName: "张敏", status: "scheduled", notes: "active plan exception has already changed time and worker", planExceptionApplied: 1, riskTags: ["独居"] },
-      { id: "schedule-002", source: "one_time", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "陪诊", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", mapDisplayPoint: { latitude: 31.292, longitude: 121.515, label: "控江路 1200 号" }, serviceDate: "2026-05-15", startTime: "10:00", endTime: "11:30", timeWindow: { start: "10:00", end: "11:30" }, status: "scheduled", assignedSocialWorkerId: "worker-001", assignedSocialWorkerName: "王丽", riskTags: ["跌倒风险"] },
-      { id: "schedule-003", source: "service_plan", servicePlanId: "plan-001", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "助餐", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", serviceDate: "2026-05-12", startTime: "09:30", endTime: "10:30", timeWindow: { start: "09:30", end: "10:30" }, assignedSocialWorkerId: "worker-001", assignedSocialWorkerName: "王丽", status: "completed", serviceRecordId: "record-001", riskTags: [] },
-      { id: "schedule-004", source: "service_plan", servicePlanId: "plan-002", serviceObjectId: "object-002", serviceObjectName: "李爷爷", serviceProject: "助浴", addressSnapshot: "上海市杨浦区长阳路 800 号", address: "上海市杨浦区长阳路 800 号", mapDisplayPoint: { latitude: 31.288, longitude: 121.525, label: "长阳路 800 号" }, serviceDate: "2026-05-15", startTime: "14:00", endTime: "15:30", timeWindow: { start: "14:00", end: "15:30", label: "下午" }, status: "unassigned", riskTags: ["认知障碍"] },
-      { id: "schedule-005", source: "one_time", serviceObjectId: "object-003", serviceObjectName: "王奶奶", serviceProject: "探访关爱", addressSnapshot: "上海市杨浦区国顺路 500 号", address: "上海市杨浦区国顺路 500 号", serviceDate: "2026-05-16", startTime: "09:00", endTime: "10:00", timeWindow: { start: "09:00", end: "10:00", label: "上午" }, assignedSocialWorkerId: "worker-003", assignedSocialWorkerName: "李芳", status: "scheduled", riskTags: [] },
+      { id: "schedule-001", source: "service_plan", servicePlanId: "plan-001", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "助餐", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", mapDisplayPoint: { latitude: 31.292, longitude: 121.515, label: "控江路 1200 号" }, serviceDate: today, startTime: "09:00", endTime: "10:30", timeWindow: { start: "09:00", end: "10:30", label: "上午" }, assignedSocialWorkerId: "sw-001", assignedSocialWorkerName: "王建国", status: "scheduled", riskTags: ["独居"] },
+      { id: "schedule-002", source: "one_time", serviceObjectId: "object-003", serviceObjectName: "王奶奶", serviceProject: "探访关爱", addressSnapshot: "上海市杨浦区国顺路 500 号", address: "上海市杨浦区国顺路 500 号", serviceDate: today, startTime: "14:00", endTime: "15:00", timeWindow: { start: "14:00", end: "15:00", label: "下午" }, assignedSocialWorkerId: "sw-001", assignedSocialWorkerName: "王建国", status: "scheduled", riskTags: [] },
+      { id: "schedule-003", source: "service_plan", servicePlanId: "plan-001", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "助餐", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", serviceDate: "2026-05-12", startTime: "09:30", endTime: "10:30", timeWindow: { start: "09:30", end: "10:30" }, assignedSocialWorkerId: "sw-001", assignedSocialWorkerName: "王建国", status: "completed", serviceRecordId: "record-001", riskTags: [] },
+      { id: "schedule-004", source: "service_plan", servicePlanId: "plan-002", serviceObjectId: "object-002", serviceObjectName: "李爷爷", serviceProject: "助浴", addressSnapshot: "上海市杨浦区长阳路 800 号", address: "上海市杨浦区长阳路 800 号", mapDisplayPoint: { latitude: 31.288, longitude: 121.525, label: "长阳路 800 号" }, serviceDate: today, startTime: "14:00", endTime: "15:30", timeWindow: { start: "14:00", end: "15:30", label: "下午" }, assignedSocialWorkerId: "sw-002", assignedSocialWorkerName: "张敏", status: "scheduled", riskTags: ["认知障碍"] },
+      { id: "schedule-005", source: "one_time", serviceObjectId: "object-003", serviceObjectName: "王奶奶", serviceProject: "探访关爱", addressSnapshot: "上海市杨浦区国顺路 500 号", address: "上海市杨浦区国顺路 500 号", serviceDate: "2026-05-16", startTime: "09:00", endTime: "10:00", timeWindow: { start: "09:00", end: "10:00", label: "上午" }, assignedSocialWorkerId: "sw-001", assignedSocialWorkerName: "王建国", status: "scheduled", riskTags: [] },
       { id: "schedule-006", source: "service_plan", servicePlanId: "plan-001", serviceObjectId: "object-001", serviceObjectName: "陈阿姨", serviceProject: "助餐", addressSnapshot: "上海市杨浦区控江路 1200 号", address: "上海市杨浦区控江路 1200 号", serviceDate: "2026-05-17", startTime: "09:00", endTime: "10:30", timeWindow: { start: "09:00", end: "10:30", label: "上午" }, status: "cancelled", notes: "家属临时取消", riskTags: [] },
     ],
   });
+
+  // ── SOPs ──
+  await prisma.sop.createMany({
+    data: [
+      {
+        id: "sop-general-001", name: "上门服务通用规范", type: "general", description: "所有上门服务必须遵守的通用规范", keywords: [], version: 1, orgId: "org-001",
+        sopContent: "1. 上门服务人员必须在开始服务时自报家门（姓名、所属机构），并确认被服务人员身份\n2. 服务过程中不得向被服务人员推销任何商业产品、保健品、保险或理财\n3. 不得私下收取费用或接受好处\n4. 不得拍摄或传播被服务人员的照片、视频或个人信息\n5. 服务结束前必须明确复述本次完成的服务内容，要求被服务人员确认，并询问满意度\n6. 服务全程需保持录音，录音自动存档",
+        sopSource: "manual", sopVersion: 3,
+        sopHistory: [{ version: 1, date: "2026-04-01", summary: "初始版本" }, { version: 2, date: "2026-04-20", summary: "增加满意度询问要求" }, { version: 3, date: "2026-05-14", summary: "更新违规行为条款" }],
+        supervisionContent: "1. 开场 1 分钟内未做自报家门和身份确认 → 语音提示一次\n2. 出现服务结束迹象但未复述服务内容和询问满意度 → 语音提示一次\n3. 检测到推销商品、私下收费等违规行为 → 具体描述违规并提示",
+        supervisionSource: "ai_generated", supervisionVersion: 2,
+        supervisionHistory: [{ version: 1, date: "2026-04-01", summary: "AI 初始生成" }, { version: 2, date: "2026-05-14", summary: "AI 基于 SOP v3 重新推理" }],
+        reportContent: "1. 是否做了开场确认，如有则记录信息，如无则提示缺失\n2. 是否询问了身体情况并总结结果\n3. 是否做了结束确认、复述服务内容和询问满意度\n4. 检查是否有推销或违规行为，如有则标注",
+        reportSource: "ai_generated", reportVersion: 2,
+        reportHistory: [{ version: 1, date: "2026-04-01", summary: "AI 初始生成" }, { version: 2, date: "2026-05-14", summary: "AI 基于 SOP v3 重新推理" }],
+      },
+      {
+        id: "sop-service-001", name: "助餐服务SOP", type: "service", description: "上门助餐服务标准流程", keywords: ["助餐", "做饭", "食材", "吃饭", "午餐", "晚餐", "早餐", "饮食"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+      {
+        id: "sop-service-002", name: "助浴服务SOP", type: "service", description: "上门助浴服务标准流程", keywords: ["助浴", "洗澡", "水温", "沐浴", "浴室"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+      {
+        id: "sop-service-003", name: "探访关爱SOP", type: "service", description: "上门探访关爱服务标准流程", keywords: ["探访", "关爱", "看望", "慰问", "探望"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+      {
+        id: "sop-service-004", name: "健康监测SOP", type: "service", description: "健康监测服务标准流程", keywords: ["健康", "监测", "血压", "血糖", "体温", "心率", "体检"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+      {
+        id: "sop-service-005", name: "助洁服务SOP", type: "service", description: "上门助洁服务标准流程", keywords: ["助洁", "清洁", "打扫", "卫生", "整理"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+      {
+        id: "sop-service-006", name: "康复训练SOP", type: "service", description: "康复训练服务标准流程", keywords: ["康复", "训练", "锻炼", "运动", "理疗"], version: 1, orgId: "org-001",
+        sopContent: null, supervisionContent: null, reportContent: null,
+        sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
+        supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
+        reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
+      },
+    ],
+  });
+
+  await prisma.sopStep.createMany({
+    data: [
+      // General SOP steps
+      { id: "step-g-001", sopId: "sop-general-001", sortOrder: 1, name: "问候确认身份", description: "到达后先自报姓名和机构，确认服务对象身份，出示工牌", required: true },
+      { id: "step-g-002", sopId: "sop-general-001", sortOrder: 2, name: "询问身体状况", description: "询问血压、疼痛、睡眠等基本身体状况", required: true },
+      { id: "step-g-003", sopId: "sop-general-001", sortOrder: 3, name: "确认用药情况", description: "了解是否按时服药，有无漏服或不良反应", required: true },
+      { id: "step-g-004", sopId: "sop-general-001", sortOrder: 4, name: "评估生活状态", description: "了解饮食、活动、自理能力等日常生活状态", required: true },
+      { id: "step-g-005", sopId: "sop-general-001", sortOrder: 5, name: "安全检查", description: "检查居家环境安全，评估跌倒风险等", required: true },
+      { id: "step-g-006", sopId: "sop-general-001", sortOrder: 6, name: "心理关怀", description: "关注情绪状态，耐心倾听，提供心理支持", required: true },
+      { id: "step-g-007", sopId: "sop-general-001", sortOrder: 7, name: "服务总结和告别", description: "总结本次服务内容，确认下次服务时间，礼貌告别", required: true },
+
+      // 助餐 steps
+      { id: "step-s1-001", sopId: "sop-service-001", sortOrder: 1, name: "到达确认", description: "确认身份，了解今日饮食需求和禁忌，检查厨房卫生", required: true },
+      { id: "step-s1-002", sopId: "sop-service-001", sortOrder: 2, name: "食材检查", description: "检查食材新鲜度和保质期，确认无过敏食材，按低盐低糖低油标准准备", required: true },
+      { id: "step-s1-003", sopId: "sop-service-001", sortOrder: 3, name: "烹饪加热", description: "按服务对象口味烹饪，注意食物软硬度适合咀嚼，确保温度适宜", required: true },
+      { id: "step-s1-004", sopId: "sop-service-001", sortOrder: 4, name: "摆餐与陪餐", description: "摆放餐具，协助就座，陪同用餐，观察进食量和咀嚼吞咽情况", required: true },
+      { id: "step-s1-005", sopId: "sop-service-001", sortOrder: 5, name: "餐后清理", description: "收拾餐桌，清洗餐具，整理厨房，确认服务对象餐后状态", required: true },
+      { id: "step-s1-006", sopId: "sop-service-001", sortOrder: 6, name: "记录", description: "记录进食量、食欲情况、特殊观察，提醒餐后服药", required: true },
+
+      // 助浴 steps
+      { id: "step-s2-001", sopId: "sop-service-002", sortOrder: 1, name: "安全评估", description: "评估当日身体状况是否适合洗浴，检查浴室防滑设施和扶手", required: true },
+      { id: "step-s2-002", sopId: "sop-service-002", sortOrder: 2, name: "水温确认", description: "调节水温至38-40℃，请服务对象确认温度舒适，准备好干净衣物", required: true },
+      { id: "step-s2-003", sopId: "sop-service-002", sortOrder: 3, name: "协助沐浴", description: "全程陪护防止滑倒，保护隐私和尊严，根据需要协助清洗", required: true },
+      { id: "step-s2-004", sopId: "sop-service-002", sortOrder: 4, name: "皮肤检查", description: "观察皮肤状况，注意红肿、破损、压疮等异常", required: true },
+      { id: "step-s2-005", sopId: "sop-service-002", sortOrder: 5, name: "记录", description: "记录洗浴时长、皮肤状况、服务对象反馈，整理浴室", required: true },
+
+      // 探访关爱 steps
+      { id: "step-s3-001", sopId: "sop-service-003", sortOrder: 1, name: "确认身份", description: "到达后先自报姓名和机构，确认服务对象身份，出示工牌", required: true },
+      { id: "step-s3-002", sopId: "sop-service-003", sortOrder: 2, name: "健康状况询问", description: "询问近期身体状况：睡眠、食欲、疼痛、服药情况", required: true },
+      { id: "step-s3-003", sopId: "sop-service-003", sortOrder: 3, name: "生活照料检查", description: "检查居家环境安全，食物是否充足，水电煤气是否正常", required: true },
+      { id: "step-s3-004", sopId: "sop-service-003", sortOrder: 4, name: "心理关怀", description: "关注情绪状态，耐心倾听，注意孤独、焦虑、抑郁等情绪", required: true },
+      { id: "step-s3-005", sopId: "sop-service-003", sortOrder: 5, name: "服务记录填写", description: "总结服务发现，记录健康观察和注意事项，确认下次服务时间", required: true },
+
+      // 健康监测 steps
+      { id: "step-s4-001", sopId: "sop-service-004", sortOrder: 1, name: "问候与身份确认", description: "到达后问候并确认身份，说明本次监测内容", required: true },
+      { id: "step-s4-002", sopId: "sop-service-004", sortOrder: 2, name: "健康状况询问", description: "询问近期身体感受、睡眠、饮食、排便等情况", required: true },
+      { id: "step-s4-003", sopId: "sop-service-004", sortOrder: 3, name: "生命体征检查", description: "测量血压、心率、血糖等指标，如有异常及时记录", required: true },
+      { id: "step-s4-004", sopId: "sop-service-004", sortOrder: 4, name: "服务总结", description: "汇总监测结果，给出简单建议，询问服务满意度", required: true },
+
+      // 助洁 steps
+      { id: "step-s5-001", sopId: "sop-service-005", sortOrder: 1, name: "到达确认", description: "确认清洁区域和重点需求，了解物品摆放习惯", required: true },
+      { id: "step-s5-002", sopId: "sop-service-005", sortOrder: 2, name: "清洁区域确认", description: "与服务对象确认需要清洁的房间和区域，注意贵重物品", required: true },
+      { id: "step-s5-003", sopId: "sop-service-005", sortOrder: 3, name: "清洁执行", description: "按先卧室后客厅、先高后低的顺序清洁", required: true },
+      { id: "step-s5-004", sopId: "sop-service-005", sortOrder: 4, name: "物品归位", description: "清洁后物品放回原位，垃圾分类处理", required: true },
+      { id: "step-s5-005", sopId: "sop-service-005", sortOrder: 5, name: "服务总结", description: "请服务对象检查清洁效果，记录服务内容", required: true },
+
+      // 康复训练 steps
+      { id: "step-s6-001", sopId: "sop-service-006", sortOrder: 1, name: "评估", description: "评估当日身体状况和疼痛等级，确认是否适合训练", required: true },
+      { id: "step-s6-002", sopId: "sop-service-006", sortOrder: 2, name: "热身", description: "指导5-10分钟轻度活动，活动关节，预防运动损伤", required: true },
+      { id: "step-s6-003", sopId: "sop-service-006", sortOrder: 3, name: "训练执行", description: "按康复计划执行训练项目，注意动作规范，关注疼痛反馈", required: true },
+      { id: "step-s6-004", sopId: "sop-service-006", sortOrder: 4, name: "放松", description: "训练后拉伸和放松，按摩疲劳部位，确认无不适", required: true },
+      { id: "step-s6-005", sopId: "sop-service-006", sortOrder: 5, name: "记录", description: "记录训练内容、完成情况、疼痛等级变化和反馈", required: true },
+    ],
+  });
+
+  console.log("[seed] Seeded 7 SOPs with steps");
 
   // ── Service Records (with computed service items) ──
   const record1Items = sopBusinessItems("r1", "助餐");
@@ -229,7 +347,7 @@ async function main() {
     data: [
       {
         id: "record-001", serviceDate: "2026-05-12", startTime: "09:31", endTime: "10:22", durationMinutes: 51,
-        socialWorkerId: "worker-001", socialWorkerName: "王丽", serviceObjectId: "object-001", serviceObjectName: "陈阿姨",
+        socialWorkerId: "sw-001", socialWorkerName: "王建国", serviceObjectId: "object-001", serviceObjectName: "陈阿姨",
         familyContactIds: ["family-001"], badgeId: "badge-021", smartBadgeId: "badge-021", serviceProject: "助餐",
         assignmentConfidence: 0.72, reviewStatus: "needs_review", exportStatus: "exportable",
         locationEvidence: { startPoint: { latitude: 31.292, longitude: 121.515, capturedAt: "2026-05-12T09:31:00+08:00", accuracyMeters: 18 }, endPoint: { latitude: 31.292, longitude: 121.515, capturedAt: "2026-05-12T10:22:00+08:00", accuracyMeters: 16 }, addressMatched: true },
@@ -242,7 +360,7 @@ async function main() {
       },
       {
         id: "record-002", serviceDate: "2026-05-13", startTime: "14:10", endTime: "15:05", durationMinutes: 55,
-        socialWorkerId: "worker-002", socialWorkerName: "张敏", serviceObjectId: "object-002", serviceObjectName: "李爷爷",
+        socialWorkerId: "sw-002", socialWorkerName: "张敏", serviceObjectId: "object-002", serviceObjectName: "李爷爷",
         familyContactIds: [], badgeId: "badge-031", smartBadgeId: "badge-031", serviceProject: "助浴",
         assignmentConfidence: 0.95, reviewStatus: "confirmed", exportStatus: "exported",
         locationEvidence: { startPoint: { latitude: 31.288, longitude: 121.525, capturedAt: "2026-05-13T14:10:00+08:00", accuracyMeters: 12 }, endPoint: { latitude: 31.288, longitude: 121.525, capturedAt: "2026-05-13T15:05:00+08:00", accuracyMeters: 10 }, addressMatched: true },
@@ -255,7 +373,7 @@ async function main() {
       },
       {
         id: "record-003", serviceDate: "2026-05-14", startTime: "09:00", endTime: "09:45", durationMinutes: 45,
-        socialWorkerId: "worker-003", socialWorkerName: "李芳", serviceObjectId: "object-003", serviceObjectName: "王奶奶",
+        socialWorkerId: "sw-001", socialWorkerName: "王建国", serviceObjectId: "object-003", serviceObjectName: "王奶奶",
         familyContactIds: ["family-003"], badgeId: "badge-021", smartBadgeId: "badge-021", serviceProject: "探访关爱",
         assignmentConfidence: 0.55, reviewStatus: "info_incomplete", exportStatus: "not_ready",
         locationEvidence: { startPoint: { latitude: 31.295, longitude: 121.510, capturedAt: "2026-05-14T09:00:00+08:00", accuracyMeters: 25 }, endPoint: { latitude: 31.295, longitude: 121.510, capturedAt: "2026-05-14T09:45:00+08:00", accuracyMeters: 20 }, addressMatched: false },

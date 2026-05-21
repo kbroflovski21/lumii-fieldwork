@@ -226,8 +226,9 @@ export function SupervisorContentInner() {
 }
 
 function SOPContent() {
-  const [folders, setFolders] = useState<StdFolder[]>(buildInitialFolders);
-  const [selectedFolder, setSelectedFolder] = useState("gen-ltci");
+  const [folders, setFolders] = useState<StdFolder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFolder, setSelectedFolder] = useState("");
   const [activeLayer, setActiveLayer] = useState<ActiveLayer>("sop");
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -251,6 +252,42 @@ function SOPContent() {
 
   /* Copilot */
   const [copilotOpen, setCopilotOpen] = useState(false);
+
+  /* Fetch folders from API */
+  useEffect(() => {
+    fetch("/api/sops").then(r => r.json()).then(data => {
+      const sops = data.sops ?? [];
+      const mapped: StdFolder[] = sops.map((s: any) => ({
+        id: s.id,
+        type: s.type,
+        name: s.name,
+        sop: s.sopContent ? {
+          status: "complete" as const,
+          content: s.sopContent,
+          source: s.sopSource ?? "manual",
+          version: s.sopVersion ?? 1,
+          history: s.sopHistory ?? [],
+        } : null,
+        supervision: s.supervisionContent ? {
+          status: "complete" as const,
+          content: s.supervisionContent,
+          source: s.supervisionSource ?? "ai_generated",
+          version: s.supervisionVersion ?? 1,
+          history: s.supervisionHistory ?? [],
+        } : null,
+        report: s.reportContent ? {
+          status: "complete" as const,
+          content: s.reportContent,
+          source: s.reportSource ?? "ai_generated",
+          version: s.reportVersion ?? 1,
+          history: s.reportHistory ?? [],
+        } : null,
+      }));
+      setFolders(mapped);
+      if (mapped.length > 0 && !selectedFolder) setSelectedFolder(mapped[0].id);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Confirmation modal */
   const [confirmModal, setConfirmModal] = useState<{
@@ -297,16 +334,32 @@ function SOPContent() {
   }, []);
 
   const sendToLLM = useCallback(
-    (userText: string) => {
-      pushChat("user", userText);
+    async (userText: string) => {
       setIsTyping(true);
+      pushChat("user", userText);
       setCopilotOpen(true);
-      setTimeout(() => {
-        pushChat("agent", mockAiReply(userText));
-        setIsTyping(false);
-      }, 600);
+
+      try {
+        const allMessages = [...messages, { id: String(nextMsgId++), role: "user" as const, content: userText, timestamp: makeTimestamp() }];
+        const resp = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: allMessages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+            systemPrompt: `你是金色年华养老服务平台的AI助手，帮助集团管理员管理SOP规范文档。
+当前已有的规范：${folders.map(f => f.name).join("、")}。
+你可以帮助用户：创建新规范、编辑规范内容、解答SOP相关问题。
+回答简洁实用。`,
+          }),
+        });
+        const data = await resp.json();
+        pushChat("agent", data.reply ?? "回复异常");
+      } catch {
+        pushChat("agent", "网络错误，请重试。");
+      }
+      setIsTyping(false);
     },
-    [pushChat],
+    [pushChat, messages, folders],
   );
 
   const handleSubmit = () => {
@@ -351,6 +404,15 @@ function SOPContent() {
         return updated;
       }),
     );
+    // Persist to API
+    const fieldMap: Record<DocType, string> = { sop: "sopContent", supervision: "supervisionContent", report: "reportContent" };
+    const sourceMap: Record<DocType, string> = { sop: "sopSource", supervision: "supervisionSource", report: "reportSource" };
+    const body: any = { [fieldMap[docType]]: editContent, [sourceMap[docType]]: folder[docType]?.source ?? "manual" };
+    fetch(`/api/sops/${folder.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
     setIsEditing(false);
     setEditingDocType(null);
   };
@@ -365,17 +427,21 @@ function SOPContent() {
       basedOnSopVersion: sopDoc.version,
       status: "generating",
     });
-    // Mock async generation
-    setTimeout(() => {
+    fetch("/api/ai/generate-doc", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sopContent: sopDoc.content, sopName: folder.name, docType }),
+    }).then(r => r.json()).then(data => {
       setGeneratePreview((prev) => {
         if (!prev || prev.folderId !== folder.id || prev.docType !== docType) return prev;
-        return {
-          ...prev,
-          content: mockGenerateDoc(sopDoc.content, docType),
-          status: "preview",
-        };
+        return { ...prev, content: data.content ?? "生成失败", status: "preview" as const };
       });
-    }, 1500);
+    }).catch(() => {
+      setGeneratePreview((prev) => {
+        if (!prev) return prev;
+        return { ...prev, content: "AI 生成失败，请重试", status: "preview" as const };
+      });
+    });
   };
 
   const handleAcceptGenerate = () => {
@@ -400,6 +466,20 @@ function SOPContent() {
         return updated;
       }),
     );
+    // Persist AI-generated content to API
+    const fieldMap: Record<string, string> = { supervision: "supervisionContent", report: "reportContent" };
+    const sourceMap: Record<string, string> = { supervision: "supervisionSource", report: "reportSource" };
+    const summaryMap: Record<string, string> = { supervision: "supervisionChangeSummary", report: "reportChangeSummary" };
+    const body: any = {
+      [fieldMap[docType]]: content,
+      [sourceMap[docType]]: "ai_generated",
+      [summaryMap[docType]]: `AI 基于 SOP v${basedOnSopVersion} 生成`,
+    };
+    fetch(`/api/sops/${folder.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
     setGeneratePreview(null);
   };
 
@@ -425,18 +505,50 @@ function SOPContent() {
   const handleFolderAction = (action: string, f: StdFolder, newName?: string) => {
     if (action === "rename_confirm" && newName) {
       setFolders((prev) => prev.map((ff) => (ff.id === f.id ? { ...ff, name: newName } : ff)));
+      // Persist rename to API
+      fetch(`/api/sops/${f.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      }).catch(() => {});
     } else if (action === "delete") {
       setConfirmModal({
         title: `删除「${f.name}」`,
         message: "该规范下的所有文件（SOP、督导要求、报告要求）将全部删除，此操作不可撤销。",
         danger: true,
         onConfirm: () => {
+          // Persist delete to API
+          fetch(`/api/sops/${f.id}`, { method: "DELETE" }).catch(() => {});
           setFolders((prev) => prev.filter((ff) => ff.id !== f.id));
           if (selectedFolder === f.id) setSelectedFolder("");
           setConfirmModal(null);
         },
       });
     }
+  };
+
+  /* ── Add new folder ── */
+  const handleAddFolder = async (type: "general" | "service") => {
+    const name = prompt(type === "general" ? "请输入通用规范名称：" : "请输入服务项目规范名称：");
+    if (!name?.trim()) return;
+    try {
+      const resp = await fetch("/api/sops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), type }),
+      });
+      const newSop = await resp.json();
+      const newFolder: StdFolder = {
+        id: newSop.id,
+        type: newSop.type,
+        name: newSop.name,
+        sop: null,
+        supervision: null,
+        report: null,
+      };
+      setFolders(prev => [...prev, newFolder]);
+      setSelectedFolder(newSop.id);
+    } catch {}
   };
 
   /* ── Drag resize ── */
@@ -497,7 +609,7 @@ function SOPContent() {
                 onToggleCollapse={() => setGeneralCollapsed(!generalCollapsed)}
                 selectedFolder={selectedFolder}
                 onSelect={selectFolder}
-                onAdd={() => sendToLLM("我想添加一个新的通用规范")}
+                onAdd={() => handleAddFolder("general")}
                 onFolderAction={handleFolderAction}
               />
               <div className="sv-dir__divider" />
@@ -508,7 +620,7 @@ function SOPContent() {
                 onToggleCollapse={() => setServiceCollapsed(!serviceCollapsed)}
                 selectedFolder={selectedFolder}
                 onSelect={selectFolder}
-                onAdd={() => sendToLLM("我想添加一个新的服务项目规范")}
+                onAdd={() => handleAddFolder("service")}
                 onFolderAction={handleFolderAction}
               />
             </div>
@@ -577,13 +689,42 @@ function SOPContent() {
                             return { ...ff, sop: null };
                           }),
                         );
+                        // Persist SOP content removal to API
+                        fetch(`/api/sops/${folder.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ sopContent: null }),
+                        }).catch(() => {});
                         setConfirmModal(null);
                       },
                     });
                   }}
                 />
+              ) : folder && isEditing && editingDocType === "sop" ? (
+                <div className="sv-doc__scroll" style={{ padding: 24 }}>
+                  <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{folder.name} — 编写 SOP</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="sv-btn sv-btn--ghost" onClick={() => { setIsEditing(false); setEditingDocType(null); }}>取消</button>
+                      <button className="sv-btn" onClick={() => handleSave("sop")}>保存</button>
+                    </div>
+                  </div>
+                  <textarea
+                    className="sv-doc__editor"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="请输入 SOP 内容，每行一个步骤，例如：&#10;1. 问候确认身份&#10;2. 询问身体状况&#10;3. ..."
+                    autoFocus
+                  />
+                </div>
               ) : folder ? (
-                <div className="sv-doc__empty">该规范尚未创建 SOP 文档</div>
+                <div className="sv-doc__empty">
+                  <div>该规范尚未创建 SOP 文档</div>
+                  <button
+                    style={{ marginTop: 12, padding: "8px 20px", background: "var(--sv-accent, #0052cc)", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+                    onClick={() => { setIsEditing(true); setEditingDocType("sop"); setEditContent(""); }}
+                  >开始编写</button>
+                </div>
               ) : (
                 <div className="sv-doc__empty">在左侧目录中选择一个规范</div>
               )}

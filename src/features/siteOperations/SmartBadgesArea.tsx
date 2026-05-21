@@ -321,7 +321,7 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
   );
 }
 
-type ViewTab = "info" | "records";
+type ViewTab = "info" | "records" | "recordings";
 
 function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecords }: {
   badge: SmartBadge;
@@ -335,12 +335,24 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   const [selectedWorker, setSelectedWorker] = useState(badge.preferredWorkerId ?? "");
   const [viewingRecord, setViewingRecord] = useState<ServiceRecord | null>(null);
   const [recordsData, setRecordsData] = useState<any>(null);
+  const [badgeRecordings, setBadgeRecordings] = useState<any[]>([]);
+  const [recordingsLoading, setRecordingsLoading] = useState(false);
 
   useEffect(() => {
     if (badge.recentServiceRecordIds.length > 0) {
       fetch("/api/service-records").then(r => r.json()).then(setRecordsData).catch(() => {});
     }
   }, [badge.id]);
+
+  useEffect(() => {
+    if (activeTab !== "recordings") return;
+    setRecordingsLoading(true);
+    const token = localStorage.getItem("gy_auth_token");
+    fetch(`/api/recordings?badgeId=${badge.deviceCode}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(data => { setBadgeRecordings(data.recordings ?? []); setRecordingsLoading(false); })
+      .catch(() => setRecordingsLoading(false));
+  }, [activeTab, badge.deviceCode]);
 
   const handleStatusChange = async (newStatus: SmartBadgeStatus) => {
     try {
@@ -355,6 +367,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "info", label: "设备信息" },
     { id: "records", label: "服务记录", count: badge.recentServiceRecordIds.length || undefined },
+    { id: "recordings", label: "录音", count: badgeRecordings.length || undefined },
   ];
 
   if (viewingRecord) {
@@ -483,6 +496,58 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
               <p className="sw-text-muted">加载中...</p>
             ) : (
               <p className="sw-text-muted">暂无服务记录</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === "recordings" && (
+          <div style={{ padding: "0 20px 20px" }}>
+            {recordingsLoading ? (
+              <div style={{ textAlign: "center", color: "#94A3B8", padding: 40 }}>加载中...</div>
+            ) : badgeRecordings.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#94A3B8", padding: 40 }}>暂无录音记录</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {badgeRecordings.map((rec: any) => {
+                  const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
+                  const statusColors: Record<string, string> = { processing: "#F59E0B", pending_match: "#3B82F6", matched: "#16A34A", unmatched: "#DC2626" };
+                  const startTime = new Date(rec.startedAt);
+                  const duration = rec.durationSeconds ?? 0;
+                  return (
+                    <div key={rec.id} style={{ padding: 14, borderRadius: 10, border: "1px solid #F1F5F9", background: "#FAFBFC" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{rec.workerName ?? "未知护工"}</span>
+                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: (statusColors[rec.status] ?? "#999") + "18", color: statusColors[rec.status] ?? "#999", fontWeight: 600 }}>
+                            {statusLabels[rec.status] ?? rec.status}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 12, color: "#94A3B8" }}>
+                          {startTime.getMonth()+1}/{startTime.getDate()} {startTime.getHours().toString().padStart(2,"0")}:{startTime.getMinutes().toString().padStart(2,"0")}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#64748B", display: "flex", gap: 12, marginBottom: 6 }}>
+                        <span>时长: {Math.floor(duration/60)}分{duration%60}秒</span>
+                        {rec.matchedServiceObjectName && <span>服务对象: {rec.matchedServiceObjectName}</span>}
+                      </div>
+                      {rec.matchReason && (
+                        <div style={{ fontSize: 12, color: "#0052CC", marginBottom: 6 }}>匹配: {rec.matchReason} ({Math.round((rec.matchConfidence ?? 0) * 100)}%)</div>
+                      )}
+                      {rec.aiSummary && (
+                        <div style={{ fontSize: 12, color: "#475569", marginBottom: 8, lineHeight: 1.5 }}>{rec.aiSummary}</div>
+                      )}
+                      {rec.transcriptText && (
+                        <details style={{ fontSize: 12 }}>
+                          <summary style={{ cursor: "pointer", color: "#0052CC", fontWeight: 500, marginBottom: 4 }}>查看转写原文</summary>
+                          <div style={{ background: "#F8FAFC", padding: 10, borderRadius: 8, lineHeight: 1.7, color: "#334155", maxHeight: 200, overflowY: "auto", whiteSpace: "pre-wrap", marginTop: 4 }}>
+                            {rec.transcriptText}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}

@@ -1,194 +1,36 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, type ReactNode } from "react";
 import { Bot, Edit3 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
-import { useAgentChat } from "../features/siteOperations/useAgentChat";
-import { ADMIN_COMMANDS } from "../features/siteOperations/CommandInput";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import "./quality.css";
 
-/* ── Types ── */
+/* ── Mock data ── */
 
-type Period = "week" | "month";
-
-interface WorkerPeriodScore {
-  socialWorkerId: string;
-  socialWorkerName: string;
-  siteId: string;
-  siteName: string;
-  serviceCount: number;
-  avgS: number;
-  avgA: number;
-  avgB: number;
-  avgC: number;
-  avgD: number;
-  prevAvgS: number | null;
-  delta: number | null;
-}
-
-interface SitePeriodScore {
-  siteId: string;
-  siteName: string;
-  workerCount: number;
-  serviceCount: number;
-  avgS: number;
-  avgA: number;
-  avgB: number;
-  avgC: number;
-  avgD: number;
-  prevAvgS: number | null;
-  delta: number | null;
-}
-
-interface TrendPoint {
-  label: string;
-  avgS: number;
-  avgA: number;
-  avgB: number;
-  avgC: number;
-  avgD: number;
-  serviceCount: number;
-}
-
-/* ── Mock data for quality dashboard ── */
-
-const MOCK_SITES = [
-  { id: "site-001", name: "翠苑站" },
-  { id: "site-002", name: "三墩站" },
-  { id: "site-003", name: "古荡站" },
-  { id: "site-004", name: "文新站" },
+const KPIs = [
+  { label: "本周服务总量", value: "168", sub: "4 站点合计", trend: "+12%", up: true },
+  { label: "服务完成率", value: "93%", sub: "较上周持平", trend: "0%", up: null },
+  { label: "SOP 平均完成率", value: "87%", sub: "较上周 +3%", trend: "+3%", up: true },
+  { label: "客户满意度", value: "4.6/5", sub: "较上周 +0.1", trend: "+0.1", up: true },
+  { label: "异常率", value: "6.2%", sub: "较上周 -1.1%", trend: "-1.1%", up: false },
+  { label: "投诉率", value: "1.8%", sub: "较上周 -0.3%", trend: "-0.3%", up: false },
 ];
 
-function buildMockWorkers(period: Period): WorkerPeriodScore[] {
-  const monthData = [
-    { id: "w1", name: "李明", siteId: "site-001", siteName: "翠苑站", count: 24, s: 34.2, a: 8.8, b: 6.2, c: 9.0, d: 10.2, prev: 32.5 },
-    { id: "w2", name: "王芳", siteId: "site-001", siteName: "翠苑站", count: 18, s: 31.5, a: 8.2, b: 5.0, c: 8.3, d: 10.0, prev: 30.8 },
-    { id: "w3", name: "张伟", siteId: "site-002", siteName: "三墩站", count: 22, s: 28.6, a: 7.5, b: 5.0, c: 7.1, d: 9.0, prev: 30.2 },
-    { id: "w4", name: "陈静", siteId: "site-002", siteName: "三墩站", count: 20, s: 35.8, a: 9.2, b: 7.8, c: 9.3, d: 9.5, prev: 34.1 },
-    { id: "w5", name: "刘洋", siteId: "site-003", siteName: "古荡站", count: 26, s: 33.0, a: 8.5, b: 5.5, c: 9.0, d: 10.0, prev: 33.5 },
-    { id: "w6", name: "赵敏", siteId: "site-003", siteName: "古荡站", count: 19, s: 36.4, a: 9.4, b: 8.0, c: 9.5, d: 9.5, prev: 35.0 },
-    { id: "w7", name: "孙磊", siteId: "site-004", siteName: "文新站", count: 15, s: 22.8, a: 6.0, b: 3.0, c: 6.8, d: 7.0, prev: 25.1 },
-    { id: "w8", name: "周婷", siteId: "site-004", siteName: "文新站", count: 21, s: 30.2, a: 7.8, b: 5.0, c: 8.4, d: 9.0, prev: 29.0 },
-    { id: "w9", name: "吴强", siteId: "site-001", siteName: "翠苑站", count: 16, s: 26.5, a: 7.0, b: 4.0, c: 7.5, d: 8.0, prev: 27.8 },
-    { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 23, s: 32.1, a: 8.3, b: 6.0, c: 8.8, d: 9.0, prev: 31.0 },
-  ];
-  const weekData = [
-    { id: "w1", name: "李明", siteId: "site-001", siteName: "翠苑站", count: 6, s: 35.0, a: 9.0, b: 6.5, c: 9.2, d: 10.3, prev: 33.8 },
-    { id: "w2", name: "王芳", siteId: "site-001", siteName: "翠苑站", count: 4, s: 30.2, a: 7.8, b: 5.0, c: 8.0, d: 9.4, prev: 31.5 },
-    { id: "w3", name: "张伟", siteId: "site-002", siteName: "三墩站", count: 5, s: 27.1, a: 7.0, b: 5.0, c: 6.6, d: 8.5, prev: 28.6 },
-    { id: "w4", name: "陈静", siteId: "site-002", siteName: "三墩站", count: 5, s: 36.5, a: 9.5, b: 8.0, c: 9.5, d: 9.5, prev: 35.8 },
-    { id: "w5", name: "刘洋", siteId: "site-003", siteName: "古荡站", count: 7, s: 34.2, a: 8.8, b: 6.0, c: 9.2, d: 10.2, prev: 33.0 },
-    { id: "w6", name: "赵敏", siteId: "site-003", siteName: "古荡站", count: 5, s: 37.1, a: 9.5, b: 8.2, c: 9.6, d: 9.8, prev: 36.4 },
-    { id: "w7", name: "孙磊", siteId: "site-004", siteName: "文新站", count: 3, s: 24.5, a: 6.5, b: 3.5, c: 7.2, d: 7.3, prev: 22.8 },
-    { id: "w8", name: "周婷", siteId: "site-004", siteName: "文新站", count: 5, s: 31.0, a: 8.0, b: 5.2, c: 8.6, d: 9.2, prev: 30.2 },
-    { id: "w9", name: "吴强", siteId: "site-001", siteName: "翠苑站", count: 4, s: 25.8, a: 6.8, b: 3.8, c: 7.2, d: 8.0, prev: 26.5 },
-    { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 6, s: 33.5, a: 8.6, b: 6.2, c: 9.0, d: 9.7, prev: 32.1 },
-  ];
-  const workers = period === "week" ? weekData : monthData;
-  return workers.map((w) => ({
-    socialWorkerId: w.id,
-    socialWorkerName: w.name,
-    siteId: w.siteId,
-    siteName: w.siteName,
-    serviceCount: w.count,
-    avgS: w.s,
-    avgA: w.a,
-    avgB: w.b,
-    avgC: w.c,
-    avgD: w.d,
-    prevAvgS: w.prev,
-    delta: +(w.s - w.prev).toFixed(1),
-  }));
-}
+const SITES_DATA = [
+  { name: "翠苑站", services: 47, completion: 93, sopRate: 89, satisfaction: 4.7, anomaly: 6.4 },
+  { name: "三墩站", services: 38, completion: 91, sopRate: 85, satisfaction: 4.5, anomaly: 7.8 },
+  { name: "古荡站", services: 52, completion: 96, sopRate: 92, satisfaction: 4.8, anomaly: 4.2 },
+  { name: "文新站", services: 31, completion: 88, sopRate: 81, satisfaction: 4.3, anomaly: 9.1 },
+];
 
-function buildMockSiteScores(period: Period): SitePeriodScore[] {
-  const workers = buildMockWorkers(period);
-  const grouped = new Map<string, WorkerPeriodScore[]>();
-  for (const w of workers) {
-    const arr = grouped.get(w.siteId) || [];
-    arr.push(w);
-    grouped.set(w.siteId, arr);
-  }
-  return MOCK_SITES.map((site) => {
-    const ws = grouped.get(site.id) || [];
-    const n = ws.length || 1;
-    const totalServices = ws.reduce((s, w) => s + w.serviceCount, 0);
-    const avgS = +(ws.reduce((s, w) => s + w.avgS, 0) / n).toFixed(1);
-    const avgA = +(ws.reduce((s, w) => s + w.avgA, 0) / n).toFixed(1);
-    const avgB = +(ws.reduce((s, w) => s + w.avgB, 0) / n).toFixed(1);
-    const avgC = +(ws.reduce((s, w) => s + w.avgC, 0) / n).toFixed(1);
-    const avgD = +(ws.reduce((s, w) => s + w.avgD, 0) / n).toFixed(1);
-    const prevAvgS = +(ws.reduce((s, w) => s + (w.prevAvgS ?? 0), 0) / n).toFixed(1);
-    return {
-      siteId: site.id, siteName: site.name, workerCount: ws.length,
-      serviceCount: totalServices, avgS, avgA, avgB, avgC, avgD,
-      prevAvgS, delta: +(avgS - prevAvgS).toFixed(1),
-    };
-  });
-}
+const SOP_RATES = [
+  { service: "探访关爱", rate: 91, count: 82, issues: "安全检查步骤执行率偏低" },
+  { service: "助浴", rate: 84, count: 36, issues: "皮肤检查和水温确认遗漏较多" },
+  { service: "用药提醒", rate: 88, count: 28, issues: "药量核对步骤偶有缺失" },
+  { service: "助餐", rate: 95, count: 22, issues: "基本达标" },
+];
 
-function buildMockTrend(_workerId: string, period: Period): TrendPoint[] {
-  const labels = period === "week"
-    ? ["W06","W07","W08","W09","W10","W11","W12","W13","W14","W15","W16","W17"]
-    : ["2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"];
-  const base = 28 + Math.random() * 6;
-  const countBase = period === "week" ? 3 : 15;
-  const countRange = period === "week" ? 5 : 12;
-  return labels.map((m, i) => {
-    const s = +(base + (Math.random() - 0.3) * 4 + i * 0.3).toFixed(1);
-    const a = +(s * 0.26).toFixed(1);
-    const b = +(s * 0.16).toFixed(1);
-    const c = +(s * 0.28).toFixed(1);
-    const d = +(s * 0.30).toFixed(1);
-    return { label: m, avgS: Math.min(40, Math.max(10, s)), avgA: Math.min(10, a), avgB: Math.min(10, b), avgC: Math.min(10, c), avgD: Math.min(10, d), serviceCount: countBase + Math.floor(Math.random() * countRange) };
-  });
-}
-
-/* ── Helpers ── */
-
-function scoreClass(s: number): string {
-  if (s >= 32) return "qd-score--success";
-  if (s >= 24) return "qd-score--warning";
-  return "qd-score--danger";
-}
-
-function deltaClass(d: number | null): string {
-  if (d === null || d === 0) return "qd-delta--flat";
-  return d > 0 ? "qd-delta--up" : "qd-delta--down";
-}
-
-function deltaText(d: number | null): string {
-  if (d === null) return "—";
-  if (d === 0) return "—";
-  return d > 0 ? `+${d.toFixed(1)}` : d.toFixed(1);
-}
-
-function deltaArrow(d: number | null): string {
-  if (d === null || d === 0) return "—";
-  return d > 0 ? "↑" : "↓";
-}
-
-
-/* ── Sort helper ── */
-
-type SortKey = "name" | "site" | "count" | "s" | "a" | "b" | "c" | "d" | "delta";
-type SortDir = "asc" | "desc";
-
-function getSortValue(w: WorkerPeriodScore, key: SortKey): number | string {
-  switch (key) {
-    case "name": return w.socialWorkerName;
-    case "site": return w.siteName;
-    case "count": return w.serviceCount;
-    case "s": return w.avgS;
-    case "a": return w.avgA;
-    case "b": return w.avgB;
-    case "c": return w.avgC;
-    case "d": return w.avgD;
-    case "delta": return w.delta ?? 0;
-  }
-}
 
 /* ── Icons (inline SVG helpers) ── */
 
@@ -230,40 +72,29 @@ function IconClipboardList({ size = 20 }: { size?: number }) {
 
 type View = "dashboard" | "sop" | "sites" | "users";
 
+function rateClass(value: number, thresholds: [number, number]): string {
+  if (value >= thresholds[0]) return "quality-table__value--success";
+  if (value >= thresholds[1]) return "quality-table__value--warning";
+  return "quality-table__value--danger";
+}
+
+function trendClass(label: string, up: boolean | null): string {
+  if (up === null) return "quality-kpi-card__trend-value--neutral";
+  const isInverse = label.includes("异常") || label.includes("投诉");
+  if (isInverse) {
+    return up ? "quality-kpi-card__trend-value--inv-up" : "quality-kpi-card__trend-value--inv-down";
+  }
+  return up ? "quality-kpi-card__trend-value--up" : "quality-kpi-card__trend-value--down";
+}
+
 /* ═══════════════════════════════════════════════
    Main Page
    ═══════════════════════════════════════════════ */
-
-const VIEW_LABELS: Record<View, string> = {
-  dashboard: "质量总览",
-  sop: "规范管理",
-  sites: "站点管理",
-  users: "用户管理",
-};
 
 export function QualityPage() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("dashboard");
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const headerInputRef = useRef<HTMLInputElement>(null);
-
-  const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
-  const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
-    agentId: "lumii-goldenyears",
-    sessionId: "copilot:admin",
-    getToken,
-  });
-
-  const sendWithContext = useCallback((content: string) => {
-    const label = VIEW_LABELS[view] ?? view;
-    handleSend(`[ctx:${label}] ${content}`);
-  }, [view, handleSend]);
-
-  const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard" };
-  const handleAdminNavigate = useCallback((area: string, params: Record<string, string>) => {
-    const target = ADMIN_NAV_MAP[area];
-    if (target) setView(target);
-  }, []);
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
@@ -287,27 +118,15 @@ export function QualityPage() {
           </div>
         </div>
         <div className="quality-header__actions">
-          <form className="copilot-header-input" onSubmit={(e) => {
-            e.preventDefault();
-            const val = headerInputRef.current?.value.trim();
-            if (!val) { setCopilotOpen(true); return; }
-            sendWithContext(val);
-            setCopilotOpen(true);
-            if (headerInputRef.current) headerInputRef.current.value = "";
-          }}>
-            <Bot size={16} className="copilot-header-input__icon" />
-            <input
-              ref={headerInputRef}
-              type="text"
-              className="copilot-header-input__field"
-              placeholder="输入指令或问题..."
-            />
-            <button type="submit" className="copilot-header-input__send" aria-label="发送">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-              </svg>
-            </button>
-          </form>
+          <button
+            className="copilot-toggle"
+            data-active={copilotOpen}
+            onClick={() => setCopilotOpen((prev) => !prev)}
+            type="button"
+            aria-label={copilotOpen ? "关闭 AI 助手" : "打开 AI 助手"}
+          >
+            <Bot size={18} />
+          </button>
         </div>
       </header>
 
@@ -329,37 +148,22 @@ export function QualityPage() {
 
       {/* Main content — row 2, col 2 */}
       <div className="quality-main">
-        <div className={`quality-content${view === "sop" ? " quality-content--sop" : ""}`}>
-          {view === "dashboard" && <DashboardView />}
-          {view === "sop" && (
-            <>
-              <div className="quality-records__header">
-                <div>
-                  <div className="quality-records__title">规范管理</div>
-                  <div className="quality-records__subtitle">维护服务规范文档与 AI 配置，确保服务质量标准统一</div>
-                </div>
-              </div>
-              <SupervisorContent />
-            </>
-          )}
-          {view === "sites" && <SitesView />}
-          {view === "users" && <UsersView />}
-        </div>
+        {view === "sop" ? (
+          <SupervisorContent />
+        ) : (
+          <div className="quality-content">
+            {view === "dashboard" && <DashboardView />}
+            {view === "sites" && <SitesView />}
+            {view === "users" && <UsersView />}
+          </div>
+        )}
       </div>
 
       {/* CopilotPanel — row 2, col 3 */}
       <CopilotPanel
+        workAreaId="quality"
         isOpen={copilotOpen}
         onClose={() => setCopilotOpen(false)}
-        messages={messages}
-        connected={connected}
-        wip={wip}
-        endRef={endRef}
-        onSend={sendWithContext}
-        onNavigate={handleAdminNavigate}
-        onCardAction={sendCardAction}
-        title="AI 助手"
-        commands={ADMIN_COMMANDS}
       />
 
     </div>
@@ -367,296 +171,118 @@ export function QualityPage() {
 }
 
 /* ═══════════════════════════════════════════════
-   Dashboard View — 员工服务质量管理
+   Dashboard View
    ═══════════════════════════════════════════════ */
 
 function DashboardView() {
-  const [period, setPeriod] = useState<Period>("month");
-  const [siteFilter, setSiteFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("s");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [detailWorker, setDetailWorker] = useState<WorkerPeriodScore | null>(null);
+  const [stats, setStats] = useState<{total: number; needsReview: number; confirmed: number; completionRate: number; avgConfidence: number} | null>(null);
 
-  const allWorkers = useMemo(() => buildMockWorkers(period), [period]);
-  const siteScores = useMemo(() => buildMockSiteScores(period), [period]);
+  useEffect(() => {
+    const token = localStorage.getItem("gy_auth_token");
+    fetch("/api/service-records", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(data => {
+        const records = (data.serviceRecords ?? []) as any[];
+        const total = records.length;
+        const needsReview = records.filter(r => r.reviewStatus === "needs_review").length;
+        const confirmed = records.filter(r => r.reviewStatus === "confirmed").length;
+        const avgConf = total > 0
+          ? Math.round(records.reduce((sum, r) => sum + (r.assignmentConfidence ?? 0), 0) / total * 100)
+          : 0;
+        setStats({ total, needsReview, confirmed, completionRate: total > 0 ? Math.round(confirmed / total * 100) : 0, avgConfidence: avgConf });
+      })
+      .catch(() => {});
+  }, []);
 
-  const filteredWorkers = useMemo(() => {
-    let list = siteFilter === "all" ? allWorkers : allWorkers.filter((w) => w.siteId === siteFilter);
-    list = [...list].sort((a, b) => {
-      const va = getSortValue(a, sortKey);
-      const vb = getSortValue(b, sortKey);
-      if (typeof va === "string" && typeof vb === "string") {
-        return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
-      }
-      return sortDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
-    });
-    return list;
-  }, [allWorkers, siteFilter, sortKey, sortDir]);
-
-  const summary = useMemo(() => {
-    const ws = filteredWorkers;
-    const n = ws.length || 1;
-    const avgS = +(ws.reduce((s, w) => s + w.avgS, 0) / n).toFixed(1);
-    const totalServices = ws.reduce((s, w) => s + w.serviceCount, 0);
-    const improved = ws.filter((w) => (w.delta ?? 0) > 0).length;
-    const declined = ws.filter((w) => (w.delta ?? 0) < 0).length;
-    const feedbackCount = ws.reduce((s, w) => s + (w.avgB !== 5 ? 1 : 0), 0);
-    const feedbackRate = ws.length ? +((feedbackCount / ws.length) * 100).toFixed(0) : 0;
-    return { avgS, totalServices, improved, declined, feedbackRate };
-  }, [filteredWorkers]);
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  };
-
-  const sortIcon = (key: SortKey) => {
-    if (sortKey !== key) return "";
-    return sortDir === "asc" ? " ↑" : " ↓";
-  };
-
-  const periodLabel = period === "month" ? "本月" : "本周";
-  const prevLabel = period === "month" ? "上月" : "上周";
-
-  const periodDateLabel = useMemo(() => {
-    const now = new Date();
-    if (period === "month") {
-      return `${now.getFullYear()}年${now.getMonth() + 1}月`;
-    }
-    const oneJan = new Date(now.getFullYear(), 0, 1);
-    const weekNum = Math.ceil(((now.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
-    const mon = new Date(now);
-    mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    const sun = new Date(mon);
-    sun.setDate(mon.getDate() + 6);
-    return `${now.getFullYear()}年 第${weekNum}周（${mon.getMonth() + 1}/${mon.getDate()} - ${sun.getMonth() + 1}/${sun.getDate()}）`;
-  }, [period]);
+  const dynamicKPIs = stats ? [
+    { label: "服务记录总量", value: String(stats.total), sub: "全部记录", trend: "", up: null },
+    { label: "待审核", value: String(stats.needsReview), sub: "需要确认", trend: "", up: null },
+    { label: "已确认", value: String(stats.confirmed), sub: `完成率 ${stats.completionRate}%`, trend: "", up: null },
+    { label: "AI 平均置信度", value: `${stats.avgConfidence}%`, sub: "分析可靠度", trend: "", up: null },
+    ...KPIs.slice(4),
+  ] : KPIs;
 
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <div className="quality-dashboard__title">员工服务质量管理</div>
-        <div className="quality-dashboard__subtitle">基于录音解析、家属反馈与 SOP 符合度的多维度评价</div>
+        <div className="quality-dashboard__title">质量总览</div>
+        <div className="quality-dashboard__subtitle">跨站点服务质量监测与分析</div>
       </div>
 
-      {/* KPI cards */}
+      {/* KPIs */}
       <div className="quality-kpi-grid">
-        <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">{periodLabel}平均 S 分</div>
-          <div className="quality-kpi-card__value">{summary.avgS}</div>
-          <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">满分 40</span>
+        {dynamicKPIs.map((k) => (
+          <div key={k.label} className="quality-kpi-card">
+            <div className="quality-kpi-card__label">{k.label}</div>
+            <div className="quality-kpi-card__value">{k.value}</div>
+            <div className="quality-kpi-card__trend">
+              <span className={`quality-kpi-card__trend-value ${trendClass(k.label, k.up)}`}>
+                {k.trend !== "0%" ? k.trend : "—"}
+              </span>{" "}
+              <span className="quality-kpi-card__sub">{k.sub}</span>
+            </div>
           </div>
-        </div>
-        <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">{periodLabel}服务总次数</div>
-          <div className="quality-kpi-card__value">{summary.totalServices}</div>
-          <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">{filteredWorkers.length} 名员工</span>
-          </div>
-        </div>
-        <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">进步 / 退步</div>
-          <div className="quality-kpi-card__value">
-            <span style={{ color: "var(--quality-success-text)" }}>{summary.improved}</span>
-            {" / "}
-            <span style={{ color: "var(--quality-danger-text)" }}>{summary.declined}</span>
-          </div>
-          <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">较{prevLabel}变动人数</span>
-          </div>
-        </div>
-        <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">家属反馈率</div>
-          <div className="quality-kpi-card__value">{summary.feedbackRate}%</div>
-          <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">B 分非默认值占比</span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* ── Worker section ── */}
-      <div className="qd-section">
-        <div className="qd-section__title">员工服务质量评分</div>
-        <div className="qd-toolbar">
-          <select className="qd-site-filter" value={siteFilter} onChange={(e) => setSiteFilter(e.target.value)}>
-            <option value="all">全部站点</option>
-            {MOCK_SITES.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+      {/* Site comparison table */}
+      <div className="quality-section-label">站点对比</div>
+      <div className="quality-table-wrap">
+        <table className="quality-table">
+          <thead>
+            <tr>
+              {["站点", "服务量", "完成率", "SOP 完成率", "满意度", "异常率"].map((h) => (
+                <th key={h}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SITES_DATA.map((s) => (
+              <tr key={s.name}>
+                <td className="quality-table__site-name">{s.name}</td>
+                <td>{s.services}</td>
+                <td>{s.completion}%</td>
+                <td>
+                  <span className={rateClass(s.sopRate, [90, 80])}>{s.sopRate}%</span>
+                </td>
+                <td>{s.satisfaction}</td>
+                <td>
+                  <span className={s.anomaly <= 5 ? "quality-table__value--success" : s.anomaly <= 8 ? "quality-table__value--warning" : "quality-table__value--danger"}>
+                    {s.anomaly}%
+                  </span>
+                </td>
+              </tr>
             ))}
-          </select>
-          <span className="qd-period-date-label">{periodDateLabel}</span>
-          <div className="qd-period-toggle">
-            <button className={`qd-period-btn ${period === "week" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("week")}>周</button>
-            <button className={`qd-period-btn ${period === "month" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("month")}>月</button>
-          </div>
-        </div>
-
-        <div className="quality-table-wrap">
-          <table className="qd-worker-table">
-            <thead>
-              <tr>
-                <th onClick={() => handleSort("name")}>姓名{sortIcon("name")}</th>
-                <th onClick={() => handleSort("site")}>站点{sortIcon("site")}</th>
-                <th onClick={() => handleSort("count")}>服务次数{sortIcon("count")}</th>
-                <th onClick={() => handleSort("s")}>S 均分{sortIcon("s")}<div className="qd-th-sub">总分 A+B+C+D</div></th>
-                <th onClick={() => handleSort("a")}>A 均分{sortIcon("a")}<div className="qd-th-sub">服务对象评价</div></th>
-                <th onClick={() => handleSort("b")}>B 均分{sortIcon("b")}<div className="qd-th-sub">家属评价</div></th>
-                <th onClick={() => handleSort("c")}>C 均分{sortIcon("c")}<div className="qd-th-sub">SOP 符合度</div></th>
-                <th onClick={() => handleSort("d")}>D 均分{sortIcon("d")}<div className="qd-th-sub">特殊识别</div></th>
-                <th onClick={() => handleSort("delta")}>较{prevLabel}{sortIcon("delta")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredWorkers.map((w) => (
-                <tr key={w.socialWorkerId}>
-                  <td>
-                    <a className="qd-worker-table__name" onClick={(e) => { e.preventDefault(); setDetailWorker(w); }} href="#">
-                      {w.socialWorkerName}
-                    </a>
-                  </td>
-                  <td>{w.siteName}</td>
-                  <td>{w.serviceCount}</td>
-                  <td><span className={scoreClass(w.avgS)}>{w.avgS.toFixed(1)}</span></td>
-                  <td>{w.avgA.toFixed(1)}</td>
-                  <td>{w.avgB.toFixed(1)}</td>
-                  <td>{w.avgC.toFixed(1)}</td>
-                  <td>{w.avgD.toFixed(1)}</td>
-                  <td>
-                    <span className={deltaClass(w.delta)}>
-                      {deltaArrow(w.delta)} {deltaText(w.delta)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          </tbody>
+        </table>
       </div>
 
-      {/* ── Site comparison section ── */}
-      <div className="qd-section">
-        <div className="qd-section__title">站点对比</div>
-        <div className="quality-table-wrap">
-          <table className="qd-worker-table">
-            <thead>
-              <tr>
-                <th>站点</th>
-                <th>员工数</th>
-                <th>服务次数</th>
-                <th>S 均分</th>
-                <th>A 均分</th>
-                <th>B 均分</th>
-                <th>C 均分</th>
-                <th>D 均分</th>
-                <th>较{prevLabel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {siteScores.map((s) => (
-                <tr key={s.siteId}>
-                  <td style={{ fontWeight: 600 }}>{s.siteName}</td>
-                  <td>{s.workerCount}</td>
-                  <td>{s.serviceCount}</td>
-                  <td><span className={scoreClass(s.avgS)}>{s.avgS.toFixed(1)}</span></td>
-                  <td>{s.avgA.toFixed(1)}</td>
-                  <td>{s.avgB.toFixed(1)}</td>
-                  <td>{s.avgC.toFixed(1)}</td>
-                  <td>{s.avgD.toFixed(1)}</td>
-                  <td>
-                    <span className={deltaClass(s.delta)}>
-                      {deltaArrow(s.delta)} {deltaText(s.delta)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Worker detail modal */}
-      {detailWorker && (
-        <WorkerDetailModal worker={detailWorker} period={period} onClose={() => setDetailWorker(null)} />
-      )}
-    </>
-  );
-}
-
-/* ═══════════════════════════════════════════════
-   Worker Detail Modal
-   ═══════════════════════════════════════════════ */
-
-function WorkerDetailModal({ worker, period, onClose }: { worker: WorkerPeriodScore; period: Period; onClose: () => void }) {
-  useEscClose(onClose);
-  const trend = useMemo(() => buildMockTrend(worker.socialWorkerId, period), [worker.socialWorkerId, period]);
-
-  return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="quality-user-modal" role="dialog" aria-label={worker.socialWorkerName}>
-        <div className="quality-user-modal__header">
-          <div>
-            <div className="quality-user-modal__title">{worker.socialWorkerName}</div>
-            <div className="quality-user-modal__tags">
-              <span className="so-modal__chip">{worker.siteName}</span>
-              <span className="so-modal__chip">{period === "month" ? "本月" : "本周"} {worker.serviceCount} 次服务</span>
-            </div>
-          </div>
-          <CloseBtn onClick={onClose} />
-        </div>
-        <div className="quality-user-modal__body">
-          {/* Score cards */}
-          <div className="qd-detail-scores">
-            <div className="qd-detail-score-card qd-detail-score-card--primary">
-              <div className="qd-detail-score-card__label">S 总分</div>
-              <div className="qd-detail-score-card__value">{worker.avgS.toFixed(1)}</div>
-            </div>
-            <div className="qd-detail-score-card">
-              <div className="qd-detail-score-card__label">A 服务评价</div>
-              <div className="qd-detail-score-card__value">{worker.avgA.toFixed(1)}</div>
-            </div>
-            <div className="qd-detail-score-card">
-              <div className="qd-detail-score-card__label">B 家属评价</div>
-              <div className="qd-detail-score-card__value">{worker.avgB.toFixed(1)}</div>
-            </div>
-            <div className="qd-detail-score-card">
-              <div className="qd-detail-score-card__label">C SOP符合</div>
-              <div className="qd-detail-score-card__value">{worker.avgC.toFixed(1)}</div>
-            </div>
-            <div className="qd-detail-score-card">
-              <div className="qd-detail-score-card__label">D 特殊识别</div>
-              <div className="qd-detail-score-card__value">{worker.avgD.toFixed(1)}</div>
-            </div>
-          </div>
-
-          {/* Trend chart */}
-          <div style={{ marginBottom: 8, fontSize: 14, fontWeight: 700, color: "#191C1E" }}>
-            {period === "month" ? "月度" : "周度"} S 分趋势（近 12 期）
-          </div>
-          <div className="qd-chart-container">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9CA3AF" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
-                <YAxis domain={[10, 40]} tick={{ fontSize: 11, fill: "#9CA3AF" }} tickLine={false} axisLine={false} width={35} />
-                <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
-                  formatter={(value) => [Number(value).toFixed(1), "S 分"]}
+      {/* SOP by service */}
+      <div className="quality-section-label">服务项目 SOP 完成率</div>
+      <div className="quality-sop-grid">
+        {SOP_RATES.map((s) => {
+          const colorClass = rateClass(s.rate, [90, 80]);
+          return (
+            <div key={s.service} className="quality-sop-card">
+              <div className="quality-sop-card__header">
+                <span className="quality-sop-card__name">{s.service}</span>
+                <span className={`quality-sop-card__rate ${colorClass}`}>{s.rate}%</span>
+              </div>
+              <div className="quality-sop-card__bar">
+                <div
+                  className="quality-sop-card__bar-fill"
+                  style={{
+                    width: `${s.rate}%`,
+                    background: s.rate >= 90 ? "var(--quality-success-text)" : s.rate >= 80 ? "var(--quality-warning-text)" : "var(--quality-danger-text)",
+                  }}
                 />
-                <Line type="monotone" dataKey="avgS" stroke="#EB6420" strokeWidth={2.5} dot={{ r: 3.5, fill: "#EB6420" }} activeDot={{ r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="quality-user-modal__footer">
-          <div />
-          <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">关闭</button>
-        </div>
+              </div>
+              <div className="quality-sop-card__detail">
+                {s.count} 次服务 · {s.issues}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -908,7 +534,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
             {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {allOperators.map(op => (
-                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "rgba(235,100,32,0.06)" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#EB6420" : "#E5E7EB"}` }}>
+                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
                     <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
@@ -1044,7 +670,7 @@ function OperatorAssignModal({ site, token, onClose, onSaved }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {allOperators.map(op => (
-                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "rgba(235,100,32,0.06)" : "transparent", border: `1px solid ${selected.has(op.id) ? "#EB6420" : "#E5E7EB"}` }}>
+                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selected.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
                   <input type="checkbox" checked={selected.has(op.id)} onChange={() => toggle(op.id)} style={{ width: 16, height: 16 }} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
@@ -1114,7 +740,7 @@ function UsersView() {
       const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users);
+        setUsers(data.users.filter((u: QualityUser) => u.role !== "careworker"));
       }
     } catch { /* ignore */ }
     setLoading(false);

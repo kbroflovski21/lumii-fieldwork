@@ -14,7 +14,7 @@ export const workAreas: Array<{ id: WorkAreaId; label: string }> = [
   { id: "smart_badges", label: "设备" },
   { id: "service_objects", label: "服务对象" },
   { id: "service_schedules", label: "服务排期" },
-  { id: "service_records", label: "服务记录" }
+  { id: "service_records", label: "服务记录" },
 ];
 
 export type PermissionState = "full" | "read_only" | "restricted";

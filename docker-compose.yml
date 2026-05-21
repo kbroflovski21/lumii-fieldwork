@@ -1,0 +1,23 @@
+services:
+  dashboard:
+    build: .
+    container_name: goldenyears-dashboard
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - JWT_SECRET=dev-jwt-secret-change-in-prod
+      - WS_TOKEN=dev-ws-token-change-in-prod
+      - SERVICE_TOKEN=golden-years-service-token-2026
+      - FIELDWORK_STATIC_ROOT=/app/dist
+      - DATABASE_URL=mysql://root:root_db_k8m3p6@lumii-mysql:3306/goldenyears?connection_limit=30&pool_timeout=10
+      - LLM_API_KEY=sk-9dd462867bb34a5580a6b070499ddabf
+      - LLM_MODEL=qwen3-max
+      - LLM_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+    networks:
+      - lumii_default
+
+networks:
+  lumii_default:
+    external: true

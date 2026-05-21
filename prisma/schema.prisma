@@ -406,3 +406,87 @@ model ChatMessage {
   @@index([agentId, sessionKey, id(sort: Desc)], name: "idx_chat_agent_session")
   @@map("chat_messages")
 }
+
+enum SopType {
+  general
+  service
+}
+
+model Sop {
+  id              String   @id @db.VarChar(64)
+  name            String   @db.VarChar(255)
+  type            SopType  @default(service)
+  description     String?  @db.Text
+  keywords        Json     @default("[]")
+  exampleDialogue String?  @map("example_dialogue") @db.Text
+  sopContent         String?  @map("sop_content") @db.Text
+  sopSource          String   @default("manual") @map("sop_source") @db.VarChar(32)
+  sopVersion         Int      @default(1) @map("sop_version")
+  sopHistory         Json     @default("[]") @map("sop_history")
+  supervisionContent String?  @map("supervision_content") @db.Text
+  supervisionSource  String   @default("ai_generated") @map("supervision_source") @db.VarChar(32)
+  supervisionVersion Int      @default(1) @map("supervision_version")
+  supervisionHistory Json     @default("[]") @map("supervision_history")
+  reportContent      String?  @map("report_content") @db.Text
+  reportSource       String   @default("ai_generated") @map("report_source") @db.VarChar(32)
+  reportVersion      Int      @default(1) @map("report_version")
+  reportHistory      Json     @default("[]") @map("report_history")
+  version         Int      @default(1)
+  orgId           String   @default("org-001") @map("org_id") @db.VarChar(64)
+  status          String   @default("active") @db.VarChar(32)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  steps SopStep[]
+
+  @@map("sops")
+}
+
+model SopStep {
+  id          String  @id @db.VarChar(64)
+  sopId       String  @map("sop_id") @db.VarChar(64)
+  sortOrder   Int     @default(0) @map("sort_order")
+  name        String  @db.VarChar(255)
+  description String  @db.Text
+  required    Boolean @default(true)
+
+  sop Sop @relation(fields: [sopId], references: [id], onDelete: Cascade)
+
+  @@map("sop_steps")
+}
+
+enum RecordingStatus {
+  processing
+  pending_match
+  matched
+  unmatched
+}
+
+model Recording {
+  id                       String          @id @db.VarChar(64)
+  sessionId                String          @map("session_id") @db.VarChar(128)
+  badgeId                  String          @map("badge_id") @db.VarChar(64)
+  workerId                 String?         @map("worker_id") @db.VarChar(64)
+  workerName               String?         @map("worker_name") @db.VarChar(255)
+  siteId                   String          @default("site-001") @map("site_id") @db.VarChar(64)
+  startedAt                DateTime        @map("started_at")
+  endedAt                  DateTime?       @map("ended_at")
+  durationSeconds          Int             @default(0) @map("duration_seconds")
+  transcriptText           String?         @map("transcript_text") @db.Text
+  transcriptSegments       Json            @default("[]") @map("transcript_segments")
+  transcriptConfidence     Float?          @map("transcript_confidence")
+  audioUrl                 String?         @map("audio_url") @db.VarChar(500)
+  sopResults               Json?           @map("sop_results")
+  aiSummary                String?         @map("ai_summary") @db.Text
+  status                   RecordingStatus @default(processing)
+  matchConfidence          Float?          @map("match_confidence")
+  matchedServiceRecordId   String?         @map("matched_service_record_id") @db.VarChar(64)
+  matchedScheduleId        String?         @map("matched_schedule_id") @db.VarChar(64)
+  matchedServiceObjectId   String?         @map("matched_service_object_id") @db.VarChar(64)
+  matchedServiceObjectName String?         @map("matched_service_object_name") @db.VarChar(255)
+  matchReason              String?         @map("match_reason") @db.Text
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  @@map("recordings")
+}

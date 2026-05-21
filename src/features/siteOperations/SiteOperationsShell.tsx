@@ -12,7 +12,7 @@ const icons = {
   smart_badges: Smartphone,
   service_schedules: CalendarDays,
   service_records: FileText,
-  service_objects: UserRound
+  service_objects: UserRound,
 } satisfies Record<WorkAreaId, typeof Bot>;
 
 const AREA_LABELS: Record<string, string> = {

@@ -5,7 +5,6 @@ import { LoginPage } from "./auth/LoginPage";
 import { QualityPage } from "./quality/QualityPage";
 import { FamilyPage } from "./family/FamilyPage";
 import { CareworkerPage } from "./careworker/CareworkerPage";
-import { HardwareSimulator } from "./careworker/HardwareSimulator";
 import { SiteOperationsPage } from "./components/SiteOperations/SiteOperationsPage";
 
 const SiteOperationsRedpeiMock = lazy(() =>
@@ -65,7 +64,6 @@ function AppRoutes() {
   }
 
   // Careworker pages — own demo login, no auth required
-  if (path.startsWith("/careworker/hardware")) return <HardwareSimulator />;
   if (path.startsWith("/careworker")) return <CareworkerPage />;
   if (path.startsWith("/family")) return <FamilyPage />;
 
