@@ -11,6 +11,7 @@ import type { AuthUser } from "./requireAuth";
  */
 export function optionalAuth(jwtSecret: string, gyTokenSecret?: string) {
   return (req: Request, _res: Response, next: NextFunction): void => {
+    if (req.authUser) { next(); return; }
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       next();
