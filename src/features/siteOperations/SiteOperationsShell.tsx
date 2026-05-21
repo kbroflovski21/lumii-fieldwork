@@ -28,9 +28,10 @@ type SiteOperationsShellProps = {
   activeArea: WorkAreaId;
   children: ReactNode;
   onSelectArea: (area: WorkAreaId) => void;
+  onCopilotNavigate?: (area: string, search?: string) => void;
 };
 
-export function SiteOperationsShell({ activeArea, children, onSelectArea }: SiteOperationsShellProps) {
+export function SiteOperationsShell({ activeArea, children, onSelectArea, onCopilotNavigate }: SiteOperationsShellProps) {
   const [copilotOpen, setCopilotOpen] = useState(false);
   const { currentSite, sites, selectSite } = useSite();
   const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
@@ -57,8 +58,11 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea }: Site
   }, [sendWithContext]);
 
   const handleCopilotNavigate = useCallback((area: string, params: Record<string, string>) => {
-    if (area) onSelectArea(area as WorkAreaId);
-  }, [onSelectArea]);
+    if (area) {
+      onSelectArea(area as WorkAreaId);
+      onCopilotNavigate?.(area, params.search);
+    }
+  }, [onSelectArea, onCopilotNavigate]);
 
   useEffect(() => {
     if (!siteDropdownOpen) return;

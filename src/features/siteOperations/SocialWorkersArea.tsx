@@ -71,10 +71,11 @@ function avatarColor(name: string) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function SocialWorkersArea({ resource, onMutate }: { resource: Resource<SocialWorkersResponse>; onMutate?: () => void }) {
+export function SocialWorkersArea({ resource, onMutate, initialSearch }: { resource: Resource<SocialWorkersResponse>; onMutate?: () => void; initialSearch?: string }) {
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
+  useEffect(() => { if (initialSearch) setSearchQuery(initialSearch); }, [initialSearch]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [badgeFilter, setBadgeFilter] = useState<BadgeFilter>("");
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;

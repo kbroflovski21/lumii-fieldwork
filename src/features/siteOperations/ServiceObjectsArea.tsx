@@ -192,10 +192,11 @@ function formatTime(iso?: string) {
    Page-level components (unchanged)
    ========================================== */
 
-export function ServiceObjectsArea({ resource, onMutate }: { resource: Resource<ServiceObjectsResponse>; onMutate?: () => void }) {
+export function ServiceObjectsArea({ resource, onMutate, initialSearch }: { resource: Resource<ServiceObjectsResponse>; onMutate?: () => void; initialSearch?: string }) {
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
+  useEffect(() => { if (initialSearch) setSearchQuery(initialSearch); }, [initialSearch]);
   const [eligibilityFilter, setEligibilityFilter] = useState<EligibilityFilter>("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("");
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("");

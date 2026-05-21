@@ -61,10 +61,11 @@ const canDisableOrLose = (s: SmartBadgeStatus) =>
 const canRestore = (s: SmartBadgeStatus) =>
   s === "disabled" || s === "lost";
 
-export function SmartBadgesArea({ resource, onOpenRecords, onMutate }: { resource: Resource<SmartBadgesResponse>; onOpenRecords?: () => void; onMutate?: () => void }) {
+export function SmartBadgesArea({ resource, onOpenRecords, onMutate, initialSearch }: { resource: Resource<SmartBadgesResponse>; onOpenRecords?: () => void; onMutate?: () => void; initialSearch?: string }) {
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
+  useEffect(() => { if (initialSearch) setSearchQuery(initialSearch); }, [initialSearch]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [preferredFilter, setPreferredFilter] = useState<PreferredFilter>("");
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;
