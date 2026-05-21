@@ -57,4 +57,35 @@ describe("optionalAuth middleware", () => {
     expect(res.status).toBe(200);
     expect(res.body.authUser).toBeNull(); // GY token not verified without secret
   });
+
+  it("skips processing if authUser is already set (by prior middleware)", async () => {
+    // Simulate requireAuth setting authUser before optionalAuth runs
+    const app = express();
+    app.use(express.json());
+    // First middleware sets authUser
+    app.use((req, _res, next) => {
+      (req as any).authUser = {
+        id: "u-prior",
+        username: "prior-mw",
+        name: "Prior MW User",
+        role: "org_admin",
+        orgId: "org-001",
+        siteIds: ["site-001"],
+      };
+      next();
+    });
+    // Then optionalAuth runs — should NOT overwrite
+    app.use(optionalAuth(JWT_SECRET, GY_SECRET));
+    app.get("/api/test", (req, res) => {
+      res.json({ authUser: req.authUser ?? null });
+    });
+
+    // Send a GY token that would set a different user
+    const token = signGyToken({ sub: "cc-different", role: "site_operator", siteIds: ["site-999"], scope: "home", permissions: {} }, GY_SECRET);
+    const res = await request(app).get("/api/test").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    // Should still have the prior middleware's user, not the GY token user
+    expect(res.body.authUser.id).toBe("u-prior");
+    expect(res.body.authUser.username).toBe("prior-mw");
+  });
 });

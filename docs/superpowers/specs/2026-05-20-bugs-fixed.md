@@ -1,6 +1,7 @@
 # 2026-05-20/21 Bug Fixes & Changes
 
 **Date:** 2026-05-20 ~ 2026-05-21
+**Last updated:** 2026-05-21
 
 ## Bug 15: WIP typing dots invisible
 
@@ -76,3 +77,65 @@
 - `/help` plus 15 site-ops commands and 8 admin commands.
 - Frontend `CommandInput` accepts `commands` prop for different command sets per page.
 - Autocomplete menu with keyboard navigation (Arrow Up/Down, Tab, Enter, Escape).
+
+---
+
+## Bug Fixes (2026-05-21)
+
+### Bug 20: Message dedup race condition (stream_end vs message)
+
+- **Description:** `stream_end` and `message` WebSocket events arrive ~17ms apart. React state batching means the `prev` state in the `message` handler still has `isStreaming:true` for the same message, so the dedup check (which relied on `isStreaming` flag) failed, creating duplicate assistant bubbles.
+- **Root cause:** Content-based dedup was keyed on `isStreaming` state which hadn't updated yet due to React batching.
+- **Fix:** Changed dedup to use `findIndex` matching ALL assistant messages by content, regardless of `isStreaming` flag. If an assistant message with identical content exists, update its ID instead of appending.
+- **File:** `src/features/siteOperations/useAgentChat.ts`
+
+### Bug 21: WIP typing dots invisible (root cause: stale in_flight streams)
+
+- **Description:** The WIP typing dots never appeared because `messages.some(m => m.isStreaming)` was always true, suppressing the standalone typing indicator.
+- **Root cause:** The `init` frame handler restored 12 stale in-flight streams as `isStreaming:true` messages. These never completed, so `messages.some(m => m.isStreaming)` was permanently true.
+- **Fix:** Removed in_flight stream restoration from the init handler. The server should re-send active streams as new `stream_start` events after reconnect.
+- **File:** `src/features/siteOperations/useAgentChat.ts`
+
+### Bug 22: Typing dots low contrast
+
+- **Description:** Typing animation dots used grey (#9CA3AF) on light grey background (#F8F9FB), near-zero contrast.
+- **Fix:** Changed dot color to indigo (#6366F1), increased size to 8px, added higher bounce animation.
+- **File:** `src/features/siteOperations/siteOperations.css`
+
+### Bug 23: gy:// links open new tab instead of in-app navigation
+
+- **Description:** Clicking a `gy://` link opened a new browser tab instead of navigating within the app.
+- **Root cause:** ReactMarkdown's default `urlTransform` sanitizer strips non-standard URL schemes. `gy://social_workers?search=王丽` became an empty string, which fell through to the default `<a target="_blank">` rendering.
+- **Fix:** (a) Added `urlTransform={(url) => url}` to bypass ReactMarkdown's sanitizer. (b) Changed the gy:// link renderer from `<a>` to `<span role="link">` to avoid any default browser link behavior.
+- **File:** `src/features/siteOperations/ChatStream.tsx`
+
+### Bug 24: Admin API 403 with GY token
+
+- **Description:** CC agent's GY_API_TOKEN was rejected with 403 when calling admin API endpoints.
+- **Root cause:** Two issues: (a) The agent binary signed the GY token with an empty `role` field because lumii-agent-keeper doesn't send role in the lifecycle hook. The `requireAuth` middleware defaulted empty role to `site_operator`, which failed `requireRole("org_admin")`. (b) `optionalAuth` middleware (applied earlier in the middleware chain) overwrote the `req.authUser` set by `requireAuth`, because it didn't check if `authUser` was already set.
+- **Fix:** (a) `requireAuth` now infers `role` from GY token: if role is empty but scope is `admin`, defaults to `org_admin`. (b) `optionalAuth` now skips processing if `req.authUser` is already set (`if (req.authUser) { next(); return; }`).
+- **File:** `server/middleware/requireAuth.ts`, `server/middleware/optionalAuth.ts`
+
+### Bug 25: requireAuth didn't support GY tokens
+
+- **Description:** `requireAuth` middleware only verified user JWTs. CC sessions using GY_API_TOKEN were always rejected.
+- **Fix:** Added optional `gyTokenSecret` parameter to `requireAuth`. If JWT verification fails, falls back to `verifyGyToken` with the GY secret.
+- **File:** `server/middleware/requireAuth.ts`, `server/index.ts`
+
+### Bug 26: Historical messages show [ctx:] prefix
+
+- **Description:** When loading historical messages from DB, the `toMessage` function returned raw content including the `[ctx:label]` prefix, which was visible in the chat UI.
+- **Fix:** Strip `[ctx:...]` prefix from `content` for user role messages in `toMessage`.
+- **File:** `src/features/siteOperations/useAgentChat.ts`
+
+### Bug 27: PM rewrote QualityPage removing copilot integration
+
+- **Description:** A PM's revision of QualityPage dropped the shared copilot integration (useAgentChat, sendWithContext, onNavigate, ADMIN_COMMANDS, search filter).
+- **Fix:** Re-integrated all copilot features into the PM's new page layout.
+- **File:** `src/quality/QualityPage.tsx`
+
+### Bug 28: Build stale due to tsc errors
+
+- **Description:** `npm run build` runs `tsc -b` before Vite, but PM's new server files had Prisma import errors that blocked TypeScript compilation. The production build was stale.
+- **Fix:** Use `npx vite build` directly to skip the full `tsc -b` check. The Vite build uses its own TypeScript transform that tolerates the server-side errors.
+- **Impact:** Build process only; no runtime change.

@@ -1,5 +1,7 @@
 # Copilot 智能超链接 + 操作按钮
 
+> **Status:** IMPLEMENTED (2026-05-21)
+
 > **For agentic workers:** Use superpowers:subagent-driven-development or superpowers:executing-plans to implement.
 
 **Goal:** CC agent 返回的消息支持可点击的应用内导航链接和确认/选择操作按钮。
@@ -81,21 +83,31 @@ interface ChatStreamProps {
 
 ReactMarkdown `components.a` 自定义渲染：
 
+> **Implementation note (urlTransform fix):** ReactMarkdown's default URL sanitizer strips
+> non-standard schemes like `gy://`, turning them into empty strings that fall through to
+> `<a target="_blank">` (opening a new tab instead of in-app navigation). Fix: pass
+> `urlTransform={(url) => url}` to ReactMarkdown to bypass sanitization. The custom `components.a`
+> renderer then handles `gy://` links as `<span role="link">` (not `<a>`) to prevent any
+> browser default link behavior.
+
 ```typescript
-function GYLink({ href, children, onNavigate }) {
-  if (!href?.startsWith("gy://")) {
-    return <a href={href} target="_blank" rel="noopener">{children}</a>;
-  }
-  const url = new URL(href);
-  const area = url.hostname || url.pathname.replace(/^\//, "");
-  const params = Object.fromEntries(url.searchParams);
-  return (
-    <a href="#" className="gy-link" onClick={(e) => {
-      e.preventDefault();
-      onNavigate?.(area, params);
-    }}>{children}</a>
-  );
+// parseGyLink: manual parsing (no new URL() — gy:// is not a real URL scheme)
+function parseGyLink(href: string): { area: string; params: Record<string, string> } | null {
+  if (!href.startsWith("gy://")) return null;
+  const rest = href.slice(5);
+  const qIdx = rest.indexOf("?");
+  const area = qIdx >= 0 ? rest.slice(0, qIdx) : rest;
+  const params: Record<string, string> = {};
+  if (qIdx >= 0) new URLSearchParams(rest.slice(qIdx + 1)).forEach((v, k) => { params[k] = v; });
+  return { area, params };
 }
+
+// In ChatStream: <span> instead of <a> to avoid default link behavior
+<ReactMarkdown
+  remarkPlugins={[remarkGfm]}
+  components={mdComponents}   // custom `a` renderer that checks parseGyLink
+  urlTransform={(url) => url}  // bypass sanitizer for gy:// scheme
+>
 ```
 
 ### CardBubble 组件

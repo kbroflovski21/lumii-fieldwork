@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import express from "express";
 import request from "supertest";
 import { requireAuth, requireRole } from "../../server/middleware/requireAuth";
-import { signJwt } from "../../server/ws/auth";
+import { signJwt, signGyToken } from "../../server/ws/auth";
 
 const SECRET = "test-middleware-secret";
+const GY_SECRET = "test-gy-secret";
 
 function createApp() {
   const app = express();
@@ -21,6 +22,23 @@ function createApp() {
   // Admin-only route
   app.get("/admin-only", requireAuth(SECRET), requireRole("org_admin"), (req, res) => {
     res.json({ ok: true });
+  });
+
+  return app;
+}
+
+function createAppWithGy() {
+  const app = express();
+  app.use(express.json());
+
+  // Route that accepts both JWT and GY token
+  app.get("/protected", requireAuth(SECRET, GY_SECRET), (req, res) => {
+    res.json({ user: req.authUser });
+  });
+
+  // Admin-only route with GY token support
+  app.get("/admin-only", requireAuth(SECRET, GY_SECRET), requireRole("org_admin"), (req, res) => {
+    res.json({ ok: true, user: req.authUser });
   });
 
   return app;
@@ -68,5 +86,102 @@ describe("requireRole middleware", () => {
     const token = signJwt({ sub: "u1", role: "site_operator", orgId: "org-001", siteIds: [] }, SECRET, "1h");
     const res = await request(app).get("/admin-only").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(403);
+  });
+});
+
+describe("requireAuth with gyTokenSecret fallback", () => {
+  it("accepts GY token when gyTokenSecret is configured", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "org_admin",
+      siteIds: ["site-001"],
+      scope: "admin",
+      permissions: { users: ["read", "write"] },
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.id).toBe("cc-user");
+    expect(res.body.user.username).toBe("cc-session");
+    expect(res.body.user.role).toBe("org_admin");
+  });
+
+  it("GY token with org_admin role passes requireRole('org_admin')", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "org_admin",
+      siteIds: ["site-001"],
+      scope: "admin",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/admin-only").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe("org_admin");
+  });
+
+  it("GY token defaults empty role to org_admin", async () => {
+    const app = createAppWithGy();
+    // Simulate what lak does: signs token with empty role
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "",
+      siteIds: ["site-001"],
+      scope: "admin",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    // Empty role should default to org_admin in requireAuth
+    expect(res.body.user.role).toBe("org_admin");
+  });
+
+  it("prefers JWT over GY token when JWT is valid", async () => {
+    const app = createAppWithGy();
+    const token = signJwt({
+      sub: "u1",
+      username: "admin",
+      name: "Admin",
+      role: "org_admin",
+      orgId: "org-001",
+      siteIds: ["site-001"],
+    }, SECRET, "1h");
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    // Should use JWT payload, not GY
+    expect(res.body.user.username).toBe("admin");
+    expect(res.body.user.id).toBe("u1");
+  });
+
+  it("rejects GY token signed with wrong secret", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "org_admin",
+      siteIds: [],
+      scope: "admin",
+      permissions: {},
+    }, "wrong-secret");
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects GY token when gyTokenSecret is not configured", async () => {
+    const app = createApp(); // no gyTokenSecret
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "org_admin",
+      siteIds: [],
+      scope: "admin",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(401);
   });
 });
