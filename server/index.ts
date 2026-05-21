@@ -51,7 +51,7 @@ const pool = new AgentConnectionPool({
 const jwtSecret = process.env.JWT_SECRET ?? "dev-jwt-secret-change-in-prod";
 app.use("/api", authRoutes(jwtSecret));
 
-// Admin routes (requires auth — admin routes have their own role checks)
+// Admin routes require auth (JWT or GY token)
 const gyTokenSecret = process.env.GY_TOKEN_SECRET;
 const authMw = requireAuth(jwtSecret, gyTokenSecret);
 app.use("/api/admin", authMw);
