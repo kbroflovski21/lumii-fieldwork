@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { verifyJwt } from "../ws/auth";
+import { verifyJwt, verifyGyToken } from "../ws/auth";
 
 export interface AuthUser {
   id: string;
@@ -18,7 +18,7 @@ declare global {
   }
 }
 
-export function requireAuth(jwtSecret: string) {
+export function requireAuth(jwtSecret: string, gyTokenSecret?: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -26,22 +26,39 @@ export function requireAuth(jwtSecret: string) {
       return;
     }
 
-    const payload = verifyJwt(authHeader.slice(7), jwtSecret) as any;
-    if (!payload) {
-      res.status(401).json({ error: "token 无效或已过期" });
+    const token = authHeader.slice(7);
+
+    const payload = verifyJwt(token, jwtSecret) as any;
+    if (payload) {
+      req.authUser = {
+        id: payload.sub ?? payload.userId,
+        username: payload.username ?? "",
+        name: payload.name ?? "",
+        role: payload.role ?? "site_operator",
+        orgId: payload.orgId ?? "org-001",
+        siteIds: payload.siteIds ?? [],
+      };
+      next();
       return;
     }
 
-    req.authUser = {
-      id: payload.sub ?? payload.userId,
-      username: payload.username ?? "",
-      name: payload.name ?? "",
-      role: payload.role ?? "site_operator",
-      orgId: payload.orgId ?? "org-001",
-      siteIds: payload.siteIds ?? [],
-    };
+    if (gyTokenSecret) {
+      const gyPayload = verifyGyToken(token, gyTokenSecret);
+      if (gyPayload) {
+        req.authUser = {
+          id: gyPayload.sub,
+          username: "cc-session",
+          name: "CC Session",
+          role: gyPayload.role || "org_admin",
+          orgId: "org-001",
+          siteIds: gyPayload.siteIds ?? [],
+        };
+        next();
+        return;
+      }
+    }
 
-    next();
+    res.status(401).json({ error: "token 无效或已过期" });
   };
 }
 
