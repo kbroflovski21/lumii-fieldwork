@@ -13,6 +13,7 @@ import { statusText } from "./contracts";
 import { siteOperationsApi } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
+import { useSite } from "../../auth/SiteContext";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -583,6 +584,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
 }
 
 function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActivated: () => void }) {
+  const { currentSite } = useSite();
   const [deviceCode, setDeviceCode] = useState("");
   const [step, setStep] = useState<"input" | "confirm" | "done">("input");
   const [activating, setActivating] = useState(false);
@@ -590,11 +592,11 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
   const [result, setResult] = useState<SmartBadge | null>(null);
 
   const handleActivate = async () => {
-    if (!deviceCode.trim()) return;
+    if (!deviceCode.trim() || !currentSite) return;
     setActivating(true);
     setError("");
     try {
-      const res = await siteOperationsApi.activateSmartBadge({ deviceCode: deviceCode.trim(), siteId: "site-001" });
+      const res = await siteOperationsApi.activateSmartBadge({ deviceCode: deviceCode.trim(), siteId: currentSite.id });
       setResult(res.smartBadge);
       setStep("done");
     } catch (e) {
@@ -625,7 +627,7 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
               <h4 className="so-form-card__title">确认激活</h4>
               <dl className="so-overview-grid">
                 <div className="so-overview-item"><dt>设备码</dt><dd><span className="badges-code-tag">{deviceCode}</span></dd></div>
-                <div className="so-overview-item"><dt>绑定站点</dt><dd>红培社区站</dd></div>
+                <div className="so-overview-item"><dt>绑定站点</dt><dd>{currentSite?.name ?? "未选择"}</dd></div>
               </dl>
             </div>
             {error ? <p className="badges-error">{error}</p> : null}

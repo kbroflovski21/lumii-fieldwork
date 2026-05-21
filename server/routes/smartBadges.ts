@@ -33,13 +33,15 @@ export function smartBadgesRoutes() {
     const b = req.body;
     const id = genId("badge");
     const now = new Date().toISOString();
+    const siteId = b.siteId ?? "site-001";
+    const site = await prisma.site.findUnique({ where: { id: siteId }, select: { name: true } });
     await prisma.smartBadge.create({
       data: {
         id,
         deviceCode: b.deviceCode ?? `FW-${id.slice(-3)}`,
         orgId: "org-001",
-        siteId: b.siteId ?? "site-001",
-        siteName: "红培社区站",
+        siteId,
+        siteName: site?.name ?? siteId,
         status: "available",
         batteryPercent: 100,
         activatedAt: now,
