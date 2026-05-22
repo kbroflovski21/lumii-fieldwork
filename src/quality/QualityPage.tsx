@@ -292,6 +292,7 @@ export function QualityPage() {
     { key: "sop", label: "规范管理", icon: <IconClipboardList /> },
     { key: "sites", label: "站点管理", icon: <IconDocument /> },
     { key: "users", label: "用户管理", icon: <IconUsers /> },
+    { key: "feishu", label: "飞书管理", icon: <Bot size={20} /> },
   ];
 
   return (
