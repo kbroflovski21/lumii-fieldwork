@@ -24,6 +24,7 @@ import { siteRoutes } from "./routes/sites";
 import { sopRoutes } from "./routes/sops";
 import { aiRoutes } from "./routes/ai";
 import { recordingRoutes, recordingInternalRoutes } from "./routes/recordings";
+import { feishuUsersRoutes } from "./routes/feishuUsers";
 import { requireAuth } from "./middleware/requireAuth";
 // optionalAuth no longer used — all routes require auth (JWT or GY token)
 import { requireServiceToken } from "./middleware/serviceAuth";
@@ -70,6 +71,7 @@ const gyTokenSecret = process.env.GY_TOKEN_SECRET;
 const authMw = requireAuth(jwtSecret, gyTokenSecret);
 app.use("/api/admin", authMw);
 app.use("/api", adminRoutes());
+app.use("/api", authMw, feishuUsersRoutes());
 
 app.use("/api", authMw, siteRoutes());
 app.use("/api", authMw, homeRoutes());
