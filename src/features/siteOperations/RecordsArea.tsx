@@ -110,7 +110,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
     <>
       <section aria-label="服务记录" className="sw-page">
         <div className="sw-page__inner">
-          <div style={{ display: "inline-flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16 }}>
+          <div style={{ display: "inline-flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16, alignSelf: "flex-start" }}>
             <button
               onClick={() => setViewMode("records")}
               style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
