@@ -2,17 +2,37 @@ import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { withOperationalState, resolveSiteId } from "./helpers";
 
+function buildSopGroups(items: any[]): any[] {
+  if (!items || items.length === 0) return [];
+  const groupMap = new Map<string, { sopName: string; sopType: string; items: any[] }>();
+  for (const item of items) {
+    const source = item.source ?? "general";
+    const sopName = item.sopName ?? (source === "general" ? "通用规范" : "服务项目");
+    const key = sopName;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, { sopName, sopType: source, items: [] });
+    }
+    groupMap.get(key)!.items.push(item);
+  }
+  return Array.from(groupMap.values());
+}
+
 function toApi(row: any) {
   if (!row) return row;
+  const sp = row.serviceProject ?? "";
+  const serviceProjects = sp ? sp.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
+  const items = Array.isArray(row.serviceItems) ? row.serviceItems : [];
   return {
     id: row.id, serviceDate: row.serviceDate, startTime: row.startTime, endTime: row.endTime,
     durationMinutes: row.durationMinutes, socialWorkerId: row.socialWorkerId, socialWorkerName: row.socialWorkerName,
     serviceObjectId: row.serviceObjectId, serviceObjectName: row.serviceObjectName,
     familyContactIds: row.familyContactIds, badgeId: row.badgeId, smartBadgeId: row.smartBadgeId,
-    serviceProject: row.serviceProject, assignmentConfidence: row.assignmentConfidence,
+    serviceProject: sp, serviceProjects,
+    assignmentConfidence: row.assignmentConfidence,
     reviewStatus: row.reviewStatus, exportStatus: row.exportStatus,
     locationEvidence: row.locationEvidence, serviceExceptions: row.serviceExceptions,
-    serviceItems: row.serviceItems, exceptionTags: row.exceptionTags,
+    serviceItems: items, sopGroups: buildSopGroups(items),
+    exceptionTags: row.exceptionTags,
     missingFields: row.missingFields, audioAssetId: row.audioAssetId, transcriptId: row.transcriptId,
     structuredSummary: row.structuredSummary, generatedSummary: row.generatedSummary,
     exportHistory: row.exportHistory,

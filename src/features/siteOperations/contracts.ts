@@ -423,6 +423,12 @@ export type ServiceItem = {
   abnormalReason?: string;
 };
 
+export type SopGroup = {
+  sopName: string;
+  sopType: "general" | "service";
+  items: ServiceItem[];
+};
+
 export type ServiceRecord = {
   id: string;
   serviceDate: string;
@@ -437,12 +443,14 @@ export type ServiceRecord = {
   badgeId: string;
   smartBadgeId?: string;
   serviceProject?: string;
+  serviceProjects?: string[];
   assignmentConfidence: number;
   reviewStatus: "confirmed" | "needs_review" | "info_incomplete" | "exception_open";
   exportStatus: "not_ready" | "exportable" | "exported" | "exported_with_flags";
   locationEvidence?: ServiceLocationEvidence;
   serviceExceptions: ServiceException[];
   serviceItems?: ServiceItem[];
+  sopGroups?: SopGroup[];
   exceptionTags: string[];
   missingFields: string[];
   audioAssetId: string;

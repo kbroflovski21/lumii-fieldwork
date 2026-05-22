@@ -309,11 +309,9 @@ function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
               </div>
               <div role="cell">{r.socialWorkerName ?? <span className="sw-text-muted">待确认</span>}</div>
               <div role="cell">
-                <span className="sw-tag">{r.serviceProject ?? "未标注"}</span>
-                {r.serviceItems && r.serviceItems.length > 0 ? (() => {
-                  const biz = r.serviceItems.filter(i => i.category === "business");
-                  return <small className="rec-item-count">{biz.filter(i => i.status === "completed").length}/{biz.length}项</small>;
-                })() : null}
+                {r.serviceProjects && r.serviceProjects.length > 0
+                  ? r.serviceProjects.map((p: string) => <span className="sw-tag" key={p}>{p}</span>)
+                  : <span className="sw-tag">{r.serviceProject ?? "未标注"}</span>}
               </div>
               <div role="cell"><span className="badges-code-tag">{r.badgeId.replace("badge-", "FW-")}</span></div>
               <div role="cell"><span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus] ?? r.reviewStatus}</span></div>
@@ -333,7 +331,7 @@ function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
               <span className="sch-cell-date">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime}</span>
               <span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus]}</span>
             </div>
-            <div className="sw-mobile-card__info"><strong>{r.serviceObjectName} · {r.serviceProject}</strong></div>
+            <div className="sw-mobile-card__info"><strong>{r.serviceObjectName} · {r.serviceProjects?.join("、") || r.serviceProject || "未标注"}</strong></div>
             <div className="sw-mobile-card__meta">
               <span>{r.socialWorkerName ?? "待确认"}</span>
               <span>{r.durationMinutes}分钟</span>
@@ -356,6 +354,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [showReviewConfirm, setShowReviewConfirm] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [reviewing, setReviewing] = useState(false);
 
   const handleConfirmReview = async () => {
@@ -408,18 +407,31 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
         <div className="rec-modal__header-top">
           <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 36, height: 36, fontSize: 14 }}>{getInitials(r.serviceObjectName ?? "?")}</div>
           <div className="rec-modal__header-info">
-            <h2 className="rec-modal__title">{r.serviceProject ?? "服务"} · {r.serviceObjectName ?? "待关联"}</h2>
+            <h2 className="rec-modal__title">{r.serviceProjects?.join("、") || r.serviceProject || "服务"} · {r.serviceObjectName ?? "待关联"}</h2>
             <p className="rec-modal__subtitle">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime} · {r.durationMinutes}分钟 · {r.socialWorkerName ?? "待确认"} · <span className="badges-code-tag" style={{ fontSize: 11 }}>{r.badgeId.replace("badge-", "FW-")}</span></p>
           </div>
         </div>
         <div className="rec-modal__header-bottom">
           <div className="rec-modal__header-tags">
-            <span className="rec-modal__header-tag" data-ok={procCompleted === processItems.length && procAbnormal === 0}>
-              流程 {procAbnormal > 0 ? "⚠" : "✓"} {procCompleted}/{processItems.length}
-            </span>
-            <span className="rec-modal__header-tag" data-ok={bizAbnormal === 0}>
-              服务 {businessItems.length}项{bizAbnormal > 0 ? `(${bizAbnormal}异常)` : ""}
-            </span>
+            {(r.sopGroups && r.sopGroups.length > 0) ? r.sopGroups.map((g: any) => {
+              const gi = g.items ?? [];
+              const gc = gi.filter((i: any) => i.status === "completed").length;
+              const ga = gi.filter((i: any) => i.status === "abnormal").length;
+              return (
+                <span className="rec-modal__header-tag" data-ok={gc === gi.length && ga === 0} key={g.sopName}>
+                  {g.sopName} {ga > 0 ? "⚠" : "✓"} {gc}/{gi.length}
+                </span>
+              );
+            }) : (
+              <>
+                <span className="rec-modal__header-tag" data-ok={procCompleted === processItems.length && procAbnormal === 0}>
+                  流程 {procAbnormal > 0 ? "⚠" : "✓"} {procCompleted}/{processItems.length}
+                </span>
+                <span className="rec-modal__header-tag" data-ok={bizAbnormal === 0}>
+                  服务 {businessItems.length}项{bizAbnormal > 0 ? `(${bizAbnormal}异常)` : ""}
+                </span>
+              </>
+            )}
           </div>
           <div className="rec-modal__review-action">
             {showReviewConfirm ? (
@@ -470,42 +482,70 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               );
             })() : null}
 
-            {/* Process SOP */}
-            {processItems.length > 0 && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">
-                  流程规范
-                  <span className="rec-si-stats">
-                    <span className="rec-si-stats__done">{procCompleted}通过</span>
-                    {procAbnormal > 0 ? <span className="rec-si-stats__abnormal">{procAbnormal}异常</span> : null}
-                    <span className="rec-si-stats__total">共{processItems.length}项</span>
-                  </span>
-                </h4>
-                <div className="rec-si-list">
-                  {processItems.map(item => (
-                    <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
-                  ))}
+            {/* SOP Groups — grouped by source SOP */}
+            {(r.sopGroups && r.sopGroups.length > 0) ? r.sopGroups.map((group: any) => {
+              const gItems = group.items ?? [];
+              const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
+              const gAbnormal = gItems.filter((i: any) => i.status === "abnormal").length;
+              const isCollapsed = collapsedGroups[group.sopName];
+              return (
+                <div className="so-tab-section" key={group.sopName}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                    <ChevronRightIcon size={14} style={{ transform: isCollapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
+                    {group.sopName}
+                    <span className="rec-si-stats">
+                      <span className="rec-si-stats__done">{gCompleted}完成</span>
+                      {gAbnormal > 0 ? <span className="rec-si-stats__abnormal">{gAbnormal}异常</span> : null}
+                      <span className="rec-si-stats__total">共{gItems.length}项</span>
+                    </span>
+                  </h4>
+                  {!isCollapsed && (
+                    <div className="rec-si-list">
+                      {gItems.map((item: any) => (
+                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Business SOP */}
-            {businessItems.length > 0 && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">
-                  服务内容
-                  <span className="rec-si-stats">
-                    <span className="rec-si-stats__done">{bizCompleted}完成</span>
-                    {bizAbnormal > 0 ? <span className="rec-si-stats__abnormal">{bizAbnormal}异常</span> : null}
-                    <span className="rec-si-stats__total">共{businessItems.length}项</span>
-                  </span>
-                </h4>
-                <div className="rec-si-list">
-                  {businessItems.map(item => (
-                    <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
-                  ))}
-                </div>
-              </div>
+              );
+            }) : (
+              <>
+                {/* Fallback: flat display for old data without sopGroups */}
+                {processItems.length > 0 && (
+                  <div className="so-tab-section">
+                    <h4 className="so-tab-section-title">
+                      流程规范
+                      <span className="rec-si-stats">
+                        <span className="rec-si-stats__done">{procCompleted}通过</span>
+                        {procAbnormal > 0 ? <span className="rec-si-stats__abnormal">{procAbnormal}异常</span> : null}
+                        <span className="rec-si-stats__total">共{processItems.length}项</span>
+                      </span>
+                    </h4>
+                    <div className="rec-si-list">
+                      {processItems.map(item => (
+                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {businessItems.length > 0 && (
+                  <div className="so-tab-section">
+                    <h4 className="so-tab-section-title">
+                      服务内容
+                      <span className="rec-si-stats">
+                        <span className="rec-si-stats__done">{bizCompleted}完成</span>
+                        {bizAbnormal > 0 ? <span className="rec-si-stats__abnormal">{bizAbnormal}异常</span> : null}
+                        <span className="rec-si-stats__total">共{businessItems.length}项</span>
+                      </span>
+                    </h4>
+                    <div className="rec-si-list">
+                      {businessItems.map(item => (
+                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
