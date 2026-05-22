@@ -8,6 +8,7 @@ export interface SlashCommand {
 }
 
 export const SITE_OPS_COMMANDS: SlashCommand[] = [
+  { command: "/new", description: "新建会话（清除上下文）" },
   { command: "/help", description: "展示所有可用命令" },
   { command: "/worker-create", description: "创建新的服务人员档案" },
   { command: "/worker-query", description: "查询服务人员列表或详情" },
@@ -27,6 +28,7 @@ export const SITE_OPS_COMMANDS: SlashCommand[] = [
 ];
 
 export const ADMIN_COMMANDS: SlashCommand[] = [
+  { command: "/new", description: "新建会话（清除上下文）" },
   { command: "/help", description: "展示所有可用命令" },
   { command: "/quality-overview", description: "查看全站服务质量总览" },
   { command: "/quality-compare", description: "跨站点质量对比分析" },
