@@ -139,3 +139,74 @@
 - **Description:** `npm run build` runs `tsc -b` before Vite, but PM's new server files had Prisma import errors that blocked TypeScript compilation. The production build was stale.
 - **Fix:** Use `npx vite build` directly to skip the full `tsc -b` check. The Vite build uses its own TypeScript transform that tolerates the server-side errors.
 - **Impact:** Build process only; no runtime change.
+
+---
+
+## Bug Fixes & Features (2026-05-22)
+
+### Bug 29: Badge activation hardcoded site name "红培社区站"
+
+- **Description:** Badge activation API returned hardcoded `siteName: "红培社区站"` and `siteId: "site-001"` regardless of the actual site context.
+- **Root cause:** Badge activation handler used hardcoded values instead of looking up the site from the database.
+- **Fix:** Look up `site.name` from DB using the badge's siteId. Frontend uses `currentSite` from `useSite()` context.
+- **File:** `server/routes/smartBadges.ts`
+
+### Bug 30: Badge activation 500 on duplicate deviceCode
+
+- **Description:** Activating a badge with a deviceCode that already exists threw an unhandled database constraint error (500).
+- **Fix:** Check for existing badge with same deviceCode before insert, return proper 409 Conflict error.
+- **File:** `server/routes/smartBadges.ts`
+
+### Bug 31: Go build stale due to build cache
+
+- **Description:** After modifying goldenyears-agent Go source, `go build` used cached binaries and didn't pick up code changes.
+- **Fix:** Use `go build -a` flag to force clean rebuild, bypassing build cache.
+- **Impact:** Agent sidecar on staging server.
+
+### Bug 32: Codex CLI 401 Unauthorized to api.openai.com
+
+- **Description:** Codex CLI ignored `OPENAI_BASE_URL` environment variable and always tried to connect to `api.openai.com`, failing with 401.
+- **Root cause:** Codex requires custom provider configuration in `~/.codex/config.toml`, not environment variables.
+- **Fix:** Configure `model_provider = "litellm"` with `wire_api = "responses"` and `base_url = "http://127.0.0.1:4000/v1"` in config.toml.
+- **File:** `~/.codex/config.toml`
+
+### Bug 33: Tencent DeepSeek rejects non-function tool types
+
+- **Description:** Codex sends `computer_use_preview` and other non-function tool types in its API requests. Tencent's DeepSeek endpoint only supports `type: "function"` tools, returning `tools[N].type: tool type must be 'function'`.
+- **Fix:** Patch LiteLLM's DeepSeek provider `transform_request` to filter out non-function tools before forwarding.
+- **File:** `litellm/llms/deepseek/chat/transformation.py` (runtime patch)
+
+### Bug 34: Tencent DeepSeek rejects "developer" role
+
+- **Description:** Codex sends messages with `role: "developer"` which Tencent's API doesn't support.
+- **Fix:** Use `deepseek/` provider prefix in LiteLLM config, which automatically maps `developer` role to `system`.
+- **File:** `~/litellm-config.yaml`
+
+### Bug 35: CODEX_HOME not passed to codex process
+
+- **Description:** lak runs as root, so Codex inherits `HOME=/root` and can't find `~/.codex/config.toml` at `/home/coder/.codex/`.
+- **Root cause:** lak's codex agent `StartSession` didn't inject `CODEX_HOME` into the extra environment variables.
+- **Fix:** Patch `agent/codex/codex.go` to inject `CODEX_HOME` and `HOME` from the `codex_home` config option into `extraEnv`.
+- **File:** (lumii-agent-keeper repo) `agent/codex/codex.go`
+
+---
+
+## Features Shipped (2026-05-22)
+
+### Single-click to open modals
+
+- All list pages (site ops + org admin) changed from double-click to single-click to open detail/edit modals.
+- **File:** All Area components (`SocialWorkersArea`, `SmartBadgesArea`, etc.) + QualityPage views
+
+### Copilot voice input
+
+- Web Speech API (SpeechRecognition zh-CN) for voice-to-text input in copilot.
+- Microphone button in CommandInput, red pulsing indicator when recording.
+- **File:** `src/features/siteOperations/CommandInput.tsx`, `siteOperations.css`
+
+### Copilot agent switched to Codex + DeepSeek
+
+- Copilot backend changed from Claude Code to Codex CLI + LiteLLM Proxy + DeepSeek-v4-flash.
+- lak config: `type = "codex"`, `mode = "yolo"`, `model = "deepseek-v4-flash"`.
+- New components: LiteLLM Proxy (port 4000), Codex CLI with litellm provider.
+- Deployment guide: `lumii-goldenyears-agent/docs/deploy-codex-deepseek.md`

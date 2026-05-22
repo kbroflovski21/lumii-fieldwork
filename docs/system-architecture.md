@@ -130,18 +130,19 @@ agent → processor（指令）：
 
 ### 4.3 goldenyears-agent (lak sidecar)
 
-系统的 AI 调度入口。所有 AI 能力（聊天回答、录音规整、报告生成）经过 lak/CC
-session，由 sidecar 协调。
+Go binary HTTP 服务（port 4072），是 copilot 的业务中枢。运行在 lak 同一台服务器。
+
+> **Agent 类型已切换**：从 Claude Code (claudecode) 切换为 Codex CLI (codex) + DeepSeek (2026-05-22)。
+> Codex 读取 `AGENTS.md`（等同 CLAUDE.md），通过 LiteLLM Proxy 访问 DeepSeek LLM。
 
 #### 4.3.1 Lifecycle hooks
 
-| Hook | 行为 |
-|------|------|
-| `on_message` | 存聊天消息到审计日志 |
-| `scope_check` | actor_id → 角色 → 权限判断。未授权 → silent |
-| `prepare_session` | 解析角色 + 权限范围，构建角色上下文注入 CC system prompt |
-| `after_send` | 审计日志 |
-| `on_session_end` | 规整完成后触发后续流程（通知 controller 做语音反馈等） |
+| Hook | 端点 | 行为 |
+|------|------|------|
+| `scope_check` | `POST /hooks/scope-check` | actor_id → 角色 → 权限判断。未授权 → silent |
+| `prepare_session` | `POST /hooks/prepare-session` | 签发 GY_API_TOKEN (JWT)，根据 session_key 推断 scope/role，注入环境变量到 Codex 进程。跨天自动返回 `session_directive: "new"` 强制新建 session |
+| `after_send` | `POST /hooks/after-send` | 审计日志 |
+| `/commands/help` | `GET /commands/help` | 返回斜杠命令列表（站点运营 15 条 / 集团管理 8 条），由 lak custom command 直接调用，不启动 Codex session |
 
 #### 4.3.2 录音规整（已移至 processor）
 
@@ -262,12 +263,12 @@ Layer 3: goldenyears-api (业务 API)
 |--------|-----------|---------|
 | 浏览器用户 | 用户 JWT | `POST /api/auth/login` → JWT 存 localStorage → REST/WSS 携带 |
 | lak | ws_token | 静态共享密钥，WSS register 帧携带，timingSafeEqual 校验 |
-| CC session | GY_API_TOKEN | agent prepare_session 签发 HS256 JWT，curl Authorization header |
+| Codex session | GY_API_TOKEN | agent prepare_session 签发 HS256 JWT，curl Authorization header |
 
 API 层中间件：
-- `optionalAuth`: 业务路由使用，接受用户 JWT 或 GY_API_TOKEN，不强制拒绝
-- `requireAuth`: Admin 路由使用，强制 JWT 认证
-- `requireRole`: 角色检查（如 org_admin）
+- `requireAuth(jwtSecret, gyTokenSecret?)`: Admin 路由使用，强制认证。优先验证 JWT，失败时用 gyTokenSecret 尝试 GY_API_TOKEN。GY token role 为空但 scope 为 admin 时，自动推断为 org_admin。
+- `optionalAuth(jwtSecret, gySecret?)`: 业务路由使用，接受 JWT 或 GY_API_TOKEN，不强制拒绝。**重要**：如果 `req.authUser` 已被前置中间件（如 requireAuth）设置，直接 `next()` 不覆盖。
+- `requireRole(role)`: 角色检查（如 org_admin），必须在 requireAuth 之后使用
 
 dev-token 端点（`GET /api/auth/dev-token`）已在 2026-05-18 移除，不再提供匿名 JWT 签发。
 
@@ -283,10 +284,11 @@ Web 端和飞书端的消息入口不同：
 ```
 用户 → Web/飞书
   → [Web 端经 api WSS 中转 | 飞书端直连 lak]
-  → lak → scope_check → prepare_session → agent 注入角色上下文
-  → lak 启动/resume CC session → CC 加载 orchestrator skill
-  → CC curl goldenyears-api 查数据（API 层独立校验权限）
-  → 回答用户（原路返回）
+  → lak → scope_check → prepare_session → agent 注入角色上下文 + GY_API_TOKEN
+  → lak 启动 Codex session → Codex 加载 AGENTS.md + orchestrator skill
+  → Codex → LiteLLM Proxy → DeepSeek LLM (reasoning)
+  → Codex curl goldenyears-api 查数据（API 层独立校验 GY_API_TOKEN）
+  → 回答用户（原路返回，含 gy:// 智能链接）
   → lak → after_send → agent 审计日志
 ```
 
@@ -296,12 +298,14 @@ Web 端和飞书端的消息入口不同：
 
 ```
 用户 → Web 浏览器
-  → WebSocket /api/ws/chat (JWT auth)
+  → WebSocket /api/ws/chat?sessionId=copilot:{siteId} (JWT auth)
   → goldenyears-api AgentConnectionPool (消息持久化 + 路由)
   → WebSocket /api/ws/agent (lak 主动连入, ws_token auth)
-  → lak (mode: bypassPermissions)
-  → CC session (加载 orchestrator skill from work_dir)
-  → CC curl http://localhost:3001/api/* (直接调用 REST API)
+  → lak → lifecycle hooks (prepare_session, scope_check)
+  → goldenyears-agent sidecar (签发 GY_API_TOKEN, 注入 env)
+  → Codex session (加载 AGENTS.md + orchestrator skill from work_dir)
+  → Codex → LiteLLM (localhost:4000) → DeepSeek LLM
+  → Codex curl http://124.221.48.52:3004/api/* (携带 GY_API_TOKEN)
   → 响应通过 reply/stream 帧原路返回
   → AgentConnectionPool 持久化 + 广播
   → 浏览器 WebSocket → useAgentChat hook → ChatStream 渲染
@@ -309,10 +313,13 @@ Web 端和飞书端的消息入口不同：
 
 关键实现细节：
 - lak 在内网，主动向公网 API 服务器的 `/api/ws/agent` 发起 WSS 连接
-- CC session 的 work_dir 指向 goldenyears-agent 目录，自动加载 CLAUDE.md 和 skills/
-- CC 使用 `bypassPermissions` 模式，无需手动审批工具权限
+- Codex session 的 work_dir 指向 goldenyears-agent 目录，自动加载 AGENTS.md 和 skills/
+- Codex 使用 `mode: yolo`（等同 bypassPermissions），无需手动审批
+- Codex 通过 LiteLLM Proxy (localhost:4000) 访问 DeepSeek LLM
 - 进度卡片（`__lak_progress_card_v1__:`）被三层过滤，不显示给用户
 - 消息通过 AgentConnectionPool 持久化到 SQLite chat_messages 表
+- Session key 格式：`copilot:{siteId}`（站点运营）或 `copilot:admin`（集团管理）
+- 消息中 `[ctx:label]` 前缀在 UI 中不可见，用于 agent 识别用户当前 tab
 
 ### 6.2 录音 → AI 规整 → 语音反馈
 

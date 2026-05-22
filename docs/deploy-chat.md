@@ -3,13 +3,26 @@
 ## 1. 架构概览
 
 ```
-浏览器 ←WSS→ goldenyears-api (公网) ←WSS→ lak (内网) → CC session
-                                                         ↓
-                                              goldenyears-agent (内网)
-                                              ├ CLAUDE.md (persona)
-                                              ├ skills/ (orchestrator)
-                                              └ bin/agent (sidecar, port 4072)
+用户 (浏览器)
+  ↓ WebSocket
+Dashboard (goldenyears-api, 公网)
+  ↓ WebSocket (agent bridge)
+lak (内网)
+  ↓ lifecycle hooks (HTTP)
+lumii-goldenyears-agent (localhost:4072)     ← 业务 sidecar
+  │  ├─ prepare_session: 签发 GY_API_TOKEN、注入 scope/role 上下文
+  │  ├─ scope_check: 权限校验
+  │  └─ /commands/help: 返回可用命令列表
+  ↓ codex exec (注入 GY_API_TOKEN 等环境变量)
+Codex CLI
+  ↓ Responses API
+LiteLLM Proxy (localhost:4000)              ← API 翻译代理
+  ↓ Chat Completions API
+DeepSeek-v4-flash (via Tencent TokenHub)
 ```
+
+> **注意**：Copilot agent 已从 Claude Code 切换为 Codex + DeepSeek (2026-05-22)。
+> 详细的 Codex + LiteLLM + DeepSeek 部署步骤见 `lumii-goldenyears-agent/docs/deploy-codex-deepseek.md`。
 
 ## 2. 服务清单
 
@@ -17,8 +30,10 @@
 |------|------|------|------|
 | goldenyears-api | 3001 | 公网服务器 | REST API + WSS relay + 消息持久化 |
 | Vite/Nginx | 5173/80 | 公网服务器 | 前端静态文件 + API/WSS 代理 |
-| lak | — | 内网服务器 | CC session 管理, 主动连接 API 的 WSS |
-| goldenyears-agent | 4072 | 内网服务器 | 操作 sidecar (hooks, token 签发) |
+| lak | — | 内网服务器 | Agent session 管理, 主动连接 API 的 WSS |
+| goldenyears-agent | 4072 | 内网服务器 | 业务 sidecar (hooks, token 签发, /help) |
+| LiteLLM Proxy | 4000 | 内网服务器 | API 翻译：Responses API → Chat Completions |
+| Codex CLI | — | 内网服务器 | AI coding agent，读取 AGENTS.md + skills/ |
 
 ## 3. 公网服务器部署
 
@@ -110,19 +125,38 @@ language = "zh"
 
 [[projects]]
   name = "lumii-goldenyears"
-  admin_from = "<管理员ID>"
+  admin_from = "*"
+  disabled_commands = ["help", "show", "dir", "shell", "restart", "upgrade", "model", "lang", "session", "tts", "cron", "observe", "delete", "relay", "provider", "commands", "whoami"]
+  show_context_indicator = false
+
+  [projects.lifecycle]
+    base_url = "http://localhost:4072"
+    timeout_seconds = 10
+    [projects.lifecycle.hooks.prepare_session]
+      path = "/hooks/prepare-session"
+      timeout_seconds = 10
+    [projects.lifecycle.hooks.scope_check]
+      path = "/hooks/scope-check"
+      timeout_seconds = 5
 
   [projects.agent]
-    type = "claudecode"
+    type = "codex"
 
     [projects.agent.options]
       work_dir = "/opt/goldenyears/lumii-goldenyears-agent"
-      mode = "bypassPermissions"
-      disallowed_tools = ["Edit", "MultiEdit", "Write", "NotebookEdit"]
+      mode = "yolo"
+      model = "deepseek-v4-flash"
+      codex_home = "/home/coder/.codex"
 
   [projects.display]
     thinking_messages = false
     tool_max_len = 300
+
+  # /help 命令由 goldenyears-agent binary 处理
+  [[projects.commands]]
+  name = "help"
+  exec = "curl -s http://localhost:4072/commands/help"
+  description = "展示所有可用命令"
 
   [[projects.platforms]]
     type = "dashboard"
@@ -134,15 +168,21 @@ language = "zh"
 ```
 
 关键配置说明:
-- `mode = "bypassPermissions"`: CC 无需手动审批 Bash/Skill 工具权限
-- `disallowed_tools`: 禁止 CC 修改文件，只允许读取和执行 curl
+- `type = "codex"`: 使用 Codex CLI 作为 agent（已从 claudecode 切换）
+- `mode = "yolo"`: 跳过所有审批和沙箱，适合服务端自动化
+- `codex_home`: 指定 Codex 配置目录（lak 以 root 运行时需要显式指定）
+- `disabled_commands`: 禁用所有 lak 内置命令，只保留自定义 `/help`
+- `lifecycle`: 指向 goldenyears-agent sidecar 的 hook 端点
 - `url`: 指向公网 API 服务器的 WSS 端点, lak 主动发起连接
 - `token`: 必须与 API 服务器的 `WS_TOKEN` 环境变量一致
 
 启动:
 ```bash
-/usr/local/bin/lak --config /home/deploy/.lumii/goldenyears/config.toml
+sudo LITELLM_API_KEY=sk-local-codex \
+  /usr/local/bin/lak --config /home/deploy/.lumii/goldenyears/config.toml
 ```
+
+> `LITELLM_API_KEY` 必须在 lak 进程环境中，会被传递给 codex 子进程。
 
 ### 4.2 goldenyears-agent
 
@@ -163,17 +203,22 @@ AGENT_PORT=4072 \
 
 注意:
 - 不要在 agent 目录下创建 `.claude/` 目录
-- CLAUDE.md 和 skills/ 由 CC session 自动读取
-- agent sidecar 提供 hooks 端点供未来 lak 调用
+- `AGENTS.md` 和 `skills/` 由 Codex session 自动读取（Codex 使用 AGENTS.md，Claude Code 使用 CLAUDE.md）
+- agent sidecar 提供 lifecycle hooks 端点供 lak 调用
 
 ### 4.3 Orchestrator Skill
 
-CC session 自动从 `work_dir/skills/goldenyears-orchestrator/` 加载:
+Codex session 自动从 `work_dir/skills/goldenyears-orchestrator/` 加载:
 - `prompt.md`: 主 prompt (角色定义 + 行为规则 + API 路由表)
-- `sub-skills/*.md`: 15 个子技能文件 (查询/新增/修改/归档等)
+- `sub-skills/*.md`: 15 个站点运营 + 8 个集团管理子技能文件
 
-所有 sub-skill 中的 API 地址使用 `http://localhost:3001/api` (CC 和 API 在同一内网可达)。
-如果 API 在公网,改为 `https://fieldwork.example.com/api`。
+所有 sub-skill 中的 API 地址使用 staging 公网地址 `http://124.221.48.52:3004/api`。
+
+### 4.4 LiteLLM Proxy
+
+API 翻译代理，将 Codex 的 Responses API 请求转换为 Chat Completions API 发送给 DeepSeek。
+
+详细配置见 `lumii-goldenyears-agent/docs/deploy-codex-deepseek.md` 第 1-2 节。
 
 ## 5. 安全配置
 
@@ -250,7 +295,7 @@ Local 模式需要 `globalSetup` 启动测试 server，修改 `playwright.config
 
 ### 6.3 Real-lak E2E
 
-需要真实 lak + CC + agent sidecar 全部就绪:
+需要真实 lak + Codex + agent sidecar + LiteLLM 全部就绪:
 
 ```bash
 npx playwright test --project=real-lak --reporter=line
@@ -261,18 +306,19 @@ npx playwright test --project=real-lak --reporter=line
 
 | 现象 | 原因 | 解决 |
 |------|------|------|
-| "AI 助手离线中..." | 前端无有效 JWT 或 lak 未连接 | 见 Bug #2；也检查 lak 日志确认 url 和 token |
-| "正在思考..." 卡住不动 | CC session 权限阻塞 | 确认 lak 版本 >= c2449d4，见下方 Bug #1 |
+| "AI 助手离线中..." | 前端无有效 JWT 或 lak 未连接 | 检查 lak 日志确认 url 和 token |
 | 进度卡片 JSON 显示 | pool.ts 过滤未生效 | 检查 `__lak_progress_card_v1__` 过滤代码 |
 | "并发活跃会话过多" | max_active_sessions 不够 | 增大 pool.ts 中的值 (默认 8) |
-| CC 响应慢 (>60s) | CC session 上下文过长 | 正常现象,首次查询需加载 skill |
-| WIP 指示器闪烁 | CC turn 期间 wip_update(false) 到达 | turnActiveRef 抑制机制已实现 |
-| 消息重复 | message 帧在 init 帧前到达 | initReceivedRef 门控已实现 |
+| Copilot 响应慢 (>30s) | Codex 首次加载 AGENTS.md + skills | 正常现象，后续请求更快 |
+| WIP 指示器闪烁 | turn 期间 wip_update(false) 到达 | turnActiveRef 抑制机制已实现 |
+| 消息重复 | stream_end 和 message 事件竞态 | content-based dedup (findIndex) 已实现 |
 | WebSocket 断开无感知 | 网络波动后不重连 | 5s 健康检查自动重连 |
 | Markdown 表格不渲染 | 缺少 react-markdown 依赖 | 已安装 react-markdown + remark-gfm |
-| `❌ 错误: --dangerously-skip-permissions` | lak 以 root 运行 + 旧版 | 升级 lak，见下方 Bug #1 |
-| `启动 Agent 会话失败` | CC 进程启动被安全检查拒绝 | 同 Bug #1 |
-| `run_as_user spawn refused` | coder 有 NOPASSWD sudo | 不要用 `run_as_user`，用 Bug #1 方案 |
+| gy:// 链接打开新标签 | ReactMarkdown sanitizer 清除自定义 scheme | urlTransform={(url)=>url} + span 渲染 |
+| Admin copilot 403 | GY token role 为空 | requireAuth 自动从 scope 推断 org_admin |
+| `401 wss://api.openai.com` | Codex 没读到 litellm config | 检查 CODEX_HOME 环境变量 |
+| `tools[N].type must be 'function'` | Tencent 不支持 computer_use tool | 确认 LiteLLM DeepSeek provider 补丁 |
+| `LITELLM_API_KEY` 未设置 | 环境变量缺失 | 添加到 /etc/environment 或 lak 启动参数 |
 
 ## 8. 已知 Bug 与修复
 
@@ -342,28 +388,62 @@ rsync -az deploy/fieldwork.db staging:data/fieldwork.db
 
 **预防:** 部署脚本应始终在停止服务后、替换 DB 前清理 WAL 文件。
 
-## 9. Copilot UI 架构
+## 9. Copilot UI 架构 (2026-05-22)
 
-### 从 Drawer 到右侧面板 (2026-05-17)
+### 共享 Session 架构
 
-Copilot 从 overlay drawer 模式重构为右侧面板模式：
+Copilot 使用共享 session 架构，同一用户+站点下所有 tab 共享一个 WS session：
 
-**之前 (drawer):**
-- 每个 tab 组件各自管理 copilot 状态 (`copilotOpen`)
-- 使用 `CopilotFab` 浮动按钮打开，`CopilotDrawer` overlay 覆盖主内容
-- 打开时有半透明 scrim 遮罩
+- Session key: `copilot:{siteId}`（站点运营）或 `copilot:admin`（集团管理）
+- `useAgentChat` hook 提升到 Shell 级别（SiteOperationsShell / QualityPage）
+- `CopilotPanel` 是纯展示组件，接收 messages/connected/wip 等 props
+- Tab 切换不会断开 WS 或丢失消息
 
-**现在 (panel):**
-- `SiteOperationsShell` 统一管理 copilot 状态
-- 页头右上角 `copilot-toggle` 按钮控制显示/收起
-- `CopilotPanel` 作为右侧面板（360px），与主内容区并排，非 overlay
-- 仅在非首页 tab 显示 toggle 按钮
-- 手机端隐藏 copilot 面板
+### 交互方式
 
-**相关文件:**
-- `CopilotPanel.tsx` — 面板组件（替代 `CopilotDrawer.tsx`）
-- `SiteOperationsShell.tsx` — toggle 按钮 + 面板状态管理
-- `siteOperations.css` — `.copilot-panel`、`.copilot-toggle` 样式
+**桌面端：**
+- Header 右侧内嵌输入框（宽度与 copilot panel 同步）
+- CopilotPanel 作为右侧面板（360px），与主内容区并排
+- Copilot 在所有 tab（包括首页）都可用
+
+**手机端：**
+- Header 输入框隐藏
+- 右下角浮动 FAB 按钮
+- Bottom-sheet copilot panel（65vh 高度，上滑动画 + backdrop 遮罩）
+
+### Tab 上下文
+
+用户消息自动附带当前 tab 的 `[ctx:label]` 前缀（如 `[ctx:服务人员]`），agent 据此判断用户角色和当前工作区。前缀在 UI 中不可见。
+
+### 智能链接 (gy://)
+
+Agent 回复中的 `gy://` scheme 链接触发应用内导航（切换 tab + 筛选），不打开新浏览器页。
+
+### 操作按钮 (Card Frame)
+
+Agent 通过 lak card frame 返回确认/选择按钮，前端 CardBubble 组件渲染。
+
+### 语音输入
+
+支持 Web Speech API (SpeechRecognition zh-CN) 语音转文字输入。
+
+### 斜杠命令
+
+- 站点运营: 15 条命令 (`/worker-create`, `/badge-activate` 等)
+- 集团管理: 8 条命令 (`/quality-overview`, `/site-query` 等)
+- `/help`: 由 goldenyears-agent binary 直接返回命令列表（不启动 Codex session）
+
+### 相关文件
+
+| 文件 | 职责 |
+|------|------|
+| `useAgentChat.ts` | WS 连接 + 消息状态管理 hook |
+| `CopilotPanel.tsx` | 纯展示面板组件 |
+| `ChatStream.tsx` | 消息渲染（ReactMarkdown + gy:// 链接 + CardBubble） |
+| `CardBubble.tsx` | 操作按钮卡片组件 |
+| `CommandInput.tsx` | 输入框 + 斜杠命令自动补全 + 语音输入 |
+| `SiteOperationsShell.tsx` | 站点运营 Shell（owns useAgentChat） |
+| `QualityPage.tsx` | 集团管理页面（owns useAgentChat） |
 
 ## 8. 用户认证
 
@@ -454,8 +534,10 @@ lak (内网)
 - **生产环境禁止使用默认密钥**: `JWT_SECRET`, `WS_TOKEN`, `GY_TOKEN_SECRET` 必须设置为强随机值
 - **dev-token 端点已移除**: 无匿名 JWT 签发入口，必须通过登录获取 token
 - **业务路由使用 optionalAuth**: 识别用户身份但不强制拒绝（向后兼容过渡期）
-- **Admin 路由使用 requireAuth + requireRole**: 强制认证 + org_admin 角色检查
+- **Admin 路由使用 requireAuth + requireRole**: 强制认证 + org_admin 角色检查。`requireAuth` 支持 GY_API_TOKEN fallback（第二参数 `gyTokenSecret`），GY token 空 role + admin scope 自动推断为 org_admin
+- **optionalAuth 不覆盖已认证用户**: 如果 `req.authUser` 已被前置中间件设置，直接放行
 - **ws_token 必须一致**: API 服务器的 `WS_TOKEN` 环境变量必须与 lak config.toml 中的 `token` 一致
+- **LITELLM_API_KEY**: lak 进程环境中必须设置，传递给 Codex 子进程用于访问 LiteLLM Proxy
 
 ## 10. 多模块部署
 
