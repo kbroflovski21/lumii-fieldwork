@@ -45,11 +45,15 @@ export function requireAuth(jwtSecret: string, gyTokenSecret?: string) {
     if (gyTokenSecret) {
       const gyPayload = verifyGyToken(token, gyTokenSecret);
       if (gyPayload) {
+        let role = gyPayload.role;
+        if (!role) {
+          role = gyPayload.scope === "admin" ? "org_admin" : "site_operator";
+        }
         req.authUser = {
           id: gyPayload.sub,
           username: "cc-session",
           name: "CC Session",
-          role: gyPayload.role || "org_admin",
+          role,
           orgId: "org-001",
           siteIds: gyPayload.siteIds ?? [],
         };

@@ -12,7 +12,7 @@ import type {
 } from "./contracts";
 import { RecordDrawer } from "./RecordsArea";
 import { statusText } from "./contracts";
-import { siteOperationsApi } from "./api";
+import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 
@@ -422,7 +422,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [savedPlans, setSavedPlans] = useState<Array<{ id: string; serviceProject: string; cadenceLabel: string; preferredTimeWindow: any; primarySocialWorkerName?: string; status: string }>>([]);
 
   useEffect(() => {
-    fetch("/api/service-schedule-occurrences")
+    authFetch("/api/service-schedule-occurrences")
       .then(r => r.json())
       .then(data => {
         const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id);
@@ -533,7 +533,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
     const cadenceLabel = first.recurrenceLabel ?? `每周${(first.recurrenceDays ?? []).map(d => dayNames[d]).join("、")}`;
     const timeMatch = first.timeLabel.match(/(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
-    fetch(`/api/service-objects/${obj.id}/service-plans`, {
+    authFetch(`/api/service-objects/${obj.id}/service-plans`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -570,7 +570,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
       pendingItems.forEach(persistSchedule);
     }
     setTimeout(() => {
-      fetch("/api/service-schedule-occurrences").then(r => r.json()).then(data => {
+      authFetch("/api/service-schedule-occurrences").then(r => r.json()).then(data => {
         setSavedSchedules((data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id));
       }).catch(() => {});
     }, 800);
@@ -925,7 +925,7 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
     setSaving(true);
     try {
       const token = localStorage.getItem("gy_auth_token");
-      await fetch(`/api/service-objects/${obj.id}/family-contacts`, {
+      await authFetch(`/api/service-objects/${obj.id}/family-contacts`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
@@ -940,7 +940,7 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
     setSaving(true);
     try {
       const token = localStorage.getItem("gy_auth_token");
-      await fetch(`/api/family-contacts/${id}`, {
+      await authFetch(`/api/family-contacts/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
@@ -1014,7 +1014,7 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
                           <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeleteConfirmId(null)} type="button">取消</button>
                           <button className="sw-btn sw-btn--danger" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={async () => {
                             const token = localStorage.getItem("gy_auth_token");
-                            await fetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                            await authFetch(`/api/family-contacts/${c.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
                             setDeleteConfirmId(null);
                             onUpdated();
                           }} type="button">确认删除</button>

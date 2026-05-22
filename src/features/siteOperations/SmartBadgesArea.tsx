@@ -8,7 +8,7 @@ import type {
   SmartBadgesResponse
 } from "./contracts";
 import { statusText } from "./contracts";
-import { siteOperationsApi } from "./api";
+import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
@@ -333,7 +333,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
 
   useEffect(() => {
     if (badge.recentServiceRecordIds.length > 0) {
-      fetch("/api/service-records").then(r => r.json()).then(setRecordsData).catch(() => {});
+      authFetch("/api/service-records").then(r => r.json()).then(setRecordsData).catch(() => {});
     }
   }, [badge.id]);
 
@@ -350,7 +350,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   const [workerOptions, setWorkerOptions] = useState<Array<{id: string; name: string; boundBadge?: string}>>([]);
 
   useEffect(() => {
-    fetch("/api/social-workers").then(r => r.json()).then(data => {
+    authFetch("/api/social-workers").then(r => r.json()).then(data => {
       const workers = (data.socialWorkers ?? []).map((w: any) => ({
         id: w.id,
         name: w.name,

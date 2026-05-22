@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Download, Shield, AlertTriangle, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, MapPin } from "lucide-react";
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
+import { authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 
@@ -86,8 +87,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
   useEffect(() => {
     if (viewMode !== "recordings") return;
     setRecordingsLoading(true);
-    const token = localStorage.getItem("gy_auth_token");
-    fetch("/api/recordings", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    authFetch("/api/recordings")
       .then(r => r.json())
       .then(data => { setRecordings(data.recordings ?? []); setRecordingsLoading(false); })
       .catch(() => setRecordingsLoading(false));

@@ -8,7 +8,7 @@ import type {
   SocialWorkersResponse
 } from "./contracts";
 import { statusText } from "./contracts";
-import { siteOperationsApi } from "./api";
+import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 
@@ -529,10 +529,8 @@ function ViewModal({
     setResetPwdLoading(true);
     setResetPwdResult(null);
     try {
-      const token = localStorage.getItem("gy_auth_token");
-      const res = await fetch(`/api/social-workers/${worker.id}/reset-password`, {
+      const res = await authFetch(`/api/social-workers/${worker.id}/reset-password`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();

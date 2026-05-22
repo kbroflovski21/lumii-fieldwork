@@ -25,7 +25,7 @@ import { sopRoutes } from "./routes/sops";
 import { aiRoutes } from "./routes/ai";
 import { recordingRoutes, recordingInternalRoutes } from "./routes/recordings";
 import { requireAuth } from "./middleware/requireAuth";
-import { optionalAuth } from "./middleware/optionalAuth";
+// optionalAuth no longer used — all routes require auth (JWT or GY token)
 import { requireServiceToken } from "./middleware/serviceAuth";
 import { internalRoutes } from "./routes/internal";
 
@@ -51,36 +51,36 @@ const pool = new AgentConnectionPool({
 const jwtSecret = process.env.JWT_SECRET ?? "dev-jwt-secret-change-in-prod";
 app.use("/api", authRoutes(jwtSecret));
 
-// Admin routes require auth (JWT or GY token)
-const gyTokenSecret = process.env.GY_TOKEN_SECRET;
-const authMw = requireAuth(jwtSecret, gyTokenSecret);
-app.use("/api/admin", authMw);
-app.use("/api", adminRoutes());
+// Health check (public, no auth) — must be before authMw
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Business routes — optional auth (attaches user if token present)
-const optAuth = optionalAuth(jwtSecret, gyTokenSecret);
-app.use("/api", optAuth, siteRoutes());
-app.use("/api", optAuth, homeRoutes());
-app.use("/api", optAuth, socialWorkersRoutes());
-app.use("/api", optAuth, smartBadgesRoutes());
-app.use("/api", optAuth, serviceObjectsRoutes());
-app.use("/api", optAuth, serviceSchedulesRoutes());
-app.use("/api", optAuth, serviceRecordsRoutes());
-app.use("/api", optAuth, sopRoutes());
-app.use("/api", optAuth, aiRoutes());
-app.use("/api", optAuth, recordingRoutes());
+// Persona route (own auth via wsToken) — before authMw
 app.use("/api", personaRoutes(
   process.env.WS_TOKEN ?? "dev-ws-token-change-in-prod",
   process.env.AGENT_ID ?? "lumii-goldenyears",
 ));
 
-// Health check (public, no auth)
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-// Internal API (service-to-service, requires SERVICE_TOKEN)
+// Internal API (service-to-service, requires SERVICE_TOKEN) — before authMw
 const serviceAuth = requireServiceToken();
 app.use("/api/internal", serviceAuth, internalRoutes());
 app.use("/api/internal", serviceAuth, recordingInternalRoutes());
+
+// All remaining /api routes require auth (JWT or GY token)
+const gyTokenSecret = process.env.GY_TOKEN_SECRET;
+const authMw = requireAuth(jwtSecret, gyTokenSecret);
+app.use("/api/admin", authMw);
+app.use("/api", adminRoutes());
+
+app.use("/api", authMw, siteRoutes());
+app.use("/api", authMw, homeRoutes());
+app.use("/api", authMw, socialWorkersRoutes());
+app.use("/api", authMw, smartBadgesRoutes());
+app.use("/api", authMw, serviceObjectsRoutes());
+app.use("/api", authMw, serviceSchedulesRoutes());
+app.use("/api", authMw, serviceRecordsRoutes());
+app.use("/api", authMw, sopRoutes());
+app.use("/api", authMw, aiRoutes());
+app.use("/api", authMw, recordingRoutes());
 
 // Static file serving (production/staging)
 if (existsSync(STATIC_ROOT)) {

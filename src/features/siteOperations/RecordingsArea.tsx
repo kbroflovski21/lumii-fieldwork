@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authFetch } from "./api";
 
 interface RecordingItem {
   id: string;
@@ -37,8 +38,7 @@ export function RecordingsArea() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("gy_auth_token");
-    fetch("/api/recordings", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    authFetch("/api/recordings")
       .then(r => r.json())
       .then(data => { setRecordings(data.recordings ?? []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -147,10 +147,9 @@ export function RecordingsArea() {
                 onClick={() => {
                   const scheduleId = prompt("请输入要关联的排班ID（schedule ID）：");
                   if (!scheduleId) return;
-                  const token = localStorage.getItem("gy_auth_token");
-                  fetch(`/api/recordings/${selected.id}/match`, {
+                  authFetch(`/api/recordings/${selected.id}/match`, {
                     method: "PATCH",
-                    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ scheduleId }),
                   }).then(() => window.location.reload());
                 }}

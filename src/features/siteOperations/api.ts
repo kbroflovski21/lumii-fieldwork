@@ -59,16 +59,26 @@ async function parseJson<T>(response: Response, path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem("gy_auth_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const headers = { ...authHeaders(), ...init?.headers };
+  return fetch(input, { ...init, headers });
+}
+
 async function getJson<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = params ? `${path}?${new URLSearchParams(params)}` : path;
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const response = await fetch(url, { headers: { Accept: "application/json", ...authHeaders() } });
   return parseJson<T>(response, path);
 }
 
 async function sendJson<T>(path: string, method: "POST" | "PATCH" | "PUT", body?: unknown): Promise<T> {
   const response = await fetch(path, {
     method,
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...authHeaders() },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
   return parseJson<T>(response, path);

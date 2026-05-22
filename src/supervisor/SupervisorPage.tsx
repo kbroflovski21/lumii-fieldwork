@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bot } from "lucide-react";
 import { ProfileMenu } from "../shared/ProfileMenu";
+import { authFetch } from "../features/siteOperations/api";
 import "./supervisor.css";
 
 /* ── Types ── */
@@ -255,7 +256,7 @@ function SOPContent() {
 
   /* Fetch folders from API */
   useEffect(() => {
-    fetch("/api/sops").then(r => r.json()).then(data => {
+    authFetch("/api/sops").then(r => r.json()).then(data => {
       const sops = data.sops ?? [];
       const mapped: StdFolder[] = sops.map((s: any) => ({
         id: s.id,
@@ -341,7 +342,7 @@ function SOPContent() {
 
       try {
         const allMessages = [...messages, { id: String(nextMsgId++), role: "user" as const, content: userText, timestamp: makeTimestamp() }];
-        const resp = await fetch("/api/ai/chat", {
+        const resp = await authFetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -408,7 +409,7 @@ function SOPContent() {
     const fieldMap: Record<DocType, string> = { sop: "sopContent", supervision: "supervisionContent", report: "reportContent" };
     const sourceMap: Record<DocType, string> = { sop: "sopSource", supervision: "supervisionSource", report: "reportSource" };
     const body: any = { [fieldMap[docType]]: editContent, [sourceMap[docType]]: folder[docType]?.source ?? "manual" };
-    fetch(`/api/sops/${folder.id}`, {
+    authFetch(`/api/sops/${folder.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -427,7 +428,7 @@ function SOPContent() {
       basedOnSopVersion: sopDoc.version,
       status: "generating",
     });
-    fetch("/api/ai/generate-doc", {
+    authFetch("/api/ai/generate-doc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sopContent: sopDoc.content, sopName: folder.name, docType }),
@@ -475,7 +476,7 @@ function SOPContent() {
       [sourceMap[docType]]: "ai_generated",
       [summaryMap[docType]]: `AI 基于 SOP v${basedOnSopVersion} 生成`,
     };
-    fetch(`/api/sops/${folder.id}`, {
+    authFetch(`/api/sops/${folder.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -506,7 +507,7 @@ function SOPContent() {
     if (action === "rename_confirm" && newName) {
       setFolders((prev) => prev.map((ff) => (ff.id === f.id ? { ...ff, name: newName } : ff)));
       // Persist rename to API
-      fetch(`/api/sops/${f.id}`, {
+      authFetch(`/api/sops/${f.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName }),
@@ -518,7 +519,7 @@ function SOPContent() {
         danger: true,
         onConfirm: () => {
           // Persist delete to API
-          fetch(`/api/sops/${f.id}`, { method: "DELETE" }).catch(() => {});
+          authFetch(`/api/sops/${f.id}`, { method: "DELETE" }).catch(() => {});
           setFolders((prev) => prev.filter((ff) => ff.id !== f.id));
           if (selectedFolder === f.id) setSelectedFolder("");
           setConfirmModal(null);
@@ -532,7 +533,7 @@ function SOPContent() {
     const name = prompt(type === "general" ? "请输入通用规范名称：" : "请输入服务项目规范名称：");
     if (!name?.trim()) return;
     try {
-      const resp = await fetch("/api/sops", {
+      const resp = await authFetch("/api/sops", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), type }),
@@ -690,7 +691,7 @@ function SOPContent() {
                           }),
                         );
                         // Persist SOP content removal to API
-                        fetch(`/api/sops/${folder.id}`, {
+                        authFetch(`/api/sops/${folder.id}`, {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ sopContent: null }),

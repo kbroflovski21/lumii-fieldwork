@@ -122,9 +122,8 @@ describe("requireAuth with gyTokenSecret fallback", () => {
     expect(res.body.user.role).toBe("org_admin");
   });
 
-  it("GY token defaults empty role to org_admin", async () => {
+  it("GY token defaults empty role + admin scope to org_admin", async () => {
     const app = createAppWithGy();
-    // Simulate what lak does: signs token with empty role
     const token = signGyToken({
       sub: "cc-user",
       role: "",
@@ -135,8 +134,37 @@ describe("requireAuth with gyTokenSecret fallback", () => {
 
     const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
-    // Empty role should default to org_admin in requireAuth
     expect(res.body.user.role).toBe("org_admin");
+  });
+
+  it("GY token defaults empty role + non-admin scope to site_operator", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "",
+      siteIds: ["site-001"],
+      scope: "social_workers",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe("site_operator");
+  });
+
+  it("GY token with explicit site_operator role is preserved", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "site_operator",
+      siteIds: ["site-001"],
+      scope: "social_workers",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe("site_operator");
   });
 
   it("prefers JWT over GY token when JWT is valid", async () => {
