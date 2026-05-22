@@ -1059,6 +1059,21 @@
 .cw-float-record:active { transform: scale(0.93); }
 
 /* ── Badge Simulator (integrated) ── */
+.sim-shell--embedded {
+  min-height: auto;
+  height: 100%;
+  padding: 8px;
+  background: transparent;
+}
+.sim-shell--embedded .sim-grid {
+  height: 100%;
+}
+
+.cw-badge-tab {
+  height: calc(100vh - 112px);
+  overflow-y: auto;
+}
+
 .sim-shell {
   --sim-bg: #F7F9FB;
   --sim-glass: rgba(255,255,255,0.75);

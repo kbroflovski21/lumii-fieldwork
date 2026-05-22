@@ -316,6 +316,16 @@ body {
   width: 40px;
 }
 
+.site-operations-rail > button {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.site-operations-rail > button:hover:not([data-active="true"]) {
+  background: #F1F5F9;
+  color: #334155;
+}
+
 .site-operations-rail > button[data-active="true"],
 .site-operations-mobile-nav button[data-active="true"] {
   color: var(--site-accent);

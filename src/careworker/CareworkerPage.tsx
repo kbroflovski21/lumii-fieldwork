@@ -18,7 +18,7 @@ import { HardwareSimulator } from "./HardwareSimulator";
 /* ─── Types ─── */
 
 type TaskStatus = "completed" | "abnormal" | "pending";
-type Tab = "tasks" | "reference";
+type Tab = "tasks" | "reference" | "badge";
 type BadgeState = "disconnected" | "connected_idle" | "connected_recording";
 
 interface SopCheck {
@@ -924,13 +924,10 @@ function TaskCard({ task, onClick }: { task: ServiceTask; onClick: () => void })
 
 /** Task detail drawer */
 function TaskDetailDrawer({
-  task, onClose, onStartService, onStopService, isServicing, onNavigate,
+  task, onClose, onNavigate,
 }: {
   task: ServiceTask;
   onClose: () => void;
-  onStartService: (taskId: string) => void;
-  onStopService: (taskId: string) => void;
-  isServicing: string | null;
   onNavigate: (address: string) => void;
 }) {
   const [sopChecked, setSopChecked] = useState<Set<number>>(new Set());
@@ -952,8 +949,6 @@ function TaskDetailDrawer({
   const toggleSop = (_idx: number) => {
     // SOP checklist is read-only — completion is determined by AI after recording
   };
-
-  const isActiveService = isServicing === task.id;
 
   return (
     <div className="cw-drawer-overlay" onClick={onClose}>
@@ -1030,22 +1025,6 @@ function TaskDetailDrawer({
           </div>
 
           {/* Service action */}
-          {task.status === "pending" && !isActiveService && (
-            <button
-              className="cw-service-btn cw-service-btn--start"
-              onClick={() => onStartService(task.id)}
-            >
-              开始服务
-            </button>
-          )}
-          {isActiveService && (
-            <button
-              className="cw-service-btn cw-service-btn--stop"
-              onClick={() => onStopService(task.id)}
-            >
-              结束服务
-            </button>
-          )}
           {task.status === "completed" && (
             <button className="cw-service-btn cw-service-btn--completed" disabled>
               服务已完成
@@ -1826,6 +1805,24 @@ export function CareworkerPage() {
       .catch(() => { setApiTasks([]); setTasksLoading(false); });
   }, [worker]);
 
+  // Fetch worker's bound badge info
+  const [myBadge, setMyBadge] = useState<{ deviceCode: string; id: string } | null>(null);
+  useEffect(() => {
+    if (!worker) return;
+    const token = localStorage.getItem("gy_careworker_token");
+    fetch("/api/social-workers", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(data => {
+        const workers = data.socialWorkers ?? [];
+        const me = workers.find((w: any) => w.userId === worker.id || w.id === worker.id);
+        const badgeInfo = me?.preferredBadge;
+        if (badgeInfo?.deviceCode) {
+          setMyBadge({ deviceCode: badgeInfo.deviceCode, id: badgeInfo.badgeId ?? "" });
+        }
+      })
+      .catch(() => {});
+  }, [worker]);
+
   // Find the next pending task's start time for pre-service detection
   const nextPendingStart = useMemo(() => {
     const now = new Date();
@@ -1873,14 +1870,6 @@ export function CareworkerPage() {
     setSelectedDate(currentDate.toISOString().slice(0, 10));
   }, [currentDate]);
 
-  const handleStartService = useCallback((taskId: string) => {
-    window.location.href = `/careworker/hardware?scheduleId=${taskId}`;
-  }, []);
-
-  const handleStopService = useCallback((_taskId: string) => {
-    setServicingTaskId(null);
-  }, []);
-
   const handleLogout = useCallback(() => {
     setShowLogout(false);
     setWorker(null);
@@ -1907,21 +1896,9 @@ export function CareworkerPage() {
     return <LoginScreen onLogin={setWorker} />;
   }
 
+  // Standalone hardware simulator page (opened in new tab)
   if (window.location.pathname.startsWith("/careworker/hardware")) {
-    if (tasksLoading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", color: "#667386" }}>加载任务中...</div>;
-    const params = new URLSearchParams(window.location.search);
-    const scheduleId = params.get("scheduleId");
-    const matchedTask = scheduleId ? apiTasks.find(t => t.id === scheduleId) : undefined;
-    const simTask = matchedTask ? {
-      scheduleId: matchedTask.id,
-      serviceObjectId: matchedTask.serviceObjectId ?? "",
-      serviceObjectName: matchedTask.recipientName,
-      serviceProject: matchedTask.serviceType,
-      clientContext: matchedTask.serviceObjectContext
-        ? `注意事项: ${JSON.stringify(matchedTask.serviceObjectContext.careNotes ?? [])}; 风险标签: ${JSON.stringify(matchedTask.serviceObjectContext.riskTags ?? [])}`
-        : "",
-    } : undefined;
-    return <HardwareSimulator worker={worker} task={simTask} />;
+    return <HardwareSimulator worker={worker} />;
   }
 
   return (
@@ -2015,6 +1992,37 @@ export function CareworkerPage() {
         {activeTab === "reference" && (
           <ReferenceList onSelectSop={setSelectedSop} />
         )}
+
+        {activeTab === "badge" && (
+          <div style={{ padding: "16px 0", textAlign: "center" }}>
+            <div style={{ padding: "40px 20px" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: myBadge ? "linear-gradient(135deg,#0052CC,#2684FF)" : "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={myBadge ? "white" : "#94A3B8"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px" }}>我的工牌</h3>
+              {myBadge ? (
+                <>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 16px", background: "#F0F7FF", borderRadius: 20, marginBottom: 20 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A" }} />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#0052CC" }}>{myBadge.deviceCode}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: "#64748B", margin: "0 0 24px" }}>工牌已绑定，点击下方按钮开始录音</p>
+                  <button
+                    onClick={() => window.open("/careworker/hardware", "_blank")}
+                    style={{ padding: "14px 40px", background: "linear-gradient(135deg,#DC2626,#EF4444)", color: "#fff", border: "none", borderRadius: 28, fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(220,38,38,.3)" }}
+                  >
+                    开始录音
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 14, color: "#94A3B8", margin: "0 0 8px" }}>暂未绑定工牌</p>
+                  <p style={{ fontSize: 13, color: "#CBD5E1" }}>请联系站长为您绑定工牌后即可使用</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Tab bar */}
@@ -2033,6 +2041,13 @@ export function CareworkerPage() {
           <IconBook color={activeTab === "reference" ? "#0052CC" : "#9CA3AF"} />
           <span className="cw-tabbar__label">参考资料</span>
         </button>
+        <button
+          className={`cw-tabbar__item ${activeTab === "badge" ? "cw-tabbar__item--active" : ""}`}
+          onClick={() => setActiveTab("badge")}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={activeTab === "badge" ? "#0052CC" : "#9CA3AF"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+          <span className="cw-tabbar__label">我的工牌</span>
+        </button>
       </nav>
 
       {/* Task detail drawer */}
@@ -2040,9 +2055,6 @@ export function CareworkerPage() {
         <TaskDetailDrawer
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
-          onStartService={handleStartService}
-          onStopService={handleStopService}
-          isServicing={servicingTaskId}
           onNavigate={(addr) => { setSelectedTask(null); setMapAddress(addr); }}
         />
       )}
@@ -2074,17 +2086,6 @@ export function CareworkerPage() {
       {/* AI Assistant */}
       <AiAssistant />
 
-      {/* Floating record button */}
-      <button
-        className="cw-float-record"
-        onClick={() => { window.location.href = "/careworker/hardware"; }}
-        title="开始录音"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="12" cy="12" r="6" fill="currentColor" />
-          <circle cx="12" cy="12" r="10" />
-        </svg>
-      </button>
     </div>
   );
 }

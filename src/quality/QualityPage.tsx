@@ -857,7 +857,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
         const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
-          setAllOperators(data.users.filter((u: any) => u.role === "site_operator"));
+          setAllOperators((data.users ?? []).filter((u: any) => u.role === "site_operator"));
         }
       } catch { /* ignore */ }
       setOpsLoading(false);
@@ -1041,7 +1041,7 @@ function OperatorAssignModal({ site, token, onClose, onSaved }: {
         const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
         if (res.ok) {
           const data = await res.json();
-          setAllOperators(data.users.filter((u: any) => u.role === "site_operator"));
+          setAllOperators((data.users ?? []).filter((u: any) => u.role === "site_operator"));
         }
       } catch { /* ignore */ }
     })();
@@ -1152,7 +1152,7 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
       const res = await fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data.users.filter((u: QualityUser) => u.role !== "careworker"));
+        setUsers((data.users ?? []).filter((u: QualityUser) => u.role !== "careworker"));
       }
     } catch { /* ignore */ }
     setLoading(false);

@@ -381,8 +381,8 @@ function WorkerContent({
                 {worker.phone}
               </div>
               <div role="cell">
-                {worker.qualificationLabels.length > 0
-                  ? <div className="sw-tags">{worker.qualificationLabels.map(q => <span key={q} className="sw-tag">{q}</span>)}</div>
+                {(worker.qualificationLabels ?? []).length > 0
+                  ? <div className="sw-tags">{(worker.qualificationLabels ?? []).map(q => <span key={q} className="sw-tag">{q}</span>)}</div>
                   : <span className="sw-text-muted">—</span>}
               </div>
               <div role="cell">
@@ -434,7 +434,7 @@ function WorkerContent({
                 </span>
               </div>
               <div className="sw-mobile-card__meta">
-                <span>{worker.qualificationLabels.length > 0 ? worker.qualificationLabels.join("、") : "无资质"}</span>
+                <span>{(worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).join("、") : "无资质"}</span>
                 <span>{worker.preferredBadge ? worker.preferredBadge.deviceCode : "未绑定工牌"}</span>
                 <span>{worker.praiseSummary.praiseCount} 次表扬</span>
               </div>
@@ -495,7 +495,7 @@ function ViewModal({
   const [editingBasic, setEditingBasic] = useState(false);
   const [editName, setEditName] = useState(worker.name);
   const [editPhone, setEditPhone] = useState(worker.phone);
-  const [editQual, setEditQual] = useState(worker.qualificationLabels.join("、"));
+  const [editQual, setEditQual] = useState((worker.qualificationLabels ?? []).join("、"));
   const [savingBasic, setSavingBasic] = useState(false);
   const color = avatarColor(worker.name);
 
@@ -570,7 +570,7 @@ function ViewModal({
           <span className="so-modal__meta-item"><Phone size={13} /> {worker.phone}</span>
         </div>
         <div className="so-modal__summary-tags">
-          {worker.qualificationLabels.length > 0 ? worker.qualificationLabels.map(q => (
+          {(worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).map(q => (
             <span className="so-modal__chip" key={q}>{q}</span>
           )) : <span className="so-modal__chip">无资质</span>}
           {worker.preferredBadge ? (
@@ -598,13 +598,13 @@ function ViewModal({
             <div className="so-tab-section">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
-                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(worker.name); setEditPhone(worker.phone); setEditQual(worker.qualificationLabels.join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(worker.name); setEditPhone(worker.phone); setEditQual((worker.qualificationLabels ?? []).join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
               <dl className="so-overview-grid" style={{ marginTop: 10 }}>
                 <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : worker.name}</dd></div>
                 <div className="so-overview-item"><dt>电话</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : worker.phone}</dd></div>
                 <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span></dd></div>
-                <div className="so-overview-item so-overview-item--full"><dt>资质</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editQual} onChange={e => setEditQual(e.target.value)} placeholder="用顿号分隔" /> : (worker.qualificationLabels.length > 0 ? worker.qualificationLabels.join("、") : "—")}</dd></div>
+                <div className="so-overview-item so-overview-item--full"><dt>资质</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editQual} onChange={e => setEditQual(e.target.value)} placeholder="用顿号分隔" /> : ((worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).join("、") : "—")}</dd></div>
               </dl>
               {editingBasic && (
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
@@ -732,7 +732,7 @@ function EditModal({
 }) {
   const [name, setName] = useState(worker.name);
   const [phone, setPhone] = useState(worker.phone);
-  const [qualifications, setQualifications] = useState(worker.qualificationLabels.join("、"));
+  const [qualifications, setQualifications] = useState((worker.qualificationLabels ?? []).join("、"));
   const [status, setStatus] = useState(worker.status);
   const [saving, setSaving] = useState(false);
 

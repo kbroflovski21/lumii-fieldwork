@@ -4,9 +4,9 @@ services:
     container_name: goldenyears-dashboard
     restart: always
     ports:
-      - "3001:3001"
+      - "30001:30001"
     environment:
-      - PORT=3001
+      - PORT=30001
       - JWT_SECRET=dev-jwt-secret-change-in-prod
       - WS_TOKEN=dev-ws-token-change-in-prod
       - SERVICE_TOKEN=golden-years-service-token-2026

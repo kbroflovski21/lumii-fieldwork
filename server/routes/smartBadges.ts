@@ -66,6 +66,13 @@ export function smartBadgesRoutes() {
     if (b.preferredWorkerId !== undefined) {
       data.preferredWorkerId = b.preferredWorkerId || null;
       if (b.preferredWorkerId) {
+        const existing = await prisma.smartBadge.findFirst({
+          where: { preferredWorkerId: b.preferredWorkerId, id: { not: req.params.id } },
+        });
+        if (existing) {
+          res.status(409).json({ error: `该人员已绑定工牌 ${existing.deviceCode}，请先解绑后再操作` });
+          return;
+        }
         const worker = await prisma.socialWorker.findFirst({ where: { id: b.preferredWorkerId } });
         data.preferredWorkerName = worker?.name ?? null;
       } else {

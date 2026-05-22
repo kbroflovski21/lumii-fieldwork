@@ -116,7 +116,7 @@ interface SimulatorTask {
   clientContext: string;
 }
 
-export function HardwareSimulator({ worker, task }: { worker?: SimulatorWorker; task?: SimulatorTask }) {
+export function HardwareSimulator({ worker, task, embedded }: { worker?: SimulatorWorker; task?: SimulatorTask; embedded?: boolean }) {
   const [state, setState] = useState<SimState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [hint, setHint] = useState("点击开始模拟上门服务");
@@ -328,11 +328,13 @@ export function HardwareSimulator({ worker, task }: { worker?: SimulatorWorker; 
   const btnText = isRecording ? "停止" : isProcessing ? "..." : "开始";
 
   return (
-    <div className="sim-shell">
-      <div className="sim-header">
-        <h1>智能工牌模拟器</h1>
-        <p>{task ? `${task.serviceProject} · ${task.serviceObjectName}` : worker ? `${worker.name} · ${worker.site}` : "GoldenYears · 实时ASR + AI督导"}</p>
-      </div>
+    <div className={`sim-shell ${embedded ? "sim-shell--embedded" : ""}`}>
+      {!embedded && (
+        <div className="sim-header">
+          <h1>智能工牌模拟器</h1>
+          <p>{task ? `${task.serviceProject} · ${task.serviceObjectName}` : worker ? `${worker.name} · ${worker.site}` : "GoldenYears · 实时ASR + AI督导"}</p>
+        </div>
+      )}
       <div className="sim-grid">
         <div className="sim-col">
           <div className="sim-card">

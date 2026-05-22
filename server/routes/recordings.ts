@@ -358,6 +358,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
       socialWorkerName: workerName,
       serviceObjectId,
       serviceObjectName,
+      serviceProject: sopResults?.service_project || null,
       assignmentConfidence: sopResults?.confidence ?? 0.5,
       reviewStatus: "needs_review",
       transcriptId,
@@ -365,6 +366,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
       generatedSummary: rec.aiSummary,
       structuredSummary: rec.sopResults ? JSON.stringify(rec.sopResults) : null,
       serviceExceptions: sopResults?.anomalies ?? [],
+      serviceItems: sopResults?.service_items ?? [],
     },
   });
 

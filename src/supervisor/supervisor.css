@@ -349,7 +349,8 @@
 }
 
 .sv-folder__btn {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -359,6 +360,7 @@
   border: none;
   text-align: left;
   transition: background 0.1s;
+  cursor: pointer;
 }
 
 .sv-folder__btn:hover {
@@ -412,6 +414,38 @@
   background: var(--sv-surface);
 }
 
+.sv-folder__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.sv-folder__row:hover .sv-folder__actions {
+  opacity: 1;
+}
+.sv-folder__action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sv-folder__action-btn:hover {
+  background: #F1F5F9;
+  color: #0052CC;
+}
+.sv-folder__action-btn--danger:hover {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
 .sv-folder__menu-anchor {
   position: relative;
   flex-shrink: 0;
@@ -427,8 +461,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 0.4;
   transition: opacity 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .sv-folder__row:hover .sv-folder__menu-trigger {

@@ -1,14 +1,12 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect } from "react";
-import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
 import type {
   SmartBadge,
   SmartBadgeStatus,
-  ServiceRecord,
   WorkAreaOperationalState,
   SmartBadgesResponse
 } from "./contracts";
-import { RecordDrawer } from "./RecordsArea";
 import { statusText } from "./contracts";
 import { siteOperationsApi } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
@@ -322,7 +320,7 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
   );
 }
 
-type ViewTab = "info" | "records" | "recordings";
+type ViewTab = "info";
 
 function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecords }: {
   badge: SmartBadge;
@@ -334,26 +332,13 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   const [activeTab, setActiveTab] = useState<ViewTab>("info");
   const [confirmAction, setConfirmAction] = useState<"disable" | "lost" | null>(null);
   const [selectedWorker, setSelectedWorker] = useState(badge.preferredWorkerId ?? "");
-  const [viewingRecord, setViewingRecord] = useState<ServiceRecord | null>(null);
   const [recordsData, setRecordsData] = useState<any>(null);
-  const [badgeRecordings, setBadgeRecordings] = useState<any[]>([]);
-  const [recordingsLoading, setRecordingsLoading] = useState(false);
 
   useEffect(() => {
     if (badge.recentServiceRecordIds.length > 0) {
       fetch("/api/service-records").then(r => r.json()).then(setRecordsData).catch(() => {});
     }
   }, [badge.id]);
-
-  useEffect(() => {
-    if (activeTab !== "recordings") return;
-    setRecordingsLoading(true);
-    const token = localStorage.getItem("gy_auth_token");
-    fetch(`/api/recordings?badgeId=${badge.deviceCode}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then(r => r.json())
-      .then(data => { setBadgeRecordings(data.recordings ?? []); setRecordingsLoading(false); })
-      .catch(() => setRecordingsLoading(false));
-  }, [activeTab, badge.deviceCode]);
 
   const handleStatusChange = async (newStatus: SmartBadgeStatus) => {
     try {
@@ -364,16 +349,23 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   };
 
   const [editingWorker, setEditingWorker] = useState(false);
+  const [bindError, setBindError] = useState("");
+  const [workerOptions, setWorkerOptions] = useState<Array<{id: string; name: string; boundBadge?: string}>>([]);
+
+  useEffect(() => {
+    fetch("/api/social-workers").then(r => r.json()).then(data => {
+      const workers = (data.socialWorkers ?? []).map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        boundBadge: w.preferredBadgeDeviceCode || undefined,
+      }));
+      setWorkerOptions(workers);
+    }).catch(() => {});
+  }, []);
 
   const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "info", label: "设备信息" },
-    { id: "records", label: "服务记录", count: badge.recentServiceRecordIds.length || undefined },
-    { id: "recordings", label: "录音", count: badgeRecordings.length || undefined },
   ];
-
-  if (viewingRecord) {
-    return <RecordDrawer record={viewingRecord} data={recordsData} mutationsDisabled={true} onClose={() => setViewingRecord(null)} onUpdated={() => {}} />;
-  }
 
   return (
     <div className="so-modal so-modal--view" role="dialog" aria-label="设备详情">
@@ -451,19 +443,37 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
               <dl className="so-overview-grid" style={{ marginTop: 10 }}>
                 <div className="so-overview-item"><dt>常用人员</dt><dd>
                   {editingWorker ? (
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)" }} value={selectedWorker} onChange={e => setSelectedWorker(e.target.value)}>
-                        <option value="">无（站点共享）</option>
-                        <option value="worker-001">王丽</option>
-                        <option value="worker-002">张敏</option>
-                        <option value="worker-003">李芳</option>
-                      </select>
-                      <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
-                        try { await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined }); } catch {}
-                        setEditingWorker(false);
-                        onUpdated();
-                      }} type="button">确认</button>
-                      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => setEditingWorker(false)} type="button">取消</button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)" }} value={selectedWorker} onChange={e => { setSelectedWorker(e.target.value); setBindError(""); }}>
+                          <option value="">无（站点共享）</option>
+                          {workerOptions.map(w => (
+                            <option key={w.id} value={w.id} disabled={!!w.boundBadge && w.boundBadge !== badge.deviceCode}>
+                              {w.name}{w.boundBadge && w.boundBadge !== badge.deviceCode ? ` (已绑定${w.boundBadge})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
+                          if (selectedWorker) {
+                            const chosen = workerOptions.find(w => w.id === selectedWorker);
+                            if (chosen?.boundBadge && chosen.boundBadge !== badge.deviceCode) {
+                              setBindError(`${chosen.name}已绑定工牌${chosen.boundBadge}，请先解绑后再操作`);
+                              return;
+                            }
+                          }
+                          try {
+                            await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined });
+                            setEditingWorker(false);
+                            setBindError("");
+                          } catch (err: any) {
+                            const msg = err?.message || "绑定失败";
+                            setBindError(msg.includes("已绑定") ? msg : "绑定失败，该人员可能已绑定其他工牌");
+                          }
+                          onUpdated();
+                        }} type="button">确认</button>
+                        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => { setEditingWorker(false); setBindError(""); }} type="button">取消</button>
+                      </div>
+                      {bindError && <div style={{ fontSize: 12, color: "#DC2626" }}>{bindError}</div>}
                     </div>
                   ) : (badge.preferredWorkerName ?? "站点共享")}
                 </dd></div>
@@ -473,85 +483,6 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
           </>
         )}
 
-        {activeTab === "records" && (
-          <div className="so-tab-section">
-            {badge.recentServiceRecordIds.length > 0 && recordsData ? (
-              <div className="badges-records">
-                {badge.recentServiceRecordIds.map((rid) => {
-                  const rec = recordsData.serviceRecords?.find((r: any) => r.id === rid);
-                  return rec ? (
-                    <button className="badges-record-row" key={rid} onClick={() => setViewingRecord(rec)} type="button">
-                      <FileText size={14} />
-                      <span>{rec.serviceProject} · {rec.serviceObjectName} · {rec.serviceDate}</span>
-                      <span className="sw-status-badge" data-tone={rec.reviewStatus === "confirmed" ? "success" : "warning"} style={{ fontSize: 10, padding: "2px 6px" }}>{statusText[rec.reviewStatus]}</span>
-                    </button>
-                  ) : (
-                    <button className="badges-record-row" key={rid} onClick={onOpenRecords} type="button">
-                      <FileText size={14} />
-                      <span>记录 {rid}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : badge.recentServiceRecordIds.length > 0 ? (
-              <p className="sw-text-muted">加载中...</p>
-            ) : (
-              <p className="sw-text-muted">暂无服务记录</p>
-            )}
-          </div>
-        )}
-
-        {activeTab === "recordings" && (
-          <div style={{ padding: "0 20px 20px" }}>
-            {recordingsLoading ? (
-              <div style={{ textAlign: "center", color: "#94A3B8", padding: 40 }}>加载中...</div>
-            ) : badgeRecordings.length === 0 ? (
-              <div style={{ textAlign: "center", color: "#94A3B8", padding: 40 }}>暂无录音记录</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {badgeRecordings.map((rec: any) => {
-                  const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
-                  const statusColors: Record<string, string> = { processing: "#F59E0B", pending_match: "#3B82F6", matched: "#16A34A", unmatched: "#DC2626" };
-                  const startTime = new Date(rec.startedAt);
-                  const duration = rec.durationSeconds ?? 0;
-                  return (
-                    <div key={rec.id} style={{ padding: 14, borderRadius: 10, border: "1px solid #F1F5F9", background: "#FAFBFC" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontWeight: 600, fontSize: 14 }}>{rec.workerName ?? "未知护工"}</span>
-                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: (statusColors[rec.status] ?? "#999") + "18", color: statusColors[rec.status] ?? "#999", fontWeight: 600 }}>
-                            {statusLabels[rec.status] ?? rec.status}
-                          </span>
-                        </div>
-                        <span style={{ fontSize: 12, color: "#94A3B8" }}>
-                          {startTime.getMonth()+1}/{startTime.getDate()} {startTime.getHours().toString().padStart(2,"0")}:{startTime.getMinutes().toString().padStart(2,"0")}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "#64748B", display: "flex", gap: 12, marginBottom: 6 }}>
-                        <span>时长: {Math.floor(duration/60)}分{duration%60}秒</span>
-                        {rec.matchedServiceObjectName && <span>服务对象: {rec.matchedServiceObjectName}</span>}
-                      </div>
-                      {rec.matchReason && (
-                        <div style={{ fontSize: 12, color: "#0052CC", marginBottom: 6 }}>匹配: {rec.matchReason} ({Math.round((rec.matchConfidence ?? 0) * 100)}%)</div>
-                      )}
-                      {rec.aiSummary && (
-                        <div style={{ fontSize: 12, color: "#475569", marginBottom: 8, lineHeight: 1.5 }}>{rec.aiSummary}</div>
-                      )}
-                      {rec.transcriptText && (
-                        <details style={{ fontSize: 12 }}>
-                          <summary style={{ cursor: "pointer", color: "#0052CC", fontWeight: 500, marginBottom: 4 }}>查看转写原文</summary>
-                          <div style={{ background: "#F8FAFC", padding: 10, borderRadius: 8, lineHeight: 1.7, color: "#334155", maxHeight: 200, overflowY: "auto", whiteSpace: "pre-wrap", marginTop: 4 }}>
-                            {rec.transcriptText}
-                          </div>
-                        </details>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Footer */}

@@ -222,6 +222,7 @@ function AreaNav({
         return (
           <button
             aria-label={area.label}
+            title={area.label}
             data-active={activeArea === area.id}
             key={area.id}
             onClick={() => onSelectArea(area.id)}

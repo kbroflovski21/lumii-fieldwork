@@ -28,7 +28,7 @@ function parseGyLink(href: string): { area: string; params: Record<string, strin
 }
 
 export function ChatStream({ messages, wip, connected, endRef, compact, onNavigate, onCardAction }: ChatStreamProps) {
-  const visibleMessages = messages.filter((m) => !m.content.startsWith("__lak_progress_card_v1__:"));
+  const visibleMessages = (messages ?? []).filter((m) => !m.content?.startsWith("__lak_progress_card_v1__:"));
 
   const mdComponents = useMemo(() => ({
     a(props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { children?: React.ReactNode }) {

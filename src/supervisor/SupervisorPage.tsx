@@ -1293,33 +1293,21 @@ function FolderItem({
             {STATUS_LABELS[status]}
           </span>
         </button>
-        <div className="sv-folder__menu-anchor">
+        <div className="sv-folder__actions">
           <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-            className="sv-folder__menu-trigger"
-            aria-label="更多操作"
+            onClick={(e) => { e.stopPropagation(); setRenaming(true); setRenameName(folder.name); }}
+            className="sv-folder__action-btn"
+            title="重命名"
           >
-            <DotsIcon />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
           </button>
-          {menuOpen && (
-            <>
-              <div className="sv-folder__menu-backdrop" onClick={() => setMenuOpen(false)} />
-              <div className="sv-folder__menu">
-                <button
-                  onClick={() => { setMenuOpen(false); setRenaming(true); setRenameName(folder.name); }}
-                  className="sv-folder__menu-item"
-                >
-                  重命名
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onFolderAction("delete", folder); }}
-                  className="sv-folder__menu-item sv-folder__menu-item--danger"
-                >
-                  删除
-                </button>
-              </div>
-            </>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onFolderAction("delete", folder); }}
+            className="sv-folder__action-btn sv-folder__action-btn--danger"
+            title="删除"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+          </button>
         </div>
       </div>
     </div>
