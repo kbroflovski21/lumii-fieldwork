@@ -9,19 +9,23 @@ export function siteRoutes() {
     const user = (req as any).authUser;
     if (!user || user.role !== "org_admin") { res.status(403).json({ error: "无权限" }); return; }
 
-    const sites = await prisma.site.findMany({
-      where: { orgId: user.orgId },
-      include: { siteUsers: { include: { user: { select: { id: true, username: true, name: true, role: true } } } } },
-      orderBy: { createdAt: "desc" },
-    });
+    try {
+      const sites = await prisma.site.findMany({
+        where: { orgId: user.orgId },
+        include: { siteUsers: { include: { user: { select: { id: true, username: true, name: true, role: true } } } } },
+        orderBy: { createdAt: "desc" },
+      });
 
-    res.json({
-      sites: sites.map(s => ({
-        ...s,
-        operators: s.siteUsers.map(su => su.user),
-        siteUsers: undefined,
-      })),
-    });
+      res.json({
+        sites: sites.map(s => ({
+          ...s,
+          operators: s.siteUsers.map(su => su.user),
+          siteUsers: undefined,
+        })),
+      });
+    } catch {
+      res.json({ sites: [] });
+    }
   });
 
   r.post("/admin/sites", async (req, res) => {

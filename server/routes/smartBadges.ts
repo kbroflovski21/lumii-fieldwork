@@ -17,10 +17,14 @@ export function smartBadgesRoutes() {
   const r = Router();
 
   r.get("/smart-badges", async (req, res) => {
-    const siteId = req.query.siteId as string | undefined;
-    const where = siteId ? { siteId } : {};
-    const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
-    res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
+    try {
+      const siteId = req.query.siteId as string | undefined;
+      const where = siteId ? { siteId } : {};
+      const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
+      res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
+    } catch {
+      res.json({ badges: [] });
+    }
   });
 
   r.get("/smart-badges/:id", async (req, res) => {

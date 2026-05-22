@@ -16,26 +16,30 @@ export function adminRoutes() {
       return;
     }
 
-    const includeCareworker = req.query.include_careworker === "true";
-    const rows = await prisma.user.findMany({
-      where: { orgId: user.orgId, ...(!includeCareworker && { role: { not: "careworker" } }) },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, username: true, name: true, role: true, orgId: true, siteIds: true, phone: true, status: true, createdAt: true },
-    });
+    try {
+      const includeCareworker = req.query.include_careworker === "true";
+      const rows = await prisma.user.findMany({
+        where: { orgId: user.orgId, ...(!includeCareworker && { role: { not: "careworker" } }) },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, username: true, name: true, role: true, orgId: true, siteIds: true, phone: true, status: true, createdAt: true },
+      });
 
-    res.json({
-      users: rows.map((r) => ({
-        id: r.id,
-        username: r.username,
-        name: r.name,
-        role: r.role,
-        orgId: r.orgId,
-        siteIds: r.siteIds as string[],
-        phone: r.phone,
-        status: r.status,
-        createdAt: r.createdAt.toISOString(),
-      })),
-    });
+      res.json({
+        users: rows.map((r) => ({
+          id: r.id,
+          username: r.username,
+          name: r.name,
+          role: r.role,
+          orgId: r.orgId,
+          siteIds: r.siteIds as string[],
+          phone: r.phone,
+          status: r.status,
+          createdAt: r.createdAt.toISOString(),
+        })),
+      });
+    } catch {
+      res.json({ users: [] });
+    }
   });
 
   r.post("/admin/users", async (req, res) => {

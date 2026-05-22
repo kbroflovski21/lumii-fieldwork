@@ -138,7 +138,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
             <div className="sw-toolbar">
               <label className="sw-search">
                 <Search size={16} />
-                <input aria-label="搜索服务记录" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索服务对象或人员..." value={searchQuery} />
+                <input aria-label="搜索服务记录" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或人员..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
                 <div className="sch-date-btns">
@@ -285,7 +285,7 @@ function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
       <div className="sw-table rec-table" role="table">
         <div className="sw-table__head rec-table__head" role="row">
           <span role="columnheader">日期/时间</span>
-          <span role="columnheader">服务对象</span>
+          <span role="columnheader">长者</span>
           <span role="columnheader">服务人员</span>
           <span role="columnheader">服务内容</span>
           <span role="columnheader">工牌</span>
@@ -517,7 +517,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                   完整对话记录 ({transcript.segments.length}条)
                   <button className="rec-download-btn" onClick={() => {
                     const text = transcript.segments.map((seg: any) => {
-                      const name = seg.speaker === "social_worker" ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "服务对象");
+                      const name = seg.speaker === "social_worker" ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
                       const m = Math.floor(seg.startSecond / 60);
                       const s = seg.startSecond % 60;
                       return `[${m}:${String(s).padStart(2, "0")}] ${name}: ${seg.text}`;
@@ -533,7 +533,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                 <div className="rec-chat">
                   {transcript.segments.map((seg: any, i: number) => {
                     const isWorker = seg.speaker === "social_worker";
-                    const name = isWorker ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "服务对象");
+                    const name = isWorker ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
                     const mins = Math.floor(seg.startSecond / 60);
                     const secs = seg.startSecond % 60;
                     const ac = avatarColor(name);

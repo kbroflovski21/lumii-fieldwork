@@ -19,7 +19,7 @@ const AREA_LABELS: Record<string, string> = {
   home: "首页",
   social_workers: "服务人员",
   smart_badges: "设备",
-  service_objects: "服务对象",
+  service_objects: "长者",
   service_schedules: "服务排期",
   service_records: "服务记录",
 };
@@ -126,8 +126,8 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea, onCopi
             </div>
           ) : (
             <div className="so-site-picker">
-              <span className="so-site-picker__avatar" style={{ background: "#9CA3AF" }}>?</span>
-              <span className="so-site-picker__name" style={{ color: "#9CA3AF" }}>未选择站点</span>
+              <span className="so-site-picker__avatar" style={{ background: "var(--site-muted, #8C7E73)" }}>?</span>
+              <span className="so-site-picker__name" style={{ color: "var(--site-muted, #8C7E73)" }}>未选择站点</span>
             </div>
           )}
           <p className="so-site-picker__status">
@@ -185,7 +185,7 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea, onCopi
             type="button"
             aria-label="打开 AI 助手"
           >
-            <Bot size={24} color="#fff" />
+            <Bot size={24} color="#FFFCF8" />
           </button>
         )}
         <AreaNav

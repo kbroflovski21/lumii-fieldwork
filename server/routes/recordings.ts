@@ -11,21 +11,25 @@ export function recordingRoutes() {
 
   // List recordings (for station manager view)
   r.get("/recordings", async (req, res) => {
-    const where: any = {};
-    if (req.query.badgeId) where.badgeId = req.query.badgeId;
-    if (req.query.workerId) where.workerId = req.query.workerId;
-    if (req.query.status) where.status = req.query.status;
-    if (req.query.userId) {
-      const sw = await prisma.socialWorker.findFirst({ where: { userId: req.query.userId as string }, select: { id: true } });
-      if (sw) where.workerId = sw.id;
-    }
+    try {
+      const where: any = {};
+      if (req.query.badgeId) where.badgeId = req.query.badgeId;
+      if (req.query.workerId) where.workerId = req.query.workerId;
+      if (req.query.status) where.status = req.query.status;
+      if (req.query.userId) {
+        const sw = await prisma.socialWorker.findFirst({ where: { userId: req.query.userId as string }, select: { id: true } });
+        if (sw) where.workerId = sw.id;
+      }
 
-    const recordings = await prisma.recording.findMany({
-      where,
-      orderBy: { startedAt: "desc" },
-      take: 50,
-    });
-    res.json({ recordings });
+      const recordings = await prisma.recording.findMany({
+        where,
+        orderBy: { startedAt: "desc" },
+        take: 50,
+      });
+      res.json({ recordings });
+    } catch {
+      res.json({ recordings: [] });
+    }
   });
 
   // Get single recording

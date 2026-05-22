@@ -6,10 +6,10 @@ import type { Resource } from "./useSiteOperationsData";
 export function HealthProfilesArea({ resource }: { resource: Resource<ServiceObjectsResponse> }) {
   return (
     <WorkAreaLayout
-      description="服务对象健康情况、照护重点和家属订阅"
+      description="长者健康情况、照护重点和家属订阅"
       filters={["全部", "有风险", "已订阅"]}
       searchLabel="搜索健康档案"
-      searchPlaceholder="搜索服务对象"
+      searchPlaceholder="搜索长者"
       title="健康档案"
     >
       {resource.status === "loading" || resource.status === "idle" ? <div className="site-empty-state">健康档案数据加载中</div> : null}
@@ -38,7 +38,7 @@ function HealthProfileList({ profiles }: { profiles: ServiceObject[] }) {
   return (
     <div className="site-table" role="table">
       <div className="site-table__head site-table__head--health" role="row">
-        {["服务对象", "保障类型", "服务频次", "服务项目", "风险标签", "家属订阅"].map((column) => (
+        {["长者", "保障类型", "服务频次", "服务项目", "风险标签", "家属订阅"].map((column) => (
           <span key={column} role="columnheader">
             {column}
           </span>

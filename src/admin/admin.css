@@ -1,6 +1,8 @@
 .admin-page {
   min-height: 100vh;
-  background: #F7F9FB;
+  background: #F5F0EA;
+  font-family: "Sohne", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .admin-header {
@@ -8,20 +10,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 32px;
-  background: #fff;
-  border-bottom: 1px solid #E5E7EB;
+  background: #FFFCF8;
+  border-bottom: 1px solid #DDD5CC;
 }
 
 .admin-header h1 {
   font-size: 18px;
   font-weight: 700;
-  color: #191C1E;
+  color: #2D2520;
   margin: 0;
 }
 
 .admin-header__user {
   font-size: 13px;
-  color: #667386;
+  color: #A89E96;
 }
 
 .admin-header__actions {
@@ -50,10 +52,10 @@
 }
 
 .admin-form {
-  background: #fff;
+  background: #FFFCF8;
   padding: 20px;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #DDD5CC;
   margin-bottom: 16px;
 }
 
@@ -79,23 +81,23 @@
   gap: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: #2D2520;
 }
 
 .admin-form__grid input,
 .admin-form__grid select {
   height: 38px;
   padding: 0 12px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
+  border: 1px solid #DDD5CC;
+  border-radius: 10px;
   font-size: 14px;
 }
 
 .admin-table {
   width: 100%;
-  background: #fff;
+  background: #FFFCF8;
   border-radius: 12px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #DDD5CC;
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
@@ -106,15 +108,15 @@
   padding: 12px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: #667386;
-  background: #F9FAFB;
-  border-bottom: 1px solid #E5E7EB;
+  color: #A89E96;
+  background: #FAF6F1;
+  border-bottom: 1px solid #DDD5CC;
 }
 
 .admin-table td {
   padding: 12px 16px;
   font-size: 14px;
-  border-bottom: 1px solid #F3F4F6;
+  border-bottom: 1px solid #E8E0D8;
 }
 
 .admin-table tr[data-status="disabled"] td {
@@ -122,7 +124,7 @@
 }
 
 .admin-table code {
-  background: #F3F4F6;
+  background: #EDE7E0;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
@@ -131,28 +133,30 @@
 .admin-badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
 }
 
 .admin-badge--active { background: #E0F4EC; color: #116B4C; }
-.admin-badge--disabled { background: #F3F4F6; color: #6B7280; }
+.admin-badge--disabled { background: #EDE7E0; color: #8C8279; }
 
 .admin-btn {
   padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
+  transition: background 0.2s ease;
 }
 
-.admin-btn--primary { background: #0052CC; color: #fff; }
-.admin-btn--primary:hover { background: #003D99; }
-.admin-btn--secondary { background: #F3F4F6; color: #374151; border: 1px solid #E5E7EB; }
-.admin-btn--ghost { background: transparent; color: #667386; }
-.admin-btn--ghost:hover { color: #B42318; }
-.admin-btn--sm { padding: 4px 10px; font-size: 12px; background: #F3F4F6; margin-right: 4px; }
-.admin-btn--sm:hover { background: #E5E7EB; }
+.admin-btn--primary { background: #EB6420; color: #fff; }
+.admin-btn--primary:hover { background: #D4591C; }
+.admin-btn--secondary { background: #EDE7E0; color: #2D2520; border: 1px solid #DDD5CC; }
+.admin-btn--secondary:hover { background: #FAF6F1; }
+.admin-btn--ghost { background: transparent; color: #A89E96; }
+.admin-btn--ghost:hover { color: #B42318; background: #FAF6F1; }
+.admin-btn--sm { padding: 4px 10px; font-size: 12px; background: #EDE7E0; margin-right: 4px; }
+.admin-btn--sm:hover { background: #DDD5CC; }

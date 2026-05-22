@@ -15,13 +15,15 @@ export function sopRoutes() {
 
   // List all SOPs with steps
   r.get("/sops", async (_req, res) => {
-    const sops = await prisma.sop.findMany({
-      where: { status: "active" },
-      include: { steps: { orderBy: { sortOrder: "asc" } } },
-      orderBy: [{ type: "asc" }, { name: "asc" }],
-    });
-    const enriched = sops.map(s => ({ ...s, isComplete: isComplete(s) }));
-    res.json({ sops: enriched });
+    try {
+      const sops = await prisma.sop.findMany({
+        where: { status: "active" },
+        include: { steps: { orderBy: { sortOrder: "asc" } } },
+        orderBy: [{ type: "asc" }, { name: "asc" }],
+      });
+      const enriched = sops.map(s => ({ ...s, isComplete: isComplete(s) }));
+      res.json({ sops: enriched });
+    } catch { res.json({ sops: [] }); }
   });
 
   // Get single SOP

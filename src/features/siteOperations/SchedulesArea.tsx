@@ -98,7 +98,7 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
           <header className="sw-header">
             <div className="sw-header__title-group">
               <h2 className="sw-header__title">服务排期</h2>
-              <p className="sw-header__desc">查看和管理所有服务对象的服务安排</p>
+              <p className="sw-header__desc">查看和管理所有长者的服务安排</p>
             </div>
             <div className="sch-view-switch">
               <button className={`sch-view-btn ${view === "list" ? "sch-view-btn--active" : ""}`} onClick={() => setView("list")} type="button"><List size={16} /> 列表</button>
@@ -111,7 +111,7 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
             <div className="sw-toolbar">
               <label className="sw-search">
                 <Search size={16} />
-                <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索服务对象或地址..." value={searchQuery} />
+                <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或地址..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
                 <FilterDropdown onChange={(v) => setStatusFilter(v as StatusFilter)} options={statusFilterOptions} value={statusFilter} />
@@ -168,7 +168,7 @@ function ListView({ schedules, selectedId, onRowClick, onRowDoubleClick }: {
       <div className="sw-table sch-table" role="table">
         <div className="sw-table__head sch-table__head" role="row">
           <span role="columnheader">日期 / 时间段</span>
-          <span role="columnheader">服务对象</span>
+          <span role="columnheader">长者</span>
           <span role="columnheader">服务人员</span>
           <span role="columnheader">服务项目</span>
           <span role="columnheader">地址</span>
@@ -570,7 +570,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
       {/* ── Three Info Cards ── */}
       <div className="sch-event__cards">
         <div className="sch-event__card">
-          <span className="sch-event__card-label">服务对象</span>
+          <span className="sch-event__card-label">长者</span>
           <div className="sch-event__card-main">
             <div className="sw-avatar" style={{ background: objColor.bg, color: objColor.text, width: 32, height: 32, fontSize: 13 }}>{getInitials(s.serviceObjectName)}</div>
             <span className="sch-event__card-name">{s.serviceObjectName}</span>
@@ -667,7 +667,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
             <div className="so-overview-item"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
             <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
             <div className="so-overview-item"><dt>{s.planExceptionApplied ? "计划例外" : "服务人员"}</dt><dd>{s.planExceptionApplied ? <span className="sw-status-badge" data-tone="warning">已受例外影响</span> : (s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>)}</dd></div>
-            <div className="so-overview-item"><dt>服务对象</dt><dd>{s.serviceObjectName}</dd></div>
+            <div className="so-overview-item"><dt>长者</dt><dd>{s.serviceObjectName}</dd></div>
             <div className="so-overview-item"><dt>地址</dt><dd>{s.addressSnapshot}</dd></div>
             <div className="so-overview-item"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
           </dl>

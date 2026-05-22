@@ -4,23 +4,23 @@
 
 /* ── Tokens ── */
 .sv-page {
-  --sv-page-bg: #f7f9fb;
-  --sv-surface: #ffffff;
-  --sv-surface-subtle: #f9fafb;
-  --sv-line: #e5e7eb;
-  --sv-line-subtle: #f3f4f6;
-  --sv-text: #191c1e;
-  --sv-text-sec: #374151;
-  --sv-text-muted: #9ca3af;
-  --sv-accent: #0052cc;
-  --sv-accent-soft: rgba(0, 82, 204, 0.08);
+  --sv-page-bg: #F5F0EA;
+  --sv-surface: #FFFCF8;
+  --sv-surface-subtle: #FAF6F1;
+  --sv-line: #DDD5CC;
+  --sv-line-subtle: #EDE7E0;
+  --sv-text: #2D2520;
+  --sv-text-sec: #2D2520;
+  --sv-text-muted: #A89E96;
+  --sv-accent: #EB6420;
+  --sv-accent-soft: rgba(235, 100, 32, 0.08);
   --sv-ai-accent: #6366f1;
   --sv-ai-accent-soft: rgba(99, 102, 241, 0.08);
   --sv-success-text: #116b4c;
   --sv-warning-text: #976000;
   --sv-danger-text: #b42318;
-  --sv-muted-bg: #f3f4f6;
-  --sv-muted-text: #6b7280;
+  --sv-muted-bg: #EDE7E0;
+  --sv-muted-text: #8C8279;
 
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
@@ -28,7 +28,7 @@
   height: 100vh;
   background: var(--sv-page-bg);
   color: var(--sv-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+  font-family: "Sohne", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
     "Microsoft YaHei", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -60,8 +60,8 @@
   grid-column: 1 / -1;
   grid-row: 1;
   height: 64px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  background: #FFFCF8;
+  border-bottom: 1px solid #DDD5CC;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -133,6 +133,7 @@
 /* ── Main content — row 2, col 2 (3-panel SOP layout) ── */
 .sv-content-standalone {
   display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   width: 100%;
@@ -141,25 +142,51 @@
   overflow: hidden;
 }
 
+.sv-page-header {
+  padding: 20px 28px 0;
+  flex-shrink: 0;
+}
+
+.sv-page-header__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--sv-text, #2D2520);
+  letter-spacing: -0.02em;
+}
+
+.sv-page-header__subtitle {
+  font-size: 13px;
+  color: var(--sv-text-muted, #A89E96);
+  margin-top: 2px;
+}
+
+.sv-content-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* Inherit tokens when embedded outside .sv-page (e.g. inside QualityPage) */
 .sv-content-standalone {
-  --sv-page-bg: #f7f9fb;
-  --sv-surface: #ffffff;
-  --sv-surface-subtle: #f9fafb;
-  --sv-line: #e5e7eb;
-  --sv-line-subtle: #f3f4f6;
-  --sv-text: #191c1e;
-  --sv-text-sec: #374151;
-  --sv-text-muted: #9ca3af;
-  --sv-accent: #0052cc;
-  --sv-accent-soft: rgba(0, 82, 204, 0.08);
+  --sv-page-bg: #F5F0EA;
+  --sv-surface: #FFFCF8;
+  --sv-surface-subtle: #FAF6F1;
+  --sv-line: #DDD5CC;
+  --sv-line-subtle: #EDE7E0;
+  --sv-text: #2D2520;
+  --sv-text-sec: #2D2520;
+  --sv-text-muted: #A89E96;
+  --sv-accent: #EB6420;
+  --sv-accent-soft: rgba(235, 100, 32, 0.08);
   --sv-ai-accent: #6366f1;
   --sv-ai-accent-soft: rgba(99, 102, 241, 0.08);
   --sv-success-text: #116b4c;
   --sv-warning-text: #976000;
   --sv-danger-text: #b42318;
-  --sv-muted-bg: #f3f4f6;
-  --sv-muted-text: #6b7280;
+  --sv-muted-bg: #EDE7E0;
+  --sv-muted-text: #8C8279;
 }
 
 .sv-main {
@@ -185,7 +212,7 @@
   justify-content: center;
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .sv-copilot-toggle:hover {
@@ -240,11 +267,11 @@
   flex-shrink: 0;
   cursor: col-resize;
   background: transparent;
-  transition: background 0.15s;
+  transition: background 0.2s ease;
 }
 
 .sv-drag-handle:hover {
-  background: #c7d2fe;
+  background: #DDD5CC;
 }
 
 .sv-drag-handle:active {
@@ -254,7 +281,7 @@
 /* ── Left panel: Directory ── */
 .sv-dir {
   background: var(--sv-surface);
-  border-right: 2px solid #dde1e6;
+  border-right: 2px solid #DDD5CC;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -301,7 +328,7 @@
 .sv-dir-section__chevron {
   color: var(--sv-accent);
   display: flex;
-  transition: transform 0.15s;
+  transition: transform 0.2s ease;
 }
 
 .sv-dir-section__chevron--open {
@@ -312,7 +339,6 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--sv-accent);
-  letter-spacing: 0.3px;
 }
 
 .sv-dir-section__count {
@@ -359,12 +385,12 @@
   background: transparent;
   border: none;
   text-align: left;
-  transition: background 0.1s;
+  transition: background 0.2s ease;
   cursor: pointer;
 }
 
 .sv-folder__btn:hover {
-  background: rgba(0, 82, 204, 0.04);
+  background: rgba(235, 100, 32, 0.04);
 }
 
 .sv-folder__btn--selected {
@@ -375,7 +401,7 @@
   display: flex;
   color: var(--sv-text-muted);
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: transform 0.2s ease;
 }
 
 .sv-folder__chevron--open {
@@ -462,7 +488,7 @@
   align-items: center;
   justify-content: center;
   opacity: 0.4;
-  transition: opacity 0.15s;
+  transition: opacity 0.2s ease;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -486,9 +512,8 @@
   right: 0;
   top: 24px;
   background: var(--sv-surface);
-  border: 1px solid var(--sv-line);
+  border: 1px solid #DDD5CC;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   z-index: 20;
   min-width: 100px;
   overflow: hidden;
@@ -535,11 +560,11 @@
   background: transparent;
   border: none;
   text-align: left;
-  transition: background 0.1s;
+  transition: background 0.2s ease;
 }
 
 .sv-folder__file:hover {
-  background: rgba(0, 82, 204, 0.04);
+  background: rgba(235, 100, 32, 0.04);
 }
 
 .sv-folder__file--selected {
@@ -815,7 +840,7 @@
 .sv-chat {
   flex-shrink: 0;
   min-width: 0;
-  background: #fafbfc;
+  background: #FAF6F1;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -883,7 +908,7 @@
 
 .sv-chat__ts {
   font-size: 11px;
-  color: #b0b8c4;
+  color: #A89E96;
   margin-top: 2px;
 }
 
@@ -1009,7 +1034,7 @@
 .sv-modal-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(45, 37, 32, 0.3);
 }
 
 .sv-modal {
@@ -1019,7 +1044,7 @@
   padding: 24px;
   width: 400px;
   max-width: 90vw;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 32px rgba(45, 37, 32, 0.12);
 }
 
 .sv-modal__title {
@@ -1083,7 +1108,7 @@
 }
 .sv-layer-toggle {
   display: flex;
-  background: #e8eaef;
+  background: #E4DDD6;
   border-radius: 10px;
   padding: 4px;
   gap: 4px;
@@ -1098,22 +1123,21 @@
   background: transparent;
   color: var(--sv-muted-text);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  letter-spacing: 0.2px;
+
 }
 .sv-layer-btn:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(45, 37, 32, 0.04);
   color: var(--sv-text-sec);
 }
 .sv-layer-btn--active {
   background: var(--sv-surface);
   color: var(--sv-accent);
   font-weight: 700;
-  border-color: rgba(0, 82, 204, 0.2);
-  box-shadow: 0 2px 6px rgba(0, 82, 204, 0.12);
+  border-color: rgba(235, 100, 32, 0.2);
 }
 .sv-layer-btn--ai-active {
   background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
@@ -1205,13 +1229,13 @@
   overflow-y: auto;
 }
 .sv-ai-card__prompt {
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  font-family: "Sohne Mono", "SF Mono", "Fira Code", "Consolas", monospace;
   font-size: 12px;
   line-height: 1.65;
-  color: #444;
+  color: #2D2520;
   white-space: pre-wrap;
-  background: #f8f8fc;
-  border: 1px solid #ececf4;
+  background: #FAF6F1;
+  border: 1px solid #EDE7E0;
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -1288,13 +1312,13 @@
 .sv-sop-ref__header:hover { background: var(--sv-surface-subtle); }
 .sv-sop-ref__hint {
   font-size: 11px;
-  color: #ccc;
+  color: #C4BAB0;
 }
 .sv-sop-ref__body {
   padding: 14px 18px;
   border-top: 1px solid var(--sv-line-subtle);
   font-size: 13px;
-  color: #777;
+  color: #8C8279;
   line-height: 1.7;
   max-height: 200px;
   overflow-y: auto;

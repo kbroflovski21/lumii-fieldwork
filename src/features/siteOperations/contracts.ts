@@ -12,7 +12,7 @@ export const workAreas: Array<{ id: WorkAreaId; label: string }> = [
   { id: "home", label: "首页" },
   { id: "social_workers", label: "服务人员" },
   { id: "smart_badges", label: "设备" },
-  { id: "service_objects", label: "服务对象" },
+  { id: "service_objects", label: "长者" },
   { id: "service_schedules", label: "服务排期" },
   { id: "service_records", label: "服务记录" },
 ];

@@ -46,32 +46,36 @@ export function serviceObjectsRoutes() {
   const r = Router();
 
   r.get("/service-objects", async (req, res) => {
-    const siteId = req.query.siteId as string | undefined;
-    const where = siteId ? { siteId } : {};
-    const rows = await prisma.serviceObject.findMany({ where, orderBy: { createdAt: "desc" } });
-    const objectIds = rows.map((r) => r.id);
-    const plans = await prisma.servicePlan.findMany({
-      where: objectIds.length > 0 ? { serviceObjectId: { in: objectIds } } : undefined,
-      include: { exceptions: true },
-    });
+    try {
+      const siteId = req.query.siteId as string | undefined;
+      const where = siteId ? { siteId } : {};
+      const rows = await prisma.serviceObject.findMany({ where, orderBy: { createdAt: "desc" } });
+      const objectIds = rows.map((r) => r.id);
+      const plans = await prisma.servicePlan.findMany({
+        where: objectIds.length > 0 ? { serviceObjectId: { in: objectIds } } : undefined,
+        include: { exceptions: true },
+      });
 
-    const objects = [];
-    for (const row of rows) {
-      objects.push(toApi(row, await getFamilyContacts(row.id), await getPlanSummaries(row.id)));
-    }
+      const objects = [];
+      for (const row of rows) {
+        objects.push(toApi(row, await getFamilyContacts(row.id), await getPlanSummaries(row.id)));
+      }
 
-    res.json(withOperationalState({
-      serviceObjects: objects,
-      servicePlans: plans.map((p) => ({
-        ...p,
-        preferredTimeWindow: p.preferredTimeWindow,
-        exceptions: p.exceptions.map((e) => ({
-          id: e.id, servicePlanId: e.servicePlanId, kind: e.kind,
-          effectiveFrom: e.effectiveFrom, effectiveTo: e.effectiveTo,
-          timeWindow: e.timeWindow, replacementSocialWorkerId: e.replacementSocialWorkerId, note: e.note,
+      res.json(withOperationalState({
+        serviceObjects: objects,
+        servicePlans: plans.map((p) => ({
+          ...p,
+          preferredTimeWindow: p.preferredTimeWindow,
+          exceptions: p.exceptions.map((e) => ({
+            id: e.id, servicePlanId: e.servicePlanId, kind: e.kind,
+            effectiveFrom: e.effectiveFrom, effectiveTo: e.effectiveTo,
+            timeWindow: e.timeWindow, replacementSocialWorkerId: e.replacementSocialWorkerId, note: e.note,
+          })),
         })),
-      })),
-    }));
+      }));
+    } catch {
+      res.json({ serviceObjects: [] });
+    }
   });
 
   r.post("/service-objects", async (req, res) => {

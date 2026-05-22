@@ -39,21 +39,25 @@ export function serviceRecordsRoutes() {
   const r = Router();
 
   r.get("/service-records", async (req, res) => {
-    const siteId = req.query.siteId as string | undefined;
-    const where = siteId ? { siteId } : {};
-    const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
-    const audioAssets = await prisma.audioAsset.findMany();
-    const transcripts = await prisma.transcript.findMany();
-    const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });
-    const smartBadges = await prisma.smartBadge.findMany({ where, select: { id: true, deviceCode: true } });
+    try {
+      const siteId = req.query.siteId as string | undefined;
+      const where = siteId ? { siteId } : {};
+      const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
+      const audioAssets = await prisma.audioAsset.findMany();
+      const transcripts = await prisma.transcript.findMany();
+      const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });
+      const smartBadges = await prisma.smartBadge.findMany({ where, select: { id: true, deviceCode: true } });
 
-    res.json(withOperationalState({
-      serviceRecords: records.map(toApi),
-      audioAssets: audioAssets.map(audioToApi),
-      transcripts: transcripts.map(transcriptToApi),
-      serviceObjects: serviceObjects.map((o) => ({ id: o.id, name: o.name, familyContacts: [] })),
-      smartBadges: smartBadges.map((b) => ({ id: b.id, deviceCode: b.deviceCode })),
-    }));
+      res.json(withOperationalState({
+        serviceRecords: records.map(toApi),
+        audioAssets: audioAssets.map(audioToApi),
+        transcripts: transcripts.map(transcriptToApi),
+        serviceObjects: serviceObjects.map((o) => ({ id: o.id, name: o.name, familyContacts: [] })),
+        smartBadges: smartBadges.map((b) => ({ id: b.id, deviceCode: b.deviceCode })),
+      }));
+    } catch {
+      res.json({ records: [] });
+    }
   });
 
   r.get("/service-records/:id", async (req, res) => {

@@ -248,15 +248,15 @@ export function ServiceObjectsArea({ resource, onMutate, initialSearch }: { reso
 
   return (
     <>
-      <section aria-label="服务对象" className="sw-page">
+      <section aria-label="长者" className="sw-page">
         <div className="sw-page__inner">
           <header className="sw-header">
             <div className="sw-header__title-group">
-              <h2 className="sw-header__title">服务对象</h2>
-              <p className="sw-header__desc">管理服务对象档案、服务计划、照护重点和家属订阅</p>
+              <h2 className="sw-header__title">长者</h2>
+              <p className="sw-header__desc">管理长者档案、服务计划、照护重点和家属订阅</p>
             </div>
             <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={() => setDrawer({ kind: "create" })} type="button">
-              <Plus size={15} /> 新增服务对象
+              <Plus size={15} /> 新增长者
             </button>
           </header>
 
@@ -264,7 +264,7 @@ export function ServiceObjectsArea({ resource, onMutate, initialSearch }: { reso
             <div className="sw-toolbar">
               <label className="sw-search">
                 <Search size={16} />
-                <input aria-label="搜索服务对象" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索姓名或地址..." value={searchQuery} />
+                <input aria-label="搜索长者" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索姓名或地址..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
                 <FilterDropdown onChange={(v) => setEligibilityFilter(v as EligibilityFilter)} options={eligibilityFilterOptions} value={eligibilityFilter} />
@@ -319,7 +319,7 @@ function FilterDropdown({ onChange, options, value }: { onChange: (v: string) =>
 }
 
 function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
-  if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>服务对象暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
+  if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>长者暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
   if (state.permission === "read_only") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>只读模式</strong><span>可查看数据，新增、编辑和归档操作已禁用。</span></div></div>;
   if (state.permission === "restricted") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>权限受限</strong><span>敏感信息已隐藏，部分操作不可用。</span></div></div>;
   return null;
@@ -330,10 +330,10 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
   mutationsDisabled: boolean; onCreateClick: () => void; onRowClick: (o: ServiceObject) => void;
   onNameClick: (o: ServiceObject) => void; selectedId: string | null;
 }) {
-  if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><span>服务对象数据加载中...</span></div>;
+  if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><span>长者数据加载中...</span></div>;
   if (error) return <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{error}</span></div>;
-  if (isEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><strong>暂无服务对象</strong><span>点击新增创建第一条记录</span><button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button"><Plus size={15} />新增服务对象</button></div>;
-  if (isFilterEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><Search size={32} /></div><span>没有匹配的服务对象</span></div>;
+  if (isEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><strong>暂无长者</strong><span>点击新增创建第一条记录</span><button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button"><Plus size={15} />新增长者</button></div>;
+  if (isFilterEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><Search size={32} /></div><span>没有匹配的长者</span></div>;
 
   return (
     <>
@@ -594,7 +594,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   }
 
   return (
-    <div className="so-modal so-modal--view" role="dialog" aria-label="服务对象详情">
+    <div className="so-modal so-modal--view" role="dialog" aria-label="长者详情">
       {/* ── Summary Card ── */}
       <div className="so-modal__summary">
         <div className="so-modal__summary-main">
@@ -1074,9 +1074,9 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   };
 
   return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="新增服务对象">
+    <div className="so-modal so-modal--form" role="dialog" aria-label="新增长者">
       <div className="so-modal__form-header">
-        <h3>新增服务对象</h3>
+        <h3>新增长者</h3>
         <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
       </div>
       <div className="so-modal__content">
@@ -1232,7 +1232,7 @@ function HistoryRecords({ serviceObjectName, serviceProjects, onViewRecord }: {
       reviewStatus: "confirmed", exportStatus: "exported", familyContactIds: [],
       locationEvidence: { startPoint: { latitude: 31.292, longitude: 121.515 }, addressMatched: true },
       serviceExceptions: [], exceptionTags: [], missingFields: [], audioAssetId: "audio-001", transcriptId: "transcript-001",
-      structuredSummary: "完成服务，服务对象状态稳定。", exportHistory: [{ id: "e1", exportedAt: "2026-05-13T09:00:00+08:00", operatorName: "管理员", fileVersion: "v1", filterSummary: "常规导出" }],
+      structuredSummary: "完成服务，长者状态稳定。", exportHistory: [{ id: "e1", exportedAt: "2026-05-13T09:00:00+08:00", operatorName: "管理员", fileVersion: "v1", filterSummary: "常规导出" }],
       serviceItems: [
         { id: "h1-1", seq: 1, category: "process" as const, title: "入门自我介绍", status: "completed" as const, transcript: "您好，我是王丽。", audioDurationSeconds: 8 },
         { id: "h1-2", seq: 2, category: "process" as const, title: "服务结束总结", status: "completed" as const, audioDurationSeconds: 10 },

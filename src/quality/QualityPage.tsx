@@ -11,7 +11,7 @@ import "./quality.css";
 
 /* ── Types ── */
 
-type Period = "week" | "month";
+type Period = "day" | "week" | "month";
 
 interface WorkerPeriodScore {
   socialWorkerId: string;
@@ -86,7 +86,17 @@ function buildMockWorkers(period: Period): WorkerPeriodScore[] {
     { id: "w9", name: "吴强", siteId: "site-001", siteName: "翠苑站", count: 4, s: 25.8, a: 6.8, b: 3.8, c: 7.2, d: 8.0, prev: 26.5 },
     { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 6, s: 33.5, a: 8.6, b: 6.2, c: 9.0, d: 9.7, prev: 32.1 },
   ];
-  const workers = period === "week" ? weekData : monthData;
+  const dayData = [
+    { id: "w1", name: "李明", siteId: "site-001", siteName: "翠苑站", count: 2, s: 36.0, a: 9.2, b: 7.0, c: 9.5, d: 10.3, prev: 34.5 },
+    { id: "w2", name: "王芳", siteId: "site-001", siteName: "翠苑站", count: 1, s: 29.5, a: 7.5, b: 4.8, c: 8.2, d: 9.0, prev: 30.2 },
+    { id: "w3", name: "张伟", siteId: "site-002", siteName: "三墩站", count: 1, s: 26.0, a: 6.8, b: 4.5, c: 6.2, d: 8.5, prev: 27.1 },
+    { id: "w4", name: "陈静", siteId: "site-002", siteName: "三墩站", count: 2, s: 37.2, a: 9.6, b: 8.2, c: 9.8, d: 9.6, prev: 36.5 },
+    { id: "w5", name: "刘洋", siteId: "site-003", siteName: "古荡站", count: 2, s: 35.0, a: 9.0, b: 6.5, c: 9.5, d: 10.0, prev: 34.2 },
+    { id: "w6", name: "赵敏", siteId: "site-003", siteName: "古荡站", count: 1, s: 38.0, a: 9.8, b: 8.5, c: 9.7, d: 10.0, prev: 37.1 },
+    { id: "w8", name: "周婷", siteId: "site-004", siteName: "文新站", count: 1, s: 32.0, a: 8.2, b: 5.5, c: 8.8, d: 9.5, prev: 31.0 },
+    { id: "w10", name: "郑华", siteId: "site-003", siteName: "古荡站", count: 2, s: 34.0, a: 8.8, b: 6.5, c: 9.2, d: 9.5, prev: 33.5 },
+  ];
+  const workers = period === "day" ? dayData : period === "week" ? weekData : monthData;
   return workers.map((w) => ({
     socialWorkerId: w.id,
     socialWorkerName: w.name,
@@ -130,7 +140,9 @@ function buildMockSiteScores(period: Period): SitePeriodScore[] {
 }
 
 function buildMockTrend(_workerId: string, period: Period): TrendPoint[] {
-  const labels = period === "week"
+  const labels = period === "day"
+    ? ["5/11","5/12","5/13","5/14","5/15","5/16","5/17","5/18","5/19","5/20","5/21","5/22"]
+    : period === "week"
     ? ["W06","W07","W08","W09","W10","W11","W12","W13","W14","W15","W16","W17"]
     : ["2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05"];
   const base = 28 + Math.random() * 6;
@@ -407,17 +419,28 @@ function DashboardView() {
     return list;
   }, [allWorkers, siteFilter, sortKey, sortDir]);
 
+  const [workerTableExpanded, setWorkerTableExpanded] = useState(false);
+  const [siteTableExpanded, setSiteTableExpanded] = useState(false);
+
   const summary = useMemo(() => {
     const ws = filteredWorkers;
     const n = ws.length || 1;
     const avgS = +(ws.reduce((s, w) => s + w.avgS, 0) / n).toFixed(1);
+    const prevAvgS = +(ws.reduce((s, w) => s + (w.prevAvgS ?? 0), 0) / n).toFixed(1);
+    const avgSDelta = +(avgS - prevAvgS).toFixed(1);
     const totalServices = ws.reduce((s, w) => s + w.serviceCount, 0);
+    const workerCount = ws.length;
+    const elderCount = Math.round(totalServices * 0.55);
+    const avgServicePerElder = elderCount > 0 ? +(totalServices / elderCount).toFixed(1) : 0;
+    const serviceDelta = period === "day" ? 8 : period === "week" ? 13 : 13;
+    const workerDelta = period === "day" ? 5 : period === "week" ? 10 : 15;
     const improved = ws.filter((w) => (w.delta ?? 0) > 0).length;
     const declined = ws.filter((w) => (w.delta ?? 0) < 0).length;
     const subRates: Record<string, [number, number]> = { all: [68, 3.2], "site-001": [72, 4.1], "site-002": [61, 2.8], "site-003": [75, 1.5], "site-004": [58, 5.3] };
     const [subscriptionRate, subscriptionDelta] = subRates[siteFilter] ?? [65, 3.0];
-    return { avgS, totalServices, improved, declined, subscriptionRate, subscriptionDelta };
-  }, [filteredWorkers, siteFilter]);
+    const bestSite = siteScores.reduce((best, s) => s.avgS > best.avgS ? s : best, siteScores[0]);
+    return { avgS, prevAvgS, avgSDelta, totalServices, workerCount, elderCount, avgServicePerElder, serviceDelta, workerDelta, improved, declined, subscriptionRate, subscriptionDelta, bestSiteName: bestSite?.siteName ?? "—", bestSiteScore: bestSite?.avgS ?? 0 };
+  }, [filteredWorkers, siteFilter, siteScores, period]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -433,13 +456,18 @@ function DashboardView() {
     return sortDir === "asc" ? " ↑" : " ↓";
   };
 
-  const periodLabel = period === "month" ? "本月" : "本周";
-  const prevLabel = period === "month" ? "上月" : "上周";
+  const periodLabel = period === "month" ? "本月" : period === "week" ? "本周" : "今日";
+  const prevLabel = period === "month" ? "上月" : period === "week" ? "上周" : "昨日";
 
   const periodDateLabel = useMemo(() => {
     const now = new Date();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
+    if (period === "day") {
+      return `${now.getFullYear()}年${m}月${d}日`;
+    }
     if (period === "month") {
-      return `${now.getFullYear()}年${now.getMonth() + 1}月`;
+      return `${now.getFullYear()}年 ${m}月（${m}/1 - ${m}/${d}）`;
     }
     const oneJan = new Date(now.getFullYear(), 0, 1);
     const weekNum = Math.ceil(((now.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay() + 1) / 7);
@@ -456,9 +484,9 @@ function DashboardView() {
     <>
       {/* ── Page header with global controls ── */}
       <div className="qd-page-header">
-        <div>
+        <div className="qd-page-header__left">
           <div className="quality-dashboard__title">管理概览</div>
-          <div className="quality-dashboard__subtitle">全站点服务运营与质量监控</div>
+          <div className="qd-context-badge">{siteLabel} · {periodDateLabel}</div>
         </div>
         <div className="qd-page-header__controls">
           <div className="qd-site-dropdown" ref={siteDropRef}>
@@ -480,38 +508,44 @@ function DashboardView() {
             )}
           </div>
           <div className="qd-period-toggle">
+            <button className={`qd-period-btn ${period === "day" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("day")}>日</button>
             <button className={`qd-period-btn ${period === "week" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("week")}>周</button>
             <button className={`qd-period-btn ${period === "month" ? "qd-period-btn--active" : ""}`} onClick={() => setPeriod("month")}>月</button>
           </div>
-          <span className="qd-period-date-label">{periodDateLabel}</span>
         </div>
       </div>
 
-      {/* KPI cards */}
+      {/* ═══ Section 1: 运营数据 ═══ */}
+      <div className="qd-section">
+        <div className="qd-section__header">
+          <span className="qd-section__title">运营数据 - 服务了多少长者？</span>
+          <span className="qd-section__context">{siteLabel} · {periodDateLabel}</span>
+        </div>
+      </div>
       <div className="quality-kpi-grid">
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">{periodLabel}平均服务质量分</div>
-          <div className="quality-kpi-card__value">{summary.avgS}</div>
+          <div className="quality-kpi-card__label">{periodLabel}总服务次数</div>
+          <div className="quality-kpi-card__value">{summary.totalServices}次</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">满分 40</span>
+            <span className="quality-kpi-card__sub" style={{ color: summary.serviceDelta >= 0 ? "var(--quality-success-text)" : "var(--quality-danger-text)" }}>
+              {summary.serviceDelta >= 0 ? "+" : ""}{summary.serviceDelta}%
+            </span>
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">{periodLabel}服务总次数</div>
-          <div className="quality-kpi-card__value">{summary.totalServices}</div>
+          <div className="quality-kpi-card__label">出动服务人员数量</div>
+          <div className="quality-kpi-card__value">{summary.workerCount}人</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">{filteredWorkers.length} 名员工</span>
+            <span className="quality-kpi-card__sub" style={{ color: summary.workerDelta >= 0 ? "var(--quality-success-text)" : "var(--quality-danger-text)" }}>
+              {summary.workerDelta >= 0 ? "+" : ""}{summary.workerDelta}%
+            </span>
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">进步 / 退步</div>
-          <div className="quality-kpi-card__value">
-            <span style={{ color: "var(--quality-success-text)" }}>{summary.improved}</span>
-            {" / "}
-            <span style={{ color: "var(--quality-danger-text)" }}>{summary.declined}</span>
-          </div>
+          <div className="quality-kpi-card__label">覆盖长者数量</div>
+          <div className="quality-kpi-card__value">{summary.elderCount}人</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">较{prevLabel}变动人数</span>
+            <span className="quality-kpi-card__sub">平均每名长者接受 {summary.avgServicePerElder} 次服务</span>
           </div>
         </div>
         <div className="quality-kpi-card">
@@ -525,94 +559,140 @@ function DashboardView() {
         </div>
       </div>
 
-      {/* ── Worker section ── */}
+      {/* ═══ Section 2: 质量数据 ═══ */}
       <div className="qd-section">
         <div className="qd-section__header">
-          <span className="qd-section__title">员工服务质量评分</span>
+          <span className="qd-section__title">质量数据 - 员工服务质量如何？</span>
           <span className="qd-section__context">{siteLabel} · {periodDateLabel}</span>
-        </div>
-
-        <div className="quality-table-wrap">
-          <table className="qd-worker-table">
-            <thead>
-              <tr>
-                <th onClick={() => handleSort("name")}>姓名{sortIcon("name")}</th>
-                <th onClick={() => handleSort("site")}>站点{sortIcon("site")}</th>
-                <th onClick={() => handleSort("count")}>服务次数{sortIcon("count")}</th>
-                <th onClick={() => handleSort("s")}>S 均分{sortIcon("s")}<div className="qd-th-sub">总分 A+B+C+D</div></th>
-                <th onClick={() => handleSort("a")}>A 均分{sortIcon("a")}<div className="qd-th-sub">服务对象评价</div></th>
-                <th onClick={() => handleSort("b")}>B 均分{sortIcon("b")}<div className="qd-th-sub">家属评价</div></th>
-                <th onClick={() => handleSort("c")}>C 均分{sortIcon("c")}<div className="qd-th-sub">SOP 符合度</div></th>
-                <th onClick={() => handleSort("d")}>D 均分{sortIcon("d")}<div className="qd-th-sub">特殊识别</div></th>
-                <th onClick={() => handleSort("delta")}>较{prevLabel}{sortIcon("delta")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredWorkers.map((w) => (
-                <tr key={w.socialWorkerId}>
-                  <td>
-                    <a className="qd-worker-table__name" onClick={(e) => { e.preventDefault(); setDetailWorker(w); }} href="#">
-                      {w.socialWorkerName}
-                    </a>
-                  </td>
-                  <td>{w.siteName}</td>
-                  <td>{w.serviceCount}</td>
-                  <td><span className={scoreClass(w.avgS)}>{w.avgS.toFixed(1)}</span></td>
-                  <td>{w.avgA.toFixed(1)}</td>
-                  <td>{w.avgB.toFixed(1)}</td>
-                  <td>{w.avgC.toFixed(1)}</td>
-                  <td>{w.avgD.toFixed(1)}</td>
-                  <td>
-                    <span className={deltaClass(w.delta)}>
-                      {deltaArrow(w.delta)} {deltaText(w.delta)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
 
-      {/* ── Site comparison section ── */}
-      <div className="qd-section">
-        <div className="qd-section__title">站点对比</div>
-        <div className="quality-table-wrap">
-          <table className="qd-worker-table">
-            <thead>
-              <tr>
-                <th>站点</th>
-                <th>员工数</th>
-                <th>服务次数</th>
-                <th>S 均分</th>
-                <th>A 均分</th>
-                <th>B 均分</th>
-                <th>C 均分</th>
-                <th>D 均分</th>
-                <th>较{prevLabel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {siteScores.map((s) => (
-                <tr key={s.siteId}>
-                  <td style={{ fontWeight: 600 }}>{s.siteName}</td>
-                  <td>{s.workerCount}</td>
-                  <td>{s.serviceCount}</td>
-                  <td><span className={scoreClass(s.avgS)}>{s.avgS.toFixed(1)}</span></td>
-                  <td>{s.avgA.toFixed(1)}</td>
-                  <td>{s.avgB.toFixed(1)}</td>
-                  <td>{s.avgC.toFixed(1)}</td>
-                  <td>{s.avgD.toFixed(1)}</td>
-                  <td>
-                    <span className={deltaClass(s.delta)}>
-                      {deltaArrow(s.delta)} {deltaText(s.delta)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Quality KPI cards */}
+      <div className="quality-kpi-grid">
+        <div className="quality-kpi-card">
+          <div className="quality-kpi-card__label">{periodLabel}平均服务质量总分</div>
+          <div className="quality-kpi-card__value">{summary.avgS}</div>
+          <div className="quality-kpi-card__trend">
+            <span className="quality-kpi-card__sub">满分 40</span>
+          </div>
         </div>
+        <div className="quality-kpi-card">
+          <div className="quality-kpi-card__label">相比{prevLabel}变化</div>
+          <div className="quality-kpi-card__value" style={{ color: summary.avgSDelta >= 0 ? "var(--quality-success-text)" : "var(--quality-danger-text)" }}>
+            {summary.avgSDelta >= 0 ? "+" : ""}{summary.avgSDelta}
+          </div>
+          <div className="quality-kpi-card__trend">
+            <span className="quality-kpi-card__sub">{prevLabel}均分 {summary.prevAvgS}</span>
+          </div>
+        </div>
+        <div className="quality-kpi-card">
+          <div className="quality-kpi-card__label">服务人员 进步 / 退步</div>
+          <div className="quality-kpi-card__value">
+            <span style={{ color: "var(--quality-success-text)" }}>{summary.improved}</span>
+            {" / "}
+            <span style={{ color: "var(--quality-danger-text)" }}>{summary.declined}</span>
+          </div>
+          <div className="quality-kpi-card__trend">
+            <span className="quality-kpi-card__sub">较{prevLabel}变动人数</span>
+          </div>
+        </div>
+        <div className="quality-kpi-card">
+          <div className="quality-kpi-card__label">表现最佳站点</div>
+          <div className="quality-kpi-card__value">{summary.bestSiteName}</div>
+          <div className="quality-kpi-card__trend">
+            <span className="quality-kpi-card__sub">S 均分 {summary.bestSiteScore.toFixed(1)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Worker scoring table */}
+      <div className="quality-table-wrap" style={{ marginTop: 20 }}>
+        <table className="qd-worker-table">
+          <thead>
+            <tr>
+              <th onClick={() => handleSort("name")}>姓名{sortIcon("name")}</th>
+              <th onClick={() => handleSort("site")}>站点{sortIcon("site")}</th>
+              <th onClick={() => handleSort("count")}>服务次数{sortIcon("count")}</th>
+              <th onClick={() => handleSort("s")}>S 均分{sortIcon("s")}<div className="qd-th-sub">总分 A+B+C+D</div></th>
+              <th onClick={() => handleSort("a")}>A 均分{sortIcon("a")}<div className="qd-th-sub">长者评价</div></th>
+              <th onClick={() => handleSort("b")}>B 均分{sortIcon("b")}<div className="qd-th-sub">家属评价</div></th>
+              <th onClick={() => handleSort("c")}>C 均分{sortIcon("c")}<div className="qd-th-sub">SOP 符合度</div></th>
+              <th onClick={() => handleSort("d")}>D 均分{sortIcon("d")}<div className="qd-th-sub">特殊识别</div></th>
+              <th onClick={() => handleSort("delta")}>较{prevLabel}{sortIcon("delta")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(workerTableExpanded ? filteredWorkers : filteredWorkers.slice(0, 4)).map((w) => (
+              <tr key={w.socialWorkerId}>
+                <td>
+                  <a className="qd-worker-table__name" onClick={(e) => { e.preventDefault(); setDetailWorker(w); }} href="#">
+                    {w.socialWorkerName}
+                  </a>
+                </td>
+                <td>{w.siteName}</td>
+                <td>{w.serviceCount}</td>
+                <td><span className={scoreClass(w.avgS)}>{w.avgS.toFixed(1)}</span></td>
+                <td>{w.avgA.toFixed(1)}</td>
+                <td>{w.avgB.toFixed(1)}</td>
+                <td>{w.avgC.toFixed(1)}</td>
+                <td>{w.avgD.toFixed(1)}</td>
+                <td>
+                  <span className={deltaClass(w.delta)}>
+                    {deltaArrow(w.delta)} {deltaText(w.delta)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filteredWorkers.length > 4 && (
+          <button className="qd-table-toggle" onClick={() => setWorkerTableExpanded(!workerTableExpanded)}>
+            {workerTableExpanded ? "收起" : `展开全部 ${filteredWorkers.length} 名员工`}
+          </button>
+        )}
+      </div>
+
+      {/* Site comparison table */}
+      <div className="quality-table-wrap" style={{ marginTop: 20 }}>
+        <table className="qd-worker-table">
+          <thead>
+            <tr>
+              <th>站点</th>
+              <th>员工数</th>
+              <th>服务次数</th>
+              <th>S 均分</th>
+              <th>A 均分</th>
+              <th>B 均分</th>
+              <th>C 均分</th>
+              <th>D 均分</th>
+              <th>较{prevLabel}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(siteTableExpanded ? siteScores : siteScores.slice(0, 4)).map((s) => (
+              <tr key={s.siteId}>
+                <td style={{ fontWeight: 500 }}>{s.siteName}</td>
+                <td>{s.workerCount}</td>
+                <td>{s.serviceCount}</td>
+                <td><span className={scoreClass(s.avgS)}>{s.avgS.toFixed(1)}</span></td>
+                <td>{s.avgA.toFixed(1)}</td>
+                <td>{s.avgB.toFixed(1)}</td>
+                <td>{s.avgC.toFixed(1)}</td>
+                <td>{s.avgD.toFixed(1)}</td>
+                <td>
+                  <span className={deltaClass(s.delta)}>
+                    {deltaArrow(s.delta)} {deltaText(s.delta)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {siteScores.length > 4 && (
+          <button className="qd-table-toggle" onClick={() => setSiteTableExpanded(!siteTableExpanded)}>
+            {siteTableExpanded ? "收起" : `展开全部 ${siteScores.length} 个站点`}
+          </button>
+        )}
       </div>
 
       {/* Worker detail modal */}
@@ -671,17 +751,17 @@ function WorkerDetailModal({ worker, period, onClose }: { worker: WorkerPeriodSc
           </div>
 
           {/* Trend chart */}
-          <div style={{ marginBottom: 8, fontSize: 14, fontWeight: 700, color: "#191C1E" }}>
+          <div style={{ marginBottom: 8, fontSize: 14, fontWeight: 700, color: "var(--quality-text)" }}>
             {period === "month" ? "月度" : "周度"} S 分趋势（近 12 期）
           </div>
           <div className="qd-chart-container">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9CA3AF" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
-                <YAxis domain={[10, 40]} tick={{ fontSize: 11, fill: "#9CA3AF" }} tickLine={false} axisLine={false} width={35} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--quality-line)" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--quality-text-muted)" }} tickLine={false} axisLine={{ stroke: "var(--quality-line)" }} />
+                <YAxis domain={[10, 40]} tick={{ fontSize: 11, fill: "var(--quality-text-muted)" }} tickLine={false} axisLine={false} width={35} />
                 <Tooltip
-                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                  contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--quality-line)", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
                   formatter={(value) => [Number(value).toFixed(1), "S 分"]}
                 />
                 <Line type="monotone" dataKey="avgS" stroke="#EB6420" strokeWidth={2.5} dot={{ r: 3.5, fill: "#EB6420" }} activeDot={{ r: 5 }} />
@@ -924,8 +1004,8 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
           {error && <div className="quality-modal__error">{error}</div>}
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>站点信息</h4>
-              {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>站点信息</h4>
+              {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--quality-text-muted)", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
             </div>
             <div className="so-overview-grid">
               <dl className="so-overview-item"><dt>站点名称</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : site.name}</dd></dl>
@@ -941,15 +1021,15 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
             )}
           </div>
           <div>
-            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>运营人员</h4>
+            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>运营人员</h4>
             {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {allOperators.map(op => (
-                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                  <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selectedOps.has(op.id) ? "var(--quality-accent-soft)" : "transparent", border: `1px solid ${selectedOps.has(op.id) ? "var(--quality-accent)" : "var(--quality-line)"}` }}>
                     <input type="checkbox" checked={selectedOps.has(op.id)} onChange={() => toggleOp(op.id)} style={{ width: 16, height: 16 }} />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
-                      <div style={{ fontSize: 12, color: "#64748B" }}>{op.username}</div>
+                      <div style={{ fontSize: 12, color: "var(--quality-text-muted)" }}>{op.username}</div>
                     </div>
                   </label>
                 ))}
@@ -1081,11 +1161,11 @@ function OperatorAssignModal({ site, token, onClose, onSaved }: {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {allOperators.map(op => (
-                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "#EFF6FF" : "transparent", border: `1px solid ${selected.has(op.id) ? "#0052CC" : "#E5E7EB"}` }}>
+                <label key={op.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "8px 12px", borderRadius: 8, background: selected.has(op.id) ? "var(--quality-accent-soft)" : "transparent", border: `1px solid ${selected.has(op.id) ? "var(--quality-accent)" : "var(--quality-line)"}` }}>
                   <input type="checkbox" checked={selected.has(op.id)} onChange={() => toggle(op.id)} style={{ width: 16, height: 16 }} />
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{op.name}</div>
-                    <div style={{ fontSize: 12, color: "#64748B" }}>{op.username}</div>
+                    <div style={{ fontSize: 12, color: "var(--quality-text-muted)" }}>{op.username}</div>
                   </div>
                 </label>
               ))}
@@ -1389,8 +1469,8 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>用户信息</h4>
-            {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
+            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>用户信息</h4>
+            {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--quality-text-muted)", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
           </div>
           <div className="so-overview-grid">
             <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
@@ -1547,7 +1627,7 @@ function ConfirmDialog({ title, message, confirmLabel, danger, submitting, onCon
           <CloseBtn onClick={onCancel} />
         </div>
         <div className="quality-user-modal__body">
-          <p style={{ margin: 0, fontSize: 14, color: "#374151", lineHeight: 1.6 }}>{message}</p>
+          <p style={{ margin: 0, fontSize: 14, color: "var(--quality-text)", lineHeight: 1.6 }}>{message}</p>
         </div>
         <div className="quality-user-modal__footer">
           <div />

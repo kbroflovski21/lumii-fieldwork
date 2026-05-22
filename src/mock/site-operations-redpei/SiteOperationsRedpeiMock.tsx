@@ -220,7 +220,7 @@ function SchedulesPage() {
       }
     >
       <CompactTable
-        columns={["时间", "服务对象", "服务项目", "地址", "服务人员", "状态"]}
+        columns={["时间", "长者", "服务项目", "地址", "服务人员", "状态"]}
         rows={serviceSchedules.map((schedule) => [
           schedule.time,
           <PrimaryLine key="person" primary={schedule.person} secondary={schedule.profile} />,
@@ -236,9 +236,9 @@ function SchedulesPage() {
 
 function RecordsPage() {
   return (
-    <WorkPage title="服务记录" note="原始音频、转写文字、服务人员和服务对象关联可查">
+    <WorkPage title="服务记录" note="原始音频、转写文字、服务人员和长者关联可查">
       <CompactTable
-        columns={["服务对象", "服务时间", "服务人员 / 工牌", "音频 / 文字", "复核", "导出"]}
+        columns={["长者", "服务时间", "服务人员 / 工牌", "音频 / 文字", "复核", "导出"]}
         rows={serviceRecords.map((record) => [
           record.person,
           record.time,
@@ -254,7 +254,7 @@ function RecordsPage() {
 
 function ObjectsPage() {
   return (
-    <WorkPage title="健康档案" note="服务对象健康情况、照护重点和家属订阅" variant="health">
+    <WorkPage title="健康档案" note="长者健康情况、照护重点和家属订阅" variant="health">
       <CompactTable
         columns={["档案", "健康情况", "照护重点", "家属订阅", "服务计划"]}
         rows={serviceObjects.map((object) => [

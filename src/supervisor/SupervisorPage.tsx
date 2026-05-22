@@ -221,7 +221,13 @@ const STATUS_LABELS: Record<string, string> = {
 export function SupervisorContentInner() {
   return (
     <div className="sv-content-standalone">
-      <SOPContent />
+      <div className="sv-page-header">
+        <div className="sv-page-header__title">规范管理</div>
+        <div className="sv-page-header__subtitle">服务规范、督导标准与质量报告</div>
+      </div>
+      <div className="sv-content-body">
+        <SOPContent />
+      </div>
     </div>
   );
 }

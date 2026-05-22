@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s;
+  transition: transform 0.2s ease;
   padding: 0;
 }
 .so-shell__avatar:hover {
@@ -36,9 +36,9 @@
 .so-shell__profile-menu {
   position: fixed;
   width: 180px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+  background: #FFFCF8;
+  border-radius: 12px;
+  border: 1px solid #DDD5CC;
   padding: 12px 0;
 }
 
@@ -46,20 +46,20 @@
   padding: 4px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: #191C1E;
+  color: #2D2520;
   white-space: nowrap;
 }
 
 .so-shell__profile-role {
   padding: 2px 16px 8px;
   font-size: 12px;
-  color: #9CA3AF;
+  color: #A89E96;
   white-space: nowrap;
 }
 
 .so-shell__profile-menu hr {
   border: none;
-  border-top: 1px solid #F3F4F6;
+  border-top: 1px solid #E8E0D8;
   margin: 4px 0;
 }
 
@@ -73,12 +73,13 @@
   border: none;
   border-radius: 0;
   font-size: 13px;
-  color: #374151;
+  color: #2D2520;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.2s ease;
 }
 .so-shell__profile-menu button:hover {
-  background: #F9FAFB;
+  background: #FAF6F1;
 }
 .so-shell__profile-menu button:last-child {
   color: #B42318;
@@ -98,11 +99,11 @@
   justify-content: center;
 }
 .so-shell__modal {
-  background: #fff;
+  background: #FFFCF8;
   border-radius: 12px;
   padding: 24px;
   width: 360px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  border: 1px solid #DDD5CC;
 }
 .so-shell__modal h3 {
   margin: 0 0 16px;
@@ -114,8 +115,8 @@
   height: 40px;
   padding: 0 12px;
   margin-bottom: 10px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
+  border: 1px solid #DDD5CC;
+  border-radius: 10px;
   font-size: 14px;
   box-sizing: border-box;
 }
@@ -143,7 +144,7 @@
 }
 .so-shell__modal-actions button {
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   font-size: 13px;
   cursor: pointer;
@@ -152,12 +153,19 @@
   display: inline-block;
   text-align: center;
   white-space: nowrap;
+  transition: background 0.2s ease;
 }
 .so-shell__modal-actions button:first-child {
-  background: #F3F4F6;
-  color: #374151;
+  background: #EDE7E0;
+  color: #2D2520;
+}
+.so-shell__modal-actions button:first-child:hover {
+  background: #FAF6F1;
 }
 .so-shell__modal-actions button:last-child {
-  background: #0052CC;
+  background: #EB6420;
   color: #fff;
+}
+.so-shell__modal-actions button:last-child:hover {
+  background: #D4591C;
 }

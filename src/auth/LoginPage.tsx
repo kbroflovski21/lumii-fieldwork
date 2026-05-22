@@ -26,10 +26,7 @@ export function LoginPage() {
     <div className="login-page">
       <form className="login-form" onSubmit={handleSubmit}>
         <div className="login-form__logo">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="#0052CC"/>
-            <text x="24" y="32" textAnchor="middle" fill="white" fontSize="20" fontWeight="700">GY</text>
-          </svg>
+          <img src="/logo.png" alt="金色年华" width="56" height="56" />
         </div>
         <h1 className="login-form__title">金色年华</h1>
         <p className="login-form__subtitle">站点运营管理平台</p>

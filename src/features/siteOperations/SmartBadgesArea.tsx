@@ -480,6 +480,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
           </>
         )}
 
+
       </div>
 
       {/* Footer */}

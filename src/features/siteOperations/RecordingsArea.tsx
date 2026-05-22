@@ -96,7 +96,7 @@ export function RecordingsArea() {
                 </div>
                 <div style={{ fontSize: 12, color: "#64748B", display: "flex", gap: 12 }}>
                   <span>时长: {formatDuration(rec.durationSeconds)}</span>
-                  {rec.matchedServiceObjectName && <span>服务对象: {rec.matchedServiceObjectName}</span>}
+                  {rec.matchedServiceObjectName && <span>长者: {rec.matchedServiceObjectName}</span>}
                   {rec.matchReason && <span>匹配: {rec.matchReason}</span>}
                 </div>
                 {rec.aiSummary && (
@@ -120,7 +120,7 @@ export function RecordingsArea() {
             <div><strong>时间:</strong> {formatTime(selected.startedAt)} {selected.endedAt ? `- ${formatTime(selected.endedAt)}` : ""}</div>
             <div><strong>时长:</strong> {formatDuration(selected.durationSeconds)}</div>
             <div><strong>状态:</strong> <span style={{ color: STATUS_COLORS[selected.status] }}>{STATUS_LABELS[selected.status]}</span></div>
-            {selected.matchedServiceObjectName && <div><strong>服务对象:</strong> {selected.matchedServiceObjectName}</div>}
+            {selected.matchedServiceObjectName && <div><strong>长者:</strong> {selected.matchedServiceObjectName}</div>}
             {selected.matchConfidence !== null && <div><strong>匹配置信度:</strong> {Math.round((selected.matchConfidence ?? 0) * 100)}%</div>}
             {selected.matchReason && <div><strong>匹配原因:</strong> {selected.matchReason}</div>}
           </div>
