@@ -65,6 +65,7 @@ app.use("/api", personaRoutes(
 const serviceAuth = requireServiceToken();
 app.use("/api/internal", serviceAuth, internalRoutes());
 app.use("/api/internal", serviceAuth, recordingInternalRoutes());
+app.use("/api/internal", serviceAuth, sopRoutes());
 
 // All remaining /api routes require auth (JWT or GY token)
 const gyTokenSecret = process.env.GY_TOKEN_SECRET;

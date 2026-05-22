@@ -356,6 +356,23 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [showReviewConfirm, setShowReviewConfirm] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+
+  const handleConfirmReview = async () => {
+    setReviewing(true);
+    try {
+      await authFetch(`/api/service-records/${r.id}/review`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm_assignment" }),
+      });
+      onUpdated();
+    } catch {
+      setReviewing(false);
+      setShowReviewConfirm(false);
+    }
+  };
+
   const color = avatarColor(r.serviceObjectName ?? "?");
   const audioRestricted = data?.operationalState.permission === "restricted";
   const audio = data?.audioAssets.find(a => a.id === r.audioAssetId);
@@ -409,7 +426,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               <span className="rec-modal__review-confirm">
                 <span>确认标记为已复核？</span>
                 <button className="sw-btn sw-btn--secondary" onClick={() => setShowReviewConfirm(false)} type="button" style={{ height: 28, fontSize: 12, padding: "0 10px" }}>取消</button>
-                <button className="rec-modal__review-confirm-btn" onClick={onUpdated} type="button">确认通过</button>
+                <button className="rec-modal__review-confirm-btn" onClick={handleConfirmReview} disabled={reviewing} type="button">{reviewing ? "提交中..." : "确认通过"}</button>
               </span>
             ) : canReview ? (
               <button className="rec-modal__review-btn" onClick={() => setShowReviewConfirm(true)} type="button">

@@ -91,13 +91,15 @@ export function sopRoutes() {
     if (b.keywords !== undefined) data.keywords = b.keywords;
     if (b.exampleDialogue !== undefined) data.exampleDialogue = b.exampleDialogue;
 
-    // Handle SOP document updates
+    // Handle SOP document updates — save old content in history before overwriting
     if (b.sopContent !== undefined) {
       data.sopContent = b.sopContent;
       data.sopSource = b.sopSource ?? existing.sopSource ?? "manual";
       data.sopVersion = (existing.sopVersion ?? 0) + 1;
       const history = Array.isArray(existing.sopHistory) ? [...(existing.sopHistory as any[])] : [];
-      history.push({ version: data.sopVersion, date: new Date().toISOString().slice(0, 10), summary: b.sopChangeSummary ?? "内容更新" });
+      if (existing.sopContent) {
+        history.push({ version: existing.sopVersion ?? 1, date: new Date().toISOString().slice(0, 10), summary: b.sopChangeSummary ?? "内容更新", content: existing.sopContent });
+      }
       data.sopHistory = history;
     }
     if (b.supervisionContent !== undefined) {
@@ -105,7 +107,9 @@ export function sopRoutes() {
       data.supervisionSource = b.supervisionSource ?? "ai_generated";
       data.supervisionVersion = (existing.supervisionVersion ?? 0) + 1;
       const history = Array.isArray(existing.supervisionHistory) ? [...(existing.supervisionHistory as any[])] : [];
-      history.push({ version: data.supervisionVersion, date: new Date().toISOString().slice(0, 10), summary: b.supervisionChangeSummary ?? "内容更新" });
+      if (existing.supervisionContent) {
+        history.push({ version: existing.supervisionVersion ?? 1, date: new Date().toISOString().slice(0, 10), summary: b.supervisionChangeSummary ?? "内容更新", content: existing.supervisionContent });
+      }
       data.supervisionHistory = history;
     }
     if (b.reportContent !== undefined) {
@@ -113,7 +117,9 @@ export function sopRoutes() {
       data.reportSource = b.reportSource ?? "ai_generated";
       data.reportVersion = (existing.reportVersion ?? 0) + 1;
       const history = Array.isArray(existing.reportHistory) ? [...(existing.reportHistory as any[])] : [];
-      history.push({ version: data.reportVersion, date: new Date().toISOString().slice(0, 10), summary: b.reportChangeSummary ?? "内容更新" });
+      if (existing.reportContent) {
+        history.push({ version: existing.reportVersion ?? 1, date: new Date().toISOString().slice(0, 10), summary: b.reportChangeSummary ?? "内容更新", content: existing.reportContent });
+      }
       data.reportHistory = history;
     }
 
