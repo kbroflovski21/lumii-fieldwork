@@ -11,7 +11,7 @@ interface StdDoc {
   content: string;
   source: "manual" | "ai_generated";
   version: number;
-  history: Array<{ version: number; date: string; summary: string }>;
+  history: Array<{ version: number; date: string; summary: string; content?: string }>;
 }
 
 interface StdFolder {
@@ -571,7 +571,7 @@ function SOPContent() {
   const handlePublishToggle = async (f: StdFolder) => {
     const action = f.published ? "unpublish" : "publish";
     try {
-      const resp = await fetch(`/api/sops/${f.id}/${action}`, { method: "POST" });
+      const resp = await authFetch(`/api/sops/${f.id}/${action}`, { method: "POST" });
       if (!resp.ok) {
         const data = await resp.json();
         alert(data.error ?? "操作失败");
@@ -974,7 +974,10 @@ function SopVersionView({
       </div>
       <div className="sv-doc__body">
         <div className="sv-doc__body-meta">{historyEntry?.summary ?? ""}</div>
-        <div className="sv-doc__body-content sv-doc__body-content--faded">{doc.content}</div>
+        <div className="sv-doc__body-content sv-doc__body-content--faded">
+          {historyEntry?.content ?? doc.content}
+        </div>
+        {!historyEntry?.content && <p className="sw-text-muted" style={{ fontSize: 11, margin: "8px 0 0" }}>该版本未保存内容快照（历史版本）</p>}
       </div>
     </div>
   );
@@ -1116,7 +1119,10 @@ function AiDocCard({
         </div>
         <div className="sv-ai-card__body">
           <div className="sv-doc__body-meta">{historyEntry?.summary ?? ""}</div>
-          <div className="sv-ai-card__prompt sv-ai-card__prompt--faded">{doc.content}</div>
+          <div className="sv-ai-card__prompt sv-ai-card__prompt--faded">
+            {historyEntry?.content ?? doc.content}
+          </div>
+          {!historyEntry?.content && <p className="sw-text-muted" style={{ fontSize: 11, margin: "8px 0 0" }}>该版本未保存内容快照</p>}
         </div>
       </div>
     );
