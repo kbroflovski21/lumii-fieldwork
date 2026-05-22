@@ -36,6 +36,9 @@ export const ADMIN_COMMANDS: SlashCommand[] = [
   { command: "/user-query", description: "查询用户列表或详情" },
   { command: "/user-update", description: "更新用户信息或状态" },
   { command: "/sop-query", description: "查询服务规范文档" },
+  { command: "/feishu-bindlist", description: "查看飞书用户绑定列表" },
+  { command: "/feishu-bind", description: "设置飞书用户角色" },
+  { command: "/feishu-unbind", description: "解除飞书用户角色绑定" },
 ];
 
 interface CommandInputProps {
