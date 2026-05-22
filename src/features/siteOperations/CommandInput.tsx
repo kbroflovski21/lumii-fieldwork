@@ -44,13 +44,40 @@ interface CommandInputProps {
   compact?: boolean;
 }
 
+const SpeechRecognition = (globalThis as any).SpeechRecognition || (globalThis as any).webkitSpeechRecognition;
+
 export function CommandInput({ onSend, commands, disabled, placeholder, compact }: CommandInputProps) {
   const cmds = commands ?? SITE_OPS_COMMANDS;
   const [value, setValue] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [listening, setListening] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleVoice = useCallback(() => {
+    if (!SpeechRecognition) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-CN";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (e: any) => {
+      const transcript = Array.from(e.results as SpeechRecognitionResultList)
+        .map((r: any) => r[0].transcript).join("");
+      setValue(transcript);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+  }, [listening]);
 
   const filtered = value.startsWith("/")
     ? cmds.filter(c => c.command.startsWith(value.toLowerCase()))
@@ -145,6 +172,22 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
         placeholder={placeholder ?? "输入 / 查看命令..."}
         disabled={disabled}
       />
+      {SpeechRecognition && (
+        <button
+          type="button"
+          className={`command-input__voice${listening ? " command-input__voice--active" : ""}`}
+          onClick={toggleVoice}
+          disabled={disabled}
+          aria-label={listening ? "停止语音" : "语音输入"}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </button>
+      )}
       <button
         type="submit"
         className="command-input__send"

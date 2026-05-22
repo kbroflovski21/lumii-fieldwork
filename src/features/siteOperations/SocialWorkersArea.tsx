@@ -180,9 +180,8 @@ export function SocialWorkersArea({ resource, onMutate, initialSearch }: { resou
               isFilterEmpty={resource.status === "success" && workers.length > 0 && filtered.length === 0}
               mutationsDisabled={mutationsDisabled}
               onCreateClick={() => setDrawer({ kind: "create" })}
-              onRowClick={(worker) => setSelectedId(worker.id)}
+              onRowClick={openDrawer}
               onNameClick={openDrawer}
-              onRowDoubleClick={openDrawer}
               selectedId={selectedId}
             />
           </div>
@@ -286,7 +285,6 @@ function WorkerContent({
   onCreateClick,
   onRowClick,
   onNameClick,
-  onRowDoubleClick,
   selectedId
 }: {
   filtered: SocialWorker[];
@@ -298,7 +296,6 @@ function WorkerContent({
   onCreateClick: () => void;
   onRowClick: (worker: SocialWorker) => void;
   onNameClick: (worker: SocialWorker) => void;
-  onRowDoubleClick: (worker: SocialWorker) => void;
   selectedId: string | null;
 }) {
   if (loading) {
@@ -358,7 +355,6 @@ function WorkerContent({
               data-selected={selectedId === worker.id}
               key={worker.id}
               onClick={() => onRowClick(worker)}
-              onDoubleClick={() => onRowDoubleClick(worker)}
               role="row"
             >
               <div role="cell" className="sw-table__cell-name">

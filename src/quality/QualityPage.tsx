@@ -791,7 +791,7 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
             <tbody>
               {filteredSites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
               {filteredSites.map(s => (
-                <tr key={s.id} onDoubleClick={() => { setEditingSite(false); setDetailSite(s); }} style={{ cursor: "pointer" }}>
+                <tr key={s.id} onClick={() => { setEditingSite(false); setDetailSite(s); }} style={{ cursor: "pointer" }}>
                   <td><a className="quality-users__link" onClick={e => { e.preventDefault(); setEditingSite(false); setDetailSite(s); }} href="#">{s.name}</a></td>
                   <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.address || "—"}</td>
                   <td>{s.contactName || "—"}</td>
@@ -1246,7 +1246,7 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
                 <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
               )}
               {filteredUsers.map(u => (
-                <tr key={u.id} onDoubleClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
+                <tr key={u.id} onClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
                   <td>
                     <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openDetail(u); }} href="#">
                       {u.username}

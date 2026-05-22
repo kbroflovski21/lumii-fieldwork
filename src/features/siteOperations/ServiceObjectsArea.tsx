@@ -283,9 +283,8 @@ export function ServiceObjectsArea({ resource, onMutate, initialSearch }: { reso
               isFilterEmpty={resource.status === "success" && objects.length > 0 && filtered.length === 0}
               mutationsDisabled={mutationsDisabled}
               onCreateClick={() => setDrawer({ kind: "create" })}
-              onRowClick={(o) => setSelectedId(o.id)}
+              onRowClick={openDrawer}
               onNameClick={openDrawer}
-              onRowDoubleClick={openDrawer}
               selectedId={selectedId}
             />
           </div>
@@ -326,10 +325,10 @@ function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   return null;
 }
 
-function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onCreateClick, onRowClick, onNameClick, onRowDoubleClick, selectedId }: {
+function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onCreateClick, onRowClick, onNameClick, selectedId }: {
   filtered: ServiceObject[]; loading: boolean; error?: string; isEmpty: boolean; isFilterEmpty: boolean;
   mutationsDisabled: boolean; onCreateClick: () => void; onRowClick: (o: ServiceObject) => void;
-  onNameClick: (o: ServiceObject) => void; onRowDoubleClick: (o: ServiceObject) => void; selectedId: string | null;
+  onNameClick: (o: ServiceObject) => void; selectedId: string | null;
 }) {
   if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><span>服务对象数据加载中...</span></div>;
   if (error) return <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{error}</span></div>;
@@ -355,7 +354,7 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
             : undefined;
           return (
             <div className="sw-table__row so-table__row" data-selected={selectedId === obj.id} key={obj.id}
-              onClick={() => onRowClick(obj)} onDoubleClick={() => onRowDoubleClick(obj)} role="row">
+              onClick={() => onRowClick(obj)} role="row">
               <div role="cell" className="sw-table__cell-name">
                 <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>{getInitials(obj.name)}</div>
                 <div className="sw-name-group">

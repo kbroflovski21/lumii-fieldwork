@@ -159,9 +159,8 @@ export function SmartBadgesArea({ resource, onOpenRecords, onMutate, initialSear
               isFilterEmpty={resource.status === "success" && badges.length > 0 && filtered.length === 0}
               mutationsDisabled={mutationsDisabled}
               onActivateClick={() => setDrawer({ kind: "activate" })}
-              onRowClick={(b) => setSelectedId(b.id)}
+              onRowClick={openDrawer}
               onCodeClick={openDrawer}
-              onRowDoubleClick={openDrawer}
               selectedId={selectedId}
             />
           </div>
@@ -219,7 +218,7 @@ function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   return null;
 }
 
-function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onActivateClick, onRowClick, onCodeClick, onRowDoubleClick, selectedId }: {
+function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onActivateClick, onRowClick, onCodeClick, selectedId }: {
   filtered: SmartBadge[];
   loading: boolean;
   error?: string;
@@ -229,7 +228,6 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
   onActivateClick: () => void;
   onRowClick: (b: SmartBadge) => void;
   onCodeClick: (b: SmartBadge) => void;
-  onRowDoubleClick: (b: SmartBadge) => void;
   selectedId: string | null;
 }) {
   if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><Smartphone size={32} /></div><span>设备数据加载中...</span></div>;
@@ -261,7 +259,6 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
             data-selected={selectedId === badge.id}
             key={badge.id}
             onClick={() => onRowClick(badge)}
-            onDoubleClick={() => onRowDoubleClick(badge)}
             role="row"
           >
             <div role="cell">

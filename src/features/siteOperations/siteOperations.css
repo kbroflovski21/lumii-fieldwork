@@ -6768,6 +6768,38 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   opacity: 0.4;
   cursor: not-allowed;
 }
+.command-input__voice {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: #9CA3AF;
+  border: 1px solid #E5E7EB;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.command-input__voice:hover:not(:disabled) {
+  color: #6366F1;
+  border-color: #6366F1;
+}
+.command-input__voice--active {
+  background: #DC2626;
+  color: #fff;
+  border-color: #DC2626;
+  animation: voice-pulse 1.5s ease-in-out infinite;
+}
+@keyframes voice-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+.command-input__voice:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* === Copilot Panel (right-side panel) === */
 .site-operations-shell[data-copilot-open="true"] {
