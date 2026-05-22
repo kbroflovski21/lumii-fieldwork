@@ -212,7 +212,7 @@ async function main() {
   await prisma.sop.createMany({
     data: [
       {
-        id: "sop-general-001", name: "上门服务通用规范", type: "general", description: "所有上门服务必须遵守的通用规范", keywords: [], version: 1, orgId: "org-001",
+        id: "sop-general-001", name: "上门服务通用规范", type: "general", description: "所有上门服务必须遵守的通用规范", keywords: [], version: 1, orgId: "org-001", published: true,
         sopContent: "1. 上门服务人员必须在开始服务时自报家门（姓名、所属机构），并确认被服务人员身份\n2. 服务过程中不得向被服务人员推销任何商业产品、保健品、保险或理财\n3. 不得私下收取费用或接受好处\n4. 不得拍摄或传播被服务人员的照片、视频或个人信息\n5. 服务结束前必须明确复述本次完成的服务内容，要求被服务人员确认，并询问满意度\n6. 服务全程需保持录音，录音自动存档",
         sopSource: "manual", sopVersion: 3,
         sopHistory: [{ version: 1, date: "2026-04-01", summary: "初始版本" }, { version: 2, date: "2026-04-20", summary: "增加满意度询问要求" }, { version: 3, date: "2026-05-14", summary: "更新违规行为条款" }],
@@ -224,42 +224,42 @@ async function main() {
         reportHistory: [{ version: 1, date: "2026-04-01", summary: "AI 初始生成" }, { version: 2, date: "2026-05-14", summary: "AI 基于 SOP v3 重新推理" }],
       },
       {
-        id: "sop-service-001", name: "助餐服务SOP", type: "service", description: "上门助餐服务标准流程", keywords: ["助餐", "做饭", "食材", "吃饭", "午餐", "晚餐", "早餐", "饮食"], version: 1, orgId: "org-001",
+        id: "sop-service-001", name: "助餐服务SOP", type: "service", description: "上门助餐服务标准流程", keywords: ["助餐", "做饭", "食材", "吃饭", "午餐", "晚餐", "早餐", "饮食"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
         reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
       },
       {
-        id: "sop-service-002", name: "助浴服务SOP", type: "service", description: "上门助浴服务标准流程", keywords: ["助浴", "洗澡", "水温", "沐浴", "浴室"], version: 1, orgId: "org-001",
+        id: "sop-service-002", name: "助浴服务SOP", type: "service", description: "上门助浴服务标准流程", keywords: ["助浴", "洗澡", "水温", "沐浴", "浴室"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
         reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
       },
       {
-        id: "sop-service-003", name: "探访关爱SOP", type: "service", description: "上门探访关爱服务标准流程", keywords: ["探访", "关爱", "看望", "慰问", "探望"], version: 1, orgId: "org-001",
+        id: "sop-service-003", name: "探访关爱SOP", type: "service", description: "上门探访关爱服务标准流程", keywords: ["探访", "关爱", "看望", "慰问", "探望"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
         reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
       },
       {
-        id: "sop-service-004", name: "健康监测SOP", type: "service", description: "健康监测服务标准流程", keywords: ["健康", "监测", "血压", "血糖", "体温", "心率", "体检"], version: 1, orgId: "org-001",
+        id: "sop-service-004", name: "健康监测SOP", type: "service", description: "健康监测服务标准流程", keywords: ["健康", "监测", "血压", "血糖", "体温", "心率", "体检"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
         reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
       },
       {
-        id: "sop-service-005", name: "助洁服务SOP", type: "service", description: "上门助洁服务标准流程", keywords: ["助洁", "清洁", "打扫", "卫生", "整理"], version: 1, orgId: "org-001",
+        id: "sop-service-005", name: "助洁服务SOP", type: "service", description: "上门助洁服务标准流程", keywords: ["助洁", "清洁", "打扫", "卫生", "整理"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
         reportSource: "ai_generated", reportVersion: 0, reportHistory: [],
       },
       {
-        id: "sop-service-006", name: "康复训练SOP", type: "service", description: "康复训练服务标准流程", keywords: ["康复", "训练", "锻炼", "运动", "理疗"], version: 1, orgId: "org-001",
+        id: "sop-service-006", name: "康复训练SOP", type: "service", description: "康复训练服务标准流程", keywords: ["康复", "训练", "锻炼", "运动", "理疗"], version: 1, orgId: "org-001", published: false,
         sopContent: null, supervisionContent: null, reportContent: null,
         sopSource: "manual", sopVersion: 1, sopHistory: [{ version: 1, date: "2026-05-20", summary: "初始版本" }],
         supervisionSource: "ai_generated", supervisionVersion: 0, supervisionHistory: [],
