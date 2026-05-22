@@ -408,6 +408,13 @@ export type ServiceItem = {
   title: string;
   category: "business" | "process";
   status: ServiceItemStatus;
+  requirementText?: string;
+  source?: "general" | "service";
+  transcriptExcerpts?: Array<{
+    text: string;
+    startTime?: string;
+    endTime?: string;
+  }>;
   startTime?: string;
   endTime?: string;
   audioClipUrl?: string;

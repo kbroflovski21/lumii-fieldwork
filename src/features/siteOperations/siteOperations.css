@@ -4887,6 +4887,44 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   white-space: nowrap;
 }
 
+.rec-si__source {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #F3F4F6;
+  color: #6B7280;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+.rec-si__requirement {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4B5563;
+}
+.rec-si__requirement-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+.rec-si__requirement p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.rec-si__excerpt-time {
+  color: #9CA3AF;
+  font-size: 11px;
+  margin-right: 4px;
+}
+
 .rec-missing-count {
   color: var(--site-warning-text);
   font-size: 10px;

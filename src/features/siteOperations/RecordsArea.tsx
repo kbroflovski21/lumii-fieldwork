@@ -569,12 +569,17 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
   item: ServiceItem; expanded: boolean; onToggle: () => void;
   itemStatusIcon: (s: string) => React.ReactNode;
 }) {
+  const excerpts = item.transcriptExcerpts ?? [];
+  const hasExcerpts = excerpts.length > 0;
+  const hasLegacyTranscript = !hasExcerpts && !!item.transcript;
+
   return (
     <div className="rec-si" data-status={item.status}>
       <button className="rec-si__row" onClick={onToggle} type="button">
         {itemStatusIcon(item.status)}
         <span className="rec-si__seq">{item.seq}</span>
         <span className="rec-si__title">{item.title}</span>
+        {item.source ? <span className="rec-si__source">{item.source === "general" ? "通用" : "服务"}</span> : null}
         {item.startTime ? (
           <span className="rec-si__time">{item.startTime}-{item.endTime}{item.audioDurationSeconds ? ` · ${item.audioDurationSeconds}s` : ""}</span>
         ) : null}
@@ -582,7 +587,22 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
       </button>
       {expanded ? (
         <div className="rec-si__detail">
-          {item.transcript ? (
+          {item.requirementText ? (
+            <div className="rec-si__requirement">
+              <span className="rec-si__requirement-label">规范要求</span>
+              <p>{item.requirementText}</p>
+            </div>
+          ) : null}
+          {hasExcerpts ? excerpts.map((ex, i) => (
+            <div className="rec-si__evidence" key={i}>
+              <MessageSquare size={14} />
+              <p>
+                {ex.startTime ? <span className="rec-si__excerpt-time">[{ex.startTime}{ex.endTime ? `-${ex.endTime}` : ""}]</span> : null}
+                {ex.text}
+              </p>
+            </div>
+          )) : null}
+          {hasLegacyTranscript ? (
             <div className="rec-si__evidence">
               <MessageSquare size={14} />
               <p>{item.transcript}</p>
@@ -601,7 +621,7 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
               <p>{item.abnormalReason}</p>
             </div>
           ) : null}
-          {!item.transcript && !item.audioDurationSeconds && !item.abnormalReason ? (
+          {!hasExcerpts && !hasLegacyTranscript && !item.audioDurationSeconds && !item.abnormalReason ? (
             <p className="sw-text-muted" style={{ fontSize: 12, margin: 0 }}>暂无证据记录</p>
           ) : null}
         </div>
@@ -714,12 +734,21 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
             <h4 className="so-tab-section-title">对话记录</h4>
             <div style={{ background: "#F8FAFC", padding: 14, borderRadius: 10, maxHeight: 400, overflowY: "auto", lineHeight: 1.8 }}>
               {Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0
-                ? rec.transcriptSegments.map((seg: any, i: number) => (
-                  <div key={i} style={{ marginBottom: 4 }}>
-                    {seg.speaker && <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4, marginRight: 4, background: seg.speaker === "社工" || seg.speaker?.includes("0") ? "rgba(96,165,250,.15)" : "rgba(52,211,153,.15)", color: seg.speaker === "社工" || seg.speaker?.includes("0") ? "#3B82F6" : "#10B981" }}>{seg.speaker}</span>}
-                    <span style={{ fontSize: 13 }}>{seg.text}</span>
-                  </div>
-                ))
+                ? rec.transcriptSegments.map((seg: any, i: number) => {
+                  const isWorker = seg.speaker === "社工" || seg.speaker?.includes("speaker_0") || seg.speaker?.includes("说话人0");
+                  const isElder = seg.speaker === "老人" || seg.speaker?.includes("speaker_1") || seg.speaker?.includes("说话人1");
+                  const displayName = isWorker && rec.workerName
+                    ? `${rec.workerName}（社工）`
+                    : isElder && rec.matchedServiceObjectName
+                      ? `${rec.matchedServiceObjectName}（服务对象）`
+                      : seg.speaker;
+                  return (
+                    <div key={i} style={{ marginBottom: 4 }}>
+                      {seg.speaker && <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4, marginRight: 4, background: isWorker ? "rgba(96,165,250,.15)" : "rgba(52,211,153,.15)", color: isWorker ? "#3B82F6" : "#10B981" }}>{displayName}</span>}
+                      <span style={{ fontSize: 13 }}>{seg.text}</span>
+                    </div>
+                  );
+                })
                 : <div style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{rec.transcriptText}</div>
               }
             </div>
