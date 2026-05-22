@@ -446,7 +446,7 @@ function SOPContent() {
     authFetch("/api/ai/generate-doc", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sopContent: sopDoc.content, sopName: folder.name, docType }),
+      body: JSON.stringify({ sopContent: sopDoc.content, sopName: folder.name, docType, sopType: folder.type }),
     }).then(r => r.json()).then(data => {
       setGeneratePreview((prev) => {
         if (!prev || prev.folderId !== folder.id || prev.docType !== docType) return prev;

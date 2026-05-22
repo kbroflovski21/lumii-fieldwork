@@ -4,74 +4,122 @@ const LLM_API_KEY = process.env.LLM_API_KEY ?? "";
 const LLM_MODEL = process.env.LLM_MODEL ?? "qwen3-max";
 const LLM_URL = process.env.LLM_URL ?? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
-export function aiRoutes() {
-  const r = Router();
+function buildPrompt(sopType: string, docType: string, sopName: string, sopContent: string): { system: string; user: string } {
+  const key = `${sopType ?? "general"}:${docType}`;
 
-  r.post("/ai/chat", async (req, res) => {
-    const { messages, systemPrompt } = req.body;
-    if (!messages || !Array.isArray(messages)) {
-      res.status(400).json({ error: "messages array required" });
-      return;
-    }
-    if (!LLM_API_KEY) {
-      res.json({ reply: "AI 服务未配置（缺少 LLM_API_KEY 环境变量）" });
-      return;
-    }
+  switch (key) {
+    // ── 通用规范 × 实时督导要求 ──
+    case "general:supervision":
+      return {
+        system: "你是一个专业的AI Prompt工程师，擅长从服务规范文档中提取规则并生成实时语音督导系统Prompt。",
+        user: `你是一个专业的AI Prompt工程师。你的任务是：阅读用户提供的"上门养老服务标准规范文档"，从中提取关键规则，然后生成一份完整的、可直接使用的"实时语音督导系统Prompt"。
 
-    try {
-      const llmMessages = [
-        { role: "system", content: systemPrompt ?? "你是金色年华养老服务平台的AI助手。你帮助集团管理员创建和管理SOP（标准操作流程）文档。回答简洁专业。" },
-        ...messages.map((m: any) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content })),
-      ];
+生成的系统Prompt将被交给另一个AI使用——该AI会接收上门养老服务过程中的实时录音转写文本流，并根据指令进行实时分析和TTS语音提醒。
 
-      const resp = await fetch(LLM_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${LLM_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: LLM_MODEL,
-          messages: llmMessages,
-          temperature: 0.7,
-          max_tokens: 2000,
-        }),
-      });
+---
 
-      const data = await resp.json();
-      const reply = data.choices?.[0]?.message?.content ?? "AI 回复异常";
-      res.json({ reply });
-    } catch (err: any) {
-      console.error("[ai] chat error:", err.message);
-      res.json({ reply: "AI 服务暂时不可用，请稍后重试。" });
-    }
-  });
+## 第一步：从规范文档中提取三类规则
 
-  r.post("/ai/generate-doc", async (req, res) => {
-    const { sopContent, sopName, docType } = req.body;
-    if (!sopContent || !docType) {
-      res.status(400).json({ error: "sopContent and docType required" });
-      return;
-    }
-    if (!LLM_API_KEY) {
-      res.json({ content: "AI 服务未配置" });
-      return;
-    }
+请仔细阅读规范文档，将其中的规则和要求归类到以下三个类别中。每条规则只归入最匹配的一个类别。如果某条规则跨类别，拆分为多条分别归入。
 
-    const prompts: Record<string, string> = {
-      supervision: `你是养老服务AI督导系统的配置专家。根据以下SOP内容，生成"服务中实时督导要求"。要求：
-1. 每条要求对应SOP中的关键步骤
-2. 明确触发条件（什么情况下提醒）
-3. 提醒方式（语音提示）
-4. 格式：每行一条，编号列出
+### 类别一：服务前置流程（Pre-Service Checklist）
 
-SOP名称：${sopName ?? ""}
+提取所有关于"上门时""到达时""服务开始前"需要服务人员完成的标准动作或流程。
+典型示例：自报姓名和机构、确认被服务老人身份、说明本次服务内容、检查设备等。
+提取为清晰的逐条检查项，每条用一句话描述，格式为"服务人员应当______"。
+
+### 类别二：服务结束流程（Post-Service Checklist）
+
+提取所有关于"服务结束时""告别前""离开前"需要服务人员完成的标准动作或流程。
+典型示例：复述已完成的服务项目、询问满意度、确认是否还有需要、告别等。
+提取为清晰的逐条检查项，每条用一句话描述，格式为"服务人员应当______"。
+
+### 类别三：全程禁止行为（Prohibited Behaviors）
+
+提取所有在整个服务过程中明确禁止、不允许的行为或言语。
+典型示例：推销商品、私下收费、索要好处、辱骂老人、拍摄传播隐私信息、使用不文明语言等。
+提取为清晰的逐条禁止项，每条用一句话描述，格式为"不得______"。
+
+如果规范文档中有些内容不属于以上任何类别（例如：录音需自动存档、内部考核标准等与服务人员现场行为无直接关系的条目），则忽略，不纳入生成的Prompt中。
+
+---
+
+## 第二步：生成实时语音督导系统Prompt
+
+基于第一步提取的三类规则，生成完整的系统Prompt。必须严格遵守以下结构和规则：
+
+### 整体结构要求
+
+必须包含以下四个部分，按顺序排列：
+
+**Part 1: 角色与任务定义**
+
+写明：
+- 你是一个上门养老服务的实时语音督导AI。
+- 你会持续接收服务现场的实时录音转写文本。
+- 你的职责是根据下列规则，在恰当的时机通过TTS语音向服务人员发出提醒。
+- 你不负责对话、聊天或回答问题，你只负责监控和提醒。
+
+**Part 2: 服务前置流程监控规则**
+
+将类别一的每个检查项列出，并附带以下监控逻辑：
+
+服务开始后，持续追踪以下前置流程检查项的完成情况。判断依据是录音转写文本中是否出现了明确表明该项已完成的内容（服务人员的实际言语或行为）。不要求用词完全一致，只要语义上可以判断为已完成即可。
+
+触发提醒的条件（满足任一即触发）：
+- 条件A：录音开始后超过5分钟，仍有未完成的前置检查项。
+- 条件B：虽未到5分钟，但从录音内容可以明确判断服务人员已跳过前置流程、直接开始了正式服务内容。
+
+提醒方式：通过TTS语音输出，内容为："温馨提醒：您还没有{未完成的事项描述}，请先完成。"
+如果有多个未完成项，合并为一条提醒。此提醒只触发一次，触发后不再重复。
+
+**Part 3: 服务结束流程监控规则**
+
+将类别二的每个检查项列出，并附带以下监控逻辑：
+
+当从录音转写文本中检测到服务即将结束的信号时（例如：服务人员开始与老人告别、说"今天就到这里"、"我先走了"等告别性质的话语），检查以下结束流程检查项是否已经完成。
+
+如果存在未完成的结束流程检查项，立即通过TTS语音提醒："温馨提醒：在结束服务前，请不要忘记{未完成的事项描述}。"
+如果有多个未完成项，合并为一条提醒。此提醒只触发一次，触发后不再重复。
+
+**Part 4: 全程违禁行为监控规则**
+
+将类别三的每条禁止项列出，并附带以下监控逻辑：
+
+在整个服务过程中，持续监控录音转写文本，识别是否出现了违禁行为。判断标准：基于实际言语内容进行语义判断，结合上下文避免误判，只有在较高确信度下才判定为违规。
+
+当识别到违禁行为时，立即通过TTS语音提醒："注意，请不要{违禁行为描述}。"
+去重规则：同一类违禁行为只提醒一次。不同类型的新违禁行为单独提醒。
+
+**全局规则：**
+1. 所有TTS输出必须使用自然、温和、专业的中文口语。不得使用书面化的编号、符号、括号、引号等不适合语音朗读的格式。
+2. 每次TTS输出应当简洁，控制在50字以内（中文字符），确保听感清晰不冗长。如果需要提醒多个事项，在一句话内自然串联。
+3. 不应对录音中的正常对话内容做出任何反应。只在触发上述三类规则时才输出TTS提醒。
+4. 如果录音转写质量较差（大量乱码、不可读），不要勉强判断，保持沉默。
+5. 输出格式严格为：需要TTS提醒时直接输出提醒文本内容，不附加任何标签、解释或元信息。不需要提醒时不输出任何内容。
+
+---
+
+## 输出要求
+
+- 直接输出完整的系统Prompt，不要输出分析过程、中间步骤或解释说明。
+- 输出的内容必须是一份可以直接作为系统Prompt使用的完整文本，自包含、独立可用。
+- 使用中文。
+
+---
+
+以下是需要处理的规范文档：
+
+SOP名称：${sopName}
 SOP内容：
-${sopContent}
+${sopContent}`,
+      };
 
-请直接输出督导要求内容，不要加额外说明。`,
-
-      report: `你是一个专业的AI Prompt工程师。你的任务是：阅读用户提供的"上门养老服务标准规范文档"，从中提取关键规则，然后生成一份完整的、可直接使用的"事后服务报告生成系统Prompt"。
+    // ── 通用规范 × 服务后报告要求 ──
+    case "general:report":
+      return {
+        system: "你是一个专业的AI Prompt工程师，擅长从服务规范文档中提取规则并生成结构化的评估系统Prompt。",
+        user: `你是一个专业的AI Prompt工程师。你的任务是：阅读用户提供的"上门养老服务标准规范文档"，从中提取关键规则，然后生成一份完整的、可直接使用的"事后服务报告生成系统Prompt"。
 
 生成的系统Prompt将被交给另一个AI使用——该AI会接收一次完整的上门养老服务录音转写文本，并根据指令进行分析，生成一份结构化的服务质量评估报告。
 
@@ -203,10 +251,107 @@ ${sopContent}
 
 以下是需要处理的规范文档：
 
-SOP名称：${sopName ?? ""}
+SOP名称：${sopName}
 SOP内容：
 ${sopContent}`,
-    };
+      };
+
+    // ── 服务项目规范 × 实时督导要求（待提供专用 prompt，暂用通用占位） ──
+    case "service:supervision":
+      return {
+        system: "你是养老服务标准化专家，擅长制定服务规范和AI督导配置。",
+        user: `你是养老服务AI督导系统的配置专家。根据以下SOP内容，生成"服务中实时督导要求"。要求：
+1. 每条要求对应SOP中的关键步骤
+2. 明确触发条件（什么情况下提醒）
+3. 提醒方式（语音提示）
+4. 格式：每行一条，编号列出
+
+SOP名称：${sopName}
+SOP内容：
+${sopContent}
+
+请直接输出督导要求内容，不要加额外说明。`,
+      };
+
+    // ── 服务项目规范 × 服务后报告要求（待提供专用 prompt，暂用通用占位） ──
+    case "service:report":
+      return {
+        system: "你是养老服务标准化专家，擅长制定服务规范和AI督导配置。",
+        user: `你是养老服务报告系统的配置专家。根据以下SOP内容，生成"服务后报告要求"。要求：
+1. 每条对应SOP中需要记录的关键信息
+2. 明确需要提取的数据项
+3. 格式：每行一条，编号列出
+
+SOP名称：${sopName}
+SOP内容：
+${sopContent}
+
+请直接输出报告要求内容，不要加额外说明。`,
+      };
+
+    default:
+      return {
+        system: "你是养老服务标准化专家，擅长制定服务规范和AI督导配置。",
+        user: `根据以下SOP内容生成配置要求：\n\nSOP名称：${sopName}\nSOP内容：\n${sopContent}`,
+      };
+  }
+}
+
+export function aiRoutes() {
+  const r = Router();
+
+  r.post("/ai/chat", async (req, res) => {
+    const { messages, systemPrompt } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      res.status(400).json({ error: "messages array required" });
+      return;
+    }
+    if (!LLM_API_KEY) {
+      res.json({ reply: "AI 服务未配置（缺少 LLM_API_KEY 环境变量）" });
+      return;
+    }
+
+    try {
+      const llmMessages = [
+        { role: "system", content: systemPrompt ?? "你是金色年华养老服务平台的AI助手。你帮助集团管理员创建和管理SOP（标准操作流程）文档。回答简洁专业。" },
+        ...messages.map((m: any) => ({ role: m.role === "agent" ? "assistant" : "user", content: m.content })),
+      ];
+
+      const resp = await fetch(LLM_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LLM_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: LLM_MODEL,
+          messages: llmMessages,
+          temperature: 0.7,
+          max_tokens: 2000,
+        }),
+      });
+
+      const data = await resp.json();
+      const reply = data.choices?.[0]?.message?.content ?? "AI 回复异常";
+      res.json({ reply });
+    } catch (err: any) {
+      console.error("[ai] chat error:", err.message);
+      res.json({ reply: "AI 服务暂时不可用，请稍后重试。" });
+    }
+  });
+
+  r.post("/ai/generate-doc", async (req, res) => {
+    const { sopContent, sopName, docType, sopType } = req.body;
+    if (!sopContent || !docType) {
+      res.status(400).json({ error: "sopContent and docType required" });
+      return;
+    }
+    if (!LLM_API_KEY) {
+      res.json({ content: "AI 服务未配置" });
+      return;
+    }
+
+    const { system, user } = buildPrompt(sopType ?? "general", docType, sopName ?? "", sopContent);
 
     try {
       const resp = await fetch(LLM_URL, {
@@ -218,8 +363,8 @@ ${sopContent}`,
         body: JSON.stringify({
           model: LLM_MODEL,
           messages: [
-            { role: "system", content: docType === "report" ? "你是一个专业的AI Prompt工程师，擅长从服务规范文档中提取规则并生成结构化的评估系统Prompt。" : "你是养老服务标准化专家，擅长制定服务规范和AI督导配置。" },
-            { role: "user", content: prompts[docType] ?? prompts.supervision },
+            { role: "system", content: system },
+            { role: "user", content: user },
           ],
           temperature: 0.5,
           max_tokens: 8000,
