@@ -93,6 +93,10 @@ if (existsSync(STATIC_ROOT)) {
   });
 }
 
+// ASR proxy
+import { createAsrProxy } from "./ws/asr";
+const asrProxy = createAsrProxy(jwtSecret);
+
 // Create HTTP server with WebSocket upgrade handling
 const httpServer = createServer(app);
 
@@ -102,6 +106,8 @@ httpServer.on("upgrade", (req, socket, head) => {
     pool.handleAgentUpgrade(req, socket, head);
   } else if (url.pathname === "/api/ws/chat") {
     pool.handleUserUpgrade(req, socket, head);
+  } else if (url.pathname === "/api/ws/asr") {
+    asrProxy.handleUpgrade(req, socket, head);
   } else {
     socket.destroy();
   }

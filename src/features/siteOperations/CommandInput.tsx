@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Bot, Mic } from "lucide-react";
+import { useAsrVoice } from "./useAsrVoice";
 
 export interface SlashCommand {
   command: string;
@@ -45,40 +46,32 @@ interface CommandInputProps {
   compact?: boolean;
 }
 
-const SpeechRecognition = (globalThis as any).SpeechRecognition || (globalThis as any).webkitSpeechRecognition;
-
 export function CommandInput({ onSend, commands, disabled, placeholder, compact }: CommandInputProps) {
   const cmds = commands ?? SITE_OPS_COMMANDS;
   const [value, setValue] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [listening, setListening] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const segmentsRef = useRef<Map<number, string>>(new Map());
+  const prefixRef = useRef("");
+
+  const { listening, toggle: toggleVoiceRaw } = useAsrVoice(
+    useCallback((text: string, _isFinal: boolean, segId?: number) => {
+      const segs = segmentsRef.current;
+      segs.set(segId ?? 0, text);
+      const assembled = Array.from(segs.entries()).sort((a, b) => a[0] - b[0]).map(e => e[1]).join("");
+      setValue(prefixRef.current + assembled);
+    }, [])
+  );
 
   const toggleVoice = useCallback(() => {
-    if (!SpeechRecognition) return;
-    if (listening) {
-      recognitionRef.current?.stop();
-      setListening(false);
-      return;
+    if (!listening) {
+      segmentsRef.current.clear();
+      prefixRef.current = value;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.onresult = (e: any) => {
-      const transcript = Array.from(e.results as SpeechRecognitionResultList)
-        .map((r: any) => r[0].transcript).join("");
-      setValue(transcript);
-    };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
-  }, [listening]);
+    toggleVoiceRaw();
+  }, [listening, toggleVoiceRaw, value]);
 
   const filtered = value.startsWith("/")
     ? cmds.filter(c => c.command.startsWith(value.toLowerCase()))
@@ -173,22 +166,15 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
         placeholder={placeholder ?? "输入 / 查看命令..."}
         disabled={disabled}
       />
-      {SpeechRecognition && (
-        <button
-          type="button"
-          className={`command-input__voice${listening ? " command-input__voice--active" : ""}`}
-          onClick={toggleVoice}
-          disabled={disabled}
-          aria-label={listening ? "停止语音" : "语音输入"}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
-        </button>
-      )}
+      <button
+        type="button"
+        className={`command-input__voice${listening ? " command-input__voice--active" : ""}`}
+        onClick={toggleVoice}
+        disabled={disabled}
+        aria-label={listening ? "停止语音" : "语音输入"}
+      >
+        <Mic size={16} />
+      </button>
       <button
         type="submit"
         className="command-input__send"
@@ -212,8 +198,25 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
   const [value, setValue] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const segmentsRef = useRef<Map<number, string>>(new Map());
+  const prefixRef = useRef("");
+
+  const onAsrText = useCallback((text: string, isFinal: boolean, segId?: number) => {
+    const segs = segmentsRef.current;
+    const id = segId ?? 0;
+    segs.set(id, text);
+    const assembled = Array.from(segs.entries()).sort((a, b) => a[0] - b[0]).map(e => e[1]).join("");
+    setValue(prefixRef.current + assembled);
+    if (isFinal) {
+      // nothing extra — keep accumulating segments
+    }
+  }, []);
+
+  const { listening, toggle: toggleVoice } = useAsrVoice(
+    useCallback((text: string, isFinal: boolean, segId?: number) => {
+      onAsrText(text, isFinal, segId);
+    }, [onAsrText])
+  );
 
   const filtered = value.startsWith("/")
     ? commands.filter(c => c.command.startsWith(value.toLowerCase()))
@@ -252,21 +255,13 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
     }
   }, [menuVisible, filtered, selectedIdx, selectCommand, handleSubmit]);
 
-  const toggleVoice = useCallback(() => {
-    if (!SpeechRecognition) return;
-    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
-    const r = new SpeechRecognition();
-    r.lang = "zh-CN"; r.continuous = false; r.interimResults = true;
-    r.onresult = (ev: any) => {
-      const t = Array.from(ev.results as SpeechRecognitionResultList).map((x: any) => x[0].transcript).join("");
-      setValue(t);
-    };
-    r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
-    recognitionRef.current = r;
-    r.start();
-    setListening(true);
-  }, [listening]);
+  const handleVoiceClick = useCallback(() => {
+    if (!listening) {
+      segmentsRef.current.clear();
+      prefixRef.current = value;
+    }
+    toggleVoice();
+  }, [listening, toggleVoice, value]);
 
   return (
     <form className="copilot-header-input" onSubmit={handleSubmit}>
@@ -298,16 +293,14 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
         onKeyDown={handleKeyDown}
         onBlur={() => setTimeout(() => setShowMenu(false), 150)}
       />
-      {SpeechRecognition && (
-        <button
-          type="button"
-          className={`copilot-header-input__voice${listening ? " copilot-header-input__voice--active" : ""}`}
-          onClick={toggleVoice}
-          aria-label={listening ? "停止语音" : "语音输入"}
-        >
-          <Mic size={14} />
-        </button>
-      )}
+      <button
+        type="button"
+        className={`copilot-header-input__voice${listening ? " copilot-header-input__voice--active" : ""}`}
+        onClick={handleVoiceClick}
+        aria-label={listening ? "停止语音" : "语音输入"}
+      >
+        <Mic size={14} />
+      </button>
       <button type="submit" className="copilot-header-input__send" aria-label="发送">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
