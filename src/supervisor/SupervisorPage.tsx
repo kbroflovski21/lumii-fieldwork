@@ -18,6 +18,7 @@ interface StdFolder {
   id: string;
   type: "general" | "service";
   name: string;
+  published: boolean;
   sop: StdDoc | null;
   supervision: StdDoc | null;
   report: StdDoc | null;
@@ -111,7 +112,7 @@ function buildInitialFolders(): StdFolder[] {
 
   return [
     {
-      id: "gen-ltci", type: "general", name: "国家长期护理保险",
+      id: "gen-ltci", type: "general", name: "国家长期护理保险", published: false,
       sop: mkDoc(GENERAL_SOP, "manual", 3, [
         { version: 1, date: "2026-04-01", summary: "初始版本" },
         { version: 2, date: "2026-04-20", summary: "增加满意度询问要求" },
@@ -127,7 +128,7 @@ function buildInitialFolders(): StdFolder[] {
       ]),
     },
     {
-      id: "svc-oral", type: "service", name: "清洁照护-口腔清洁",
+      id: "svc-oral", type: "service", name: "清洁照护-口腔清洁", published: false,
       sop: mkDoc(ORAL_SOP, "manual", 2, [
         { version: 1, date: "2026-04-10", summary: "初始版本" },
         { version: 2, date: "2026-05-14", summary: "补充口腔检查要求" },
@@ -140,7 +141,7 @@ function buildInitialFolders(): StdFolder[] {
       ]),
     },
     {
-      id: "svc-vitals", type: "service", name: "基础健康观察-生命体征测量",
+      id: "svc-vitals", type: "service", name: "基础健康观察-生命体征测量", published: false,
       sop: mkDoc(VITALS_SOP, "manual", 1, [
         { version: 1, date: "2026-05-14", summary: "初始版本" },
       ]),
@@ -268,6 +269,7 @@ function SOPContent() {
         id: s.id,
         type: s.type,
         name: s.name,
+        published: s.published ?? false,
         sop: s.sopContent ? {
           status: "complete" as const,
           content: s.sopContent,
@@ -419,6 +421,13 @@ function SOPContent() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+    }).then(() => {
+      // If content was cleared, server may auto-unpublish — refresh published state
+      fetch(`/api/sops/${folder.id}`).then(r => r.json()).then(data => {
+        if (data && typeof data.published === "boolean") {
+          setFolders(prev => prev.map(ff => ff.id === folder.id ? { ...ff, published: data.published } : ff));
+        }
+      }).catch(() => {});
     }).catch(() => {});
     setIsEditing(false);
     setEditingDocType(null);
@@ -549,6 +558,7 @@ function SOPContent() {
         id: newSop.id,
         type: newSop.type,
         name: newSop.name,
+        published: false,
         sop: null,
         supervision: null,
         report: null,
@@ -556,6 +566,21 @@ function SOPContent() {
       setFolders(prev => [...prev, newFolder]);
       setSelectedFolder(newSop.id);
     } catch {}
+  };
+
+  const handlePublishToggle = async (f: StdFolder) => {
+    const action = f.published ? "unpublish" : "publish";
+    try {
+      const resp = await fetch(`/api/sops/${f.id}/${action}`, { method: "POST" });
+      if (!resp.ok) {
+        const data = await resp.json();
+        alert(data.error ?? "操作失败");
+        return;
+      }
+      setFolders(prev => prev.map(ff => ff.id === f.id ? { ...ff, published: !ff.published } : ff));
+    } catch {
+      alert("网络错误");
+    }
   };
 
   /* ── Drag resize ── */
@@ -618,6 +643,7 @@ function SOPContent() {
                 onSelect={selectFolder}
                 onAdd={() => handleAddFolder("general")}
                 onFolderAction={handleFolderAction}
+                onPublishToggle={handlePublishToggle}
               />
               <div className="sv-dir__divider" />
               <DirectorySection
@@ -629,6 +655,7 @@ function SOPContent() {
                 onSelect={selectFolder}
                 onAdd={() => handleAddFolder("service")}
                 onFolderAction={handleFolderAction}
+                onPublishToggle={handlePublishToggle}
               />
             </div>
           </div>
@@ -1212,7 +1239,7 @@ function SopReference({ doc }: { doc: StdDoc }) {
 /* ═══ Directory ═══ */
 
 function DirectorySection({
-  title, folders, collapsed, onToggleCollapse, selectedFolder, onSelect, onAdd, onFolderAction,
+  title, folders, collapsed, onToggleCollapse, selectedFolder, onSelect, onAdd, onFolderAction, onPublishToggle,
 }: {
   title: string;
   folders: StdFolder[];
@@ -1222,6 +1249,7 @@ function DirectorySection({
   onSelect: (folderId: string) => void;
   onAdd: () => void;
   onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
+  onPublishToggle: (folder: StdFolder) => void;
 }) {
   return (
     <div className="sv-dir-section">
@@ -1243,6 +1271,7 @@ function DirectorySection({
               isSelected={f.id === selectedFolder}
               onSelect={() => onSelect(f.id)}
               onFolderAction={onFolderAction}
+              onPublishToggle={onPublishToggle}
             />
           ))}
           <button onClick={onAdd} className="sv-dir-section__add-btn">
@@ -1256,17 +1285,18 @@ function DirectorySection({
 }
 
 function FolderItem({
-  folder, isSelected, onSelect, onFolderAction,
+  folder, isSelected, onSelect, onFolderAction, onPublishToggle,
 }: {
   folder: StdFolder;
   isSelected: boolean;
   onSelect: () => void;
   onFolderAction: (action: string, folder: StdFolder, newName?: string) => void;
+  onPublishToggle: (folder: StdFolder) => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameName, setRenameName] = useState(folder.name);
   const status = getFolderStatus(folder);
+  const isComplete = status === "complete";
 
   return (
     <div className="sv-folder">
@@ -1296,11 +1326,25 @@ function FolderItem({
               {folder.name}
             </span>
           )}
-          <span className={`sv-folder-status sv-folder-status--${status}`}>
-            {STATUS_LABELS[status]}
-          </span>
+          {folder.published ? (
+            <span className="sv-folder-status sv-folder-status--published">已发布</span>
+          ) : (
+            <span className={`sv-folder-status sv-folder-status--${status}`}>{STATUS_LABELS[status]}</span>
+          )}
         </button>
         <div className="sv-folder__actions">
+          <button
+            onClick={(e) => { e.stopPropagation(); onPublishToggle(folder); }}
+            className={`sv-folder__action-btn ${folder.published ? "sv-folder__action-btn--unpublish" : ""}`}
+            title={folder.published ? "取消发布" : (isComplete ? "发布" : "不完整，无法发布")}
+            disabled={!folder.published && !isComplete}
+          >
+            {folder.published ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+            )}
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); setRenaming(true); setRenameName(folder.name); }}
             className="sv-folder__action-btn"

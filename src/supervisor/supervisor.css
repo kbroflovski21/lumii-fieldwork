@@ -1086,6 +1086,17 @@
 .sv-folder-status--complete { background: #e0f4ec; color: #116b4c; }
 .sv-folder-status--partial { background: #fff1d6; color: #976000; }
 .sv-folder-status--empty { background: #fee2e2; color: #b42318; }
+.sv-folder-status--published {
+  background: #D1FAE5;
+  color: #065F46;
+}
+.sv-folder__action-btn--unpublish {
+  color: #059669;
+}
+.sv-folder__action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
 
 /* ── Layer toggle bar ── */
 .sv-layer-bar {
