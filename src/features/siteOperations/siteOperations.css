@@ -6739,6 +6739,42 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   background: #fff;
   position: relative;
 }
+/* Header variant: inline in top bar, menu drops DOWN */
+.site-operations-header__actions .command-input,
+.quality-header__actions .command-input {
+  padding: 0;
+  border-top: none;
+  background: transparent;
+  width: 360px;
+  flex-shrink: 1;
+  min-width: 180px;
+}
+.site-operations-header__actions .command-input__menu,
+.quality-header__actions .command-input__menu {
+  bottom: auto;
+  top: 100%;
+  margin-top: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+.site-operations-header__actions .command-input__field,
+.quality-header__actions .command-input__field {
+  height: 36px;
+  font-size: 13px;
+  border-radius: 20px;
+  background: var(--site-muted-bg);
+}
+.site-operations-header__actions .command-input__field:focus,
+.quality-header__actions .command-input__field:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #fff;
+}
+@media (max-width: 767px) {
+  .site-operations-header__actions .command-input,
+  .quality-header__actions .command-input {
+    display: none !important;
+  }
+}
 .command-input__menu {
   position: absolute;
   bottom: 100%;
