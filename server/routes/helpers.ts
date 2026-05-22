@@ -15,3 +15,7 @@ const operationalState = { isLoading: false, permission: "full" as const };
 export function withOperationalState(data: any) {
   return { ...data, operationalState };
 }
+
+export function resolveSiteId(req: any): string | undefined {
+  return req.authUser?.forceSiteId ?? (req.query.siteId as string | undefined) ?? undefined;
+}

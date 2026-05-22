@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../db/prisma";
-import { genId, withOperationalState } from "./helpers";
+import { genId, withOperationalState, resolveSiteId } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
@@ -42,18 +42,14 @@ export function socialWorkersRoutes() {
   const r = Router();
 
   r.get("/social-workers", async (req, res) => {
-    try {
-      const siteId = req.query.siteId as string | undefined;
-      const where = siteId ? { siteId } : {};
-      const rows = await prisma.socialWorker.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include: { user: { select: { username: true, mustChangePassword: true, initialPassword: true } } },
-      });
-      res.json(withOperationalState({ socialWorkers: rows.map(toApi) }));
-    } catch {
-      res.json({ workers: [] });
-    }
+    const siteId = resolveSiteId(req);
+    const where = siteId ? { siteId } : {};
+    const rows = await prisma.socialWorker.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { username: true, mustChangePassword: true, initialPassword: true } } },
+    });
+    res.json(withOperationalState({ socialWorkers: rows.map(toApi) }));
   });
 
   r.post("/social-workers", async (req, res) => {

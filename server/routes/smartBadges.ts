@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { genId, withOperationalState } from "./helpers";
+import { genId, withOperationalState, resolveSiteId } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
@@ -17,14 +17,10 @@ export function smartBadgesRoutes() {
   const r = Router();
 
   r.get("/smart-badges", async (req, res) => {
-    try {
-      const siteId = req.query.siteId as string | undefined;
-      const where = siteId ? { siteId } : {};
-      const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
-      res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
-    } catch {
-      res.json({ badges: [] });
-    }
+    const siteId = resolveSiteId(req);
+    const where = siteId ? { siteId } : {};
+    const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
+    res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
   });
 
   r.get("/smart-badges/:id", async (req, res) => {

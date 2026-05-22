@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { genId, withOperationalState } from "./helpers";
+import { genId, withOperationalState, resolveSiteId } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
@@ -21,38 +21,34 @@ export function serviceSchedulesRoutes() {
   const r = Router();
 
   r.get("/service-schedule-occurrences", async (req, res) => {
-    try {
-      const siteId = req.query.siteId as string | undefined;
-      const workerId = req.query.workerId as string | undefined;
-      const userId = req.query.userId as string | undefined;
+    const siteId = resolveSiteId(req);
+    const workerId = req.query.workerId as string | undefined;
+    const userId = req.query.userId as string | undefined;
 
-      const where: any = {};
-      if (siteId) where.siteId = siteId;
+    const where: any = {};
+    if (siteId) where.siteId = siteId;
 
-      if (workerId) {
-        where.assignedSocialWorkerId = workerId;
-      } else if (userId) {
-        const sw = await prisma.socialWorker.findFirst({ where: { userId }, select: { id: true } });
-        if (sw) where.assignedSocialWorkerId = sw.id;
-      }
-
-      const rows = await prisma.serviceSchedule.findMany({ where, orderBy: { serviceDate: "asc" } });
-
-      const serviceObjectIds = [...new Set(rows.map((r: any) => r.serviceObjectId).filter(Boolean))];
-      const objects = serviceObjectIds.length > 0
-        ? await prisma.serviceObject.findMany({ where: { id: { in: serviceObjectIds } }, select: { id: true, careNotes: true, riskTags: true, serviceProjects: true, phone: true, age: true } })
-        : [];
-      const objMap = Object.fromEntries(objects.map((o: any) => [o.id, o]));
-
-      const enriched = rows.map((r: any) => ({
-        ...toApi(r),
-        serviceObjectContext: objMap[r.serviceObjectId] ?? null,
-      }));
-
-      res.json(withOperationalState({ serviceSchedules: enriched }));
-    } catch {
-      res.json({ schedules: [] });
+    if (workerId) {
+      where.assignedSocialWorkerId = workerId;
+    } else if (userId) {
+      const sw = await prisma.socialWorker.findFirst({ where: { userId }, select: { id: true } });
+      if (sw) where.assignedSocialWorkerId = sw.id;
     }
+
+    const rows = await prisma.serviceSchedule.findMany({ where, orderBy: { serviceDate: "asc" } });
+
+    const serviceObjectIds = [...new Set(rows.map((r: any) => r.serviceObjectId).filter(Boolean))];
+    const objects = serviceObjectIds.length > 0
+      ? await prisma.serviceObject.findMany({ where: { id: { in: serviceObjectIds } }, select: { id: true, careNotes: true, riskTags: true, serviceProjects: true, phone: true, age: true } })
+      : [];
+    const objMap = Object.fromEntries(objects.map((o: any) => [o.id, o]));
+
+    const enriched = rows.map((r: any) => ({
+      ...toApi(r),
+      serviceObjectContext: objMap[r.serviceObjectId] ?? null,
+    }));
+
+    res.json(withOperationalState({ serviceSchedules: enriched }));
   });
 
   r.get("/service-schedule-occurrences/:id", async (req, res) => {

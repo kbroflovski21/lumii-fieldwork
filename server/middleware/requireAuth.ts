@@ -8,6 +8,7 @@ export interface AuthUser {
   role: string;
   orgId: string;
   siteIds: string[];
+  forceSiteId?: string;
 }
 
 declare global {
@@ -49,6 +50,7 @@ export function requireAuth(jwtSecret: string, gyTokenSecret?: string) {
         if (!role) {
           role = gyPayload.scope === "admin" ? "org_admin" : "site_operator";
         }
+        const forceSiteId = gyPayload.scope?.startsWith("site-") ? gyPayload.scope : undefined;
         req.authUser = {
           id: gyPayload.sub,
           username: "cc-session",
@@ -56,6 +58,7 @@ export function requireAuth(jwtSecret: string, gyTokenSecret?: string) {
           role,
           orgId: "org-001",
           siteIds: gyPayload.siteIds ?? [],
+          forceSiteId,
         };
         next();
         return;

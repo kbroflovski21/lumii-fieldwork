@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { withOperationalState } from "./helpers";
+import { withOperationalState, resolveSiteId } from "./helpers";
 
 function toApi(row: any) {
   if (!row) return row;
@@ -39,25 +39,21 @@ export function serviceRecordsRoutes() {
   const r = Router();
 
   r.get("/service-records", async (req, res) => {
-    try {
-      const siteId = req.query.siteId as string | undefined;
-      const where = siteId ? { siteId } : {};
-      const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
-      const audioAssets = await prisma.audioAsset.findMany();
-      const transcripts = await prisma.transcript.findMany();
-      const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });
-      const smartBadges = await prisma.smartBadge.findMany({ where, select: { id: true, deviceCode: true } });
+    const siteId = resolveSiteId(req);
+    const where = siteId ? { siteId } : {};
+    const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
+    const audioAssets = await prisma.audioAsset.findMany();
+    const transcripts = await prisma.transcript.findMany();
+    const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });
+    const smartBadges = await prisma.smartBadge.findMany({ where, select: { id: true, deviceCode: true } });
 
-      res.json(withOperationalState({
-        serviceRecords: records.map(toApi),
-        audioAssets: audioAssets.map(audioToApi),
-        transcripts: transcripts.map(transcriptToApi),
-        serviceObjects: serviceObjects.map((o) => ({ id: o.id, name: o.name, familyContacts: [] })),
-        smartBadges: smartBadges.map((b) => ({ id: b.id, deviceCode: b.deviceCode })),
-      }));
-    } catch {
-      res.json({ records: [] });
-    }
+    res.json(withOperationalState({
+      serviceRecords: records.map(toApi),
+      audioAssets: audioAssets.map(audioToApi),
+      transcripts: transcripts.map(transcriptToApi),
+      serviceObjects: serviceObjects.map((o) => ({ id: o.id, name: o.name, familyContacts: [] })),
+      smartBadges: smartBadges.map((b) => ({ id: b.id, deviceCode: b.deviceCode })),
+    }));
   });
 
   r.get("/service-records/:id", async (req, res) => {
