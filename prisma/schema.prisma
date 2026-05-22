@@ -491,3 +491,16 @@ model Recording {
 
   @@map("recordings")
 }
+
+model FeishuUser {
+  id        String   @id @default(uuid()) @db.VarChar(64)
+  openId    String   @unique @map("open_id") @db.VarChar(128)
+  name      String   @db.VarChar(128)
+  role      String   @default("unset") @db.VarChar(32)
+  siteIds   Json     @default("[]") @map("site_ids")
+  orgId     String   @default("org-001") @map("org_id") @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("feishu_users")
+}
