@@ -189,6 +189,51 @@
 - **Fix:** Patch `agent/codex/codex.go` to inject `CODEX_HOME` and `HOME` from the `codex_home` config option into `extraEnv`.
 - **File:** (lumii-agent-keeper repo) `agent/codex/codex.go`
 
+### Bug 36: Copilot 站点数据隔离失败（跨站点数据泄露）
+
+- **Description:** 用户在翠苑站 (site-001) 通过 copilot 查询"姓王的几个，姓周的几个"，copilot 返回了所有站点的数据（包括三墩站 site-002 的李芳和周建国）。正确行为应该只返回当前站点的数据。
+- **Impact:** 严重——站点间数据泄露，用户能看到不属于自己站点的服务人员信息。
+- **Root cause (3 层问题叠加):**
+
+  **Layer 1 — lak envelope 解包失败：** lak 调用 lifecycle hook 时用 `{"hook":"prepare_session","project":"...","payload":{"session_key":"...","actor_id":"..."}}` 信封格式，但 goldenyears-agent 的 Go handler 直接 `json.Decode(body)` 为扁平 struct，导致 `session_key=""`, `actor_id=""`。从空 session_key 解析出 `scope=""`，进而 `GY_SITE_ID=""`，签发的 GY_API_TOKEN 中 scope 也为空。
+
+  **Layer 2 — Codex session 环境变量不更新：** lak 的 `getOrCreateInteractiveStateWith` 只在创建新 session 时调用 `SetSessionEnv`。如果旧 Codex session 还活着（`is_resume=true`），直接复用旧 session，不更新环境变量。即使 sidecar 重启后 prepare_session 返回了正确的 `GY_SITE_ID`，旧 session 仍然用空的环境变量。
+
+  **Layer 3 — LLM 不可靠执行过滤指令：** 即使 system prompt 中写了"所有列表查询必须带 `siteId=site-001`"，DeepSeek LLM 也不一定遵守——它可能自行构造不带 siteId 的 curl 命令，或者使用 `$GY_SITE_ID` 环境变量（而该变量在 sandbox 中为空）。
+
+- **Fix (3 层修复):**
+
+  **Fix 1 — 解包 lak 信封 (goldenyears-agent):** `prepare_session.go` 和 `scope_check.go` 的 handler 先尝试解包 `envelope.payload` 字段，fallback 到扁平解析（兼容测试和直接调用）。修复后 `session_key` 正确传入，`scope=site-001`，`GY_SITE_ID=site-001`。
+
+  **Fix 2 — sidecar 重启强制新 session (goldenyears-agent):** `prepare_session` 返回 `session_directive: "new"` 当 `has_active_session=true` 但没有存储的日期记录时（= sidecar 刚重启，旧 session 的 env 过期）。lak 收到 "new" 后会终止旧 Codex session，创建新 session 并注入最新的环境变量。
+
+  **Fix 3 — 服务端强制站点过滤 (goldenyears-dashboard):** 这是最终防线，不依赖 LLM 行为。`requireAuth` 中间件从 GY token 的 `scope` 字段提取 `forceSiteId`（scope `"site-001"` → `forceSiteId="site-001"`，scope `"admin"` → 无强制过滤）。新增 `resolveSiteId(req)` 辅助函数，优先使用 `forceSiteId`，fallback 到 `req.query.siteId`。6 个路由文件的列表查询 handler 统一使用 `resolveSiteId(req)` 替代 `req.query.siteId`。
+
+  **Fix 4 — system prompt 注入明文 siteId (goldenyears-agent):** `buildSystemPromptFragment` 在 system prompt 中直接写入 `siteId=site-001` 的明文值和示例 curl 命令，不依赖 `$GY_SITE_ID` shell 变量展开。
+
+- **Files changed:**
+  - `lumii-goldenyears-agent/internal/hooks/prepare_session.go` — 解包 lak 信封、GY_SITE_ID 推导、system prompt 明文 siteId、sidecar 重启强制 new
+  - `lumii-goldenyears-agent/internal/hooks/scope_check.go` — 解包 lak 信封
+  - `lumii-goldenyears-agent/skills/goldenyears-orchestrator/prompt.md` — 站点隔离规则 + API 调用方式
+  - `lumii-goldenyears-agent/skills/goldenyears-orchestrator/sub-skills/lumii-*-query.md` (5 files) — curl 加 `siteId=$GY_SITE_ID` + Authorization header
+  - `lumii-goldenyears-agent/CLAUDE.md` / `AGENTS.md` — 站点隔离规则
+  - `lumii-goldenyears-dashboard/server/middleware/requireAuth.ts` — `forceSiteId` 从 GY token scope 提取
+  - `lumii-goldenyears-dashboard/server/routes/helpers.ts` — `resolveSiteId(req)` 辅助函数
+  - `lumii-goldenyears-dashboard/server/routes/{socialWorkers,smartBadges,serviceObjects,serviceSchedules,serviceRecords,home}.ts` — 使用 `resolveSiteId`
+
+- **Verification:**
+  ```
+  # GY token 带 scope=site-001 直接调 API
+  curl /api/social-workers -H "Authorization: Bearer $GY_TOKEN"
+  → 只返回 site-001 的 3 人（王冲、王丽、张敏）
+
+  # 通过 copilot WS 发消息
+  "[ctx:服务人员] 姓王的几个，姓周的几个"
+  → "王 2 人（王冲、王丽），周 0 人"（无三墩站数据泄露）
+  ```
+
+- **Lesson learned:** AI agent 场景下不能依赖 LLM 正确执行安全过滤指令（prompt injection / LLM 不遵守指令都可能绕过），必须在 API 服务端做硬性数据隔离。三层防护体系中 Layer 3 (API 层) 是真正的安全边界。
+
 ---
 
 ## Features Shipped (2026-05-22)

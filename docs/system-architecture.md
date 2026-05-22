@@ -240,20 +240,24 @@ src/
 
 每个模块独立的 React 组件 + CSS，通过 App.tsx 按角色路由分发。
 
-## 5. 权限控制（三层防护）
+## 5. 权限控制（三层防护 + 站点数据隔离）
 
 ```
 Layer 1: scope_check (lifecycle hook)
   角色是否有权在此 scope 交互？未授权 → silent/deny
 
 Layer 2: prepare_session (lifecycle hook)
-  注入角色 + 权限范围到 CC system prompt
-  CC 被告知"你是站点运营助手，只能查询站点 1,2,3 的数据"
+  注入角色 + 权限范围 + 站点 ID 到 system prompt 和环境变量
+  签发 GY_API_TOKEN (JWT)，其中 scope 字段 = 当前站点 ID (如 site-001)
 
-Layer 3: goldenyears-api (业务 API)
-  每个请求携带 GY_ACTOR_TOKEN，API 层独立校验
-  即使 prompt injection 让 CC 尝试查其他站点数据，API 拒绝
+Layer 3: goldenyears-api (业务 API) ← 真正的安全边界
+  requireAuth 从 GY_API_TOKEN 的 scope 字段提取 forceSiteId
+  resolveSiteId(req) 优先使用 forceSiteId，无视查询参数
+  即使 LLM 不带 siteId 参数或被 prompt injection 绕过，API 层硬性过滤
 ```
+
+> **设计原则：** AI agent 场景下不能依赖 LLM 正确执行安全过滤指令。Layer 3 (API 层) 是真正的
+> 数据隔离边界，Layer 1-2 是辅助层。详见 Bug #36 排查记录。
 
 ### 5.1 Token 认证链路（已实现）
 
@@ -266,9 +270,11 @@ Layer 3: goldenyears-api (业务 API)
 | Codex session | GY_API_TOKEN | agent prepare_session 签发 HS256 JWT，curl Authorization header |
 
 API 层中间件：
-- `requireAuth(jwtSecret, gyTokenSecret?)`: Admin 路由使用，强制认证。优先验证 JWT，失败时用 gyTokenSecret 尝试 GY_API_TOKEN。GY token role 为空但 scope 为 admin 时，自动推断为 org_admin。
-- `optionalAuth(jwtSecret, gySecret?)`: 业务路由使用，接受 JWT 或 GY_API_TOKEN，不强制拒绝。**重要**：如果 `req.authUser` 已被前置中间件（如 requireAuth）设置，直接 `next()` 不覆盖。
+- `requireAuth(jwtSecret, gyTokenSecret?)`: 所有业务 + Admin 路由使用，强制认证。优先验证 JWT，失败时用 gyTokenSecret 尝试 GY_API_TOKEN。GY token role 为空时根据 scope 推断（admin → org_admin，其他 → site_operator）。GY token scope 为 `site-*` 时设置 `authUser.forceSiteId` 用于数据隔离。
 - `requireRole(role)`: 角色检查（如 org_admin），必须在 requireAuth 之后使用
+- `resolveSiteId(req)`: 辅助函数，优先返回 `authUser.forceSiteId`（GY token 硬性过滤），fallback 到 `req.query.siteId`（前端传参）
+
+> **注意：** `optionalAuth` 已弃用。所有业务路由统一使用 `requireAuth`，未认证请求返回 401。
 
 dev-token 端点（`GET /api/auth/dev-token`）已在 2026-05-18 移除，不再提供匿名 JWT 签发。
 

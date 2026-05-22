@@ -505,21 +505,21 @@ lak (内网)
   │ → register 帧: metadata.token = ws_token
   │ → pool.ts verifyWsToken (timingSafeEqual) 校验
   │
-  └─ CC session (由 lak 启动)
-      │ 环境变量: GY_API_TOKEN (agent prepare_session 签发)
+  └─ Codex session (由 lak 启动)
+      │ 环境变量: GY_API_TOKEN (agent prepare_session 签发, 含 scope=siteId)
       │
       └─ curl -H "Authorization: Bearer $GY_API_TOKEN" http://.../api/xxx
-          → optionalAuth 中间件: 尝试 JWT → 尝试 GY_API_TOKEN → 通过
+          → requireAuth 中间件: 验证 GY_API_TOKEN → 提取 forceSiteId → 硬性过滤
 ```
 
 ### 9.2 Token 类型
 
 | Token | 签发方 | 用途 | 有效期 | 验证方 |
 |-------|--------|------|--------|--------|
-| 用户 JWT | `POST /api/auth/login` | 浏览器 REST + WSS 认证 | 24h | optionalAuth / requireAuth / pool.ts |
+| 用户 JWT | `POST /api/auth/login` | 浏览器 REST + WSS 认证 | 24h | requireAuth / pool.ts |
 | ws_token | 静态配置 (env + config.toml) | lak WSS 注册认证 | 永久 | pool.ts verifyWsToken |
-| GY_API_TOKEN | agent prepare_session (HS256) | CC session curl API | 30min | optionalAuth (verifyGyToken) |
-| 服务人员 JWT | `POST /api/auth/login` (phone+pwd) | Careworker H5 认证 | 24h | optionalAuth |
+| GY_API_TOKEN | agent prepare_session (HS256) | Codex session curl API，**scope 字段用于站点数据隔离** | 30min | requireAuth (verifyGyToken → forceSiteId) |
+| 服务人员 JWT | `POST /api/auth/login` (phone+pwd) | Careworker H5 认证 | 24h | requireAuth |
 
 ### 9.4 修改密码
 
