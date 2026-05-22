@@ -6,6 +6,10 @@ function genId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
 
+function isComplete(sop: { sopContent?: string | null; supervisionContent?: string | null; reportContent?: string | null }) {
+  return !!(sop.sopContent && sop.supervisionContent && sop.reportContent);
+}
+
 export function sopRoutes() {
   const r = Router();
 
@@ -16,7 +20,8 @@ export function sopRoutes() {
       include: { steps: { orderBy: { sortOrder: "asc" } } },
       orderBy: [{ type: "asc" }, { name: "asc" }],
     });
-    res.json({ sops });
+    const enriched = sops.map(s => ({ ...s, isComplete: isComplete(s) }));
+    res.json({ sops: enriched });
   });
 
   // Get single SOP
@@ -110,6 +115,14 @@ export function sopRoutes() {
       data.reportHistory = history;
     }
 
+    // Auto-unpublish if a content field is set to null/empty
+    if (existing.published) {
+      const nextSop = { ...existing, ...data };
+      if (!isComplete(nextSop)) {
+        data.published = false;
+      }
+    }
+
     await prisma.sop.update({ where: { id: req.params.id }, data });
 
     // Replace steps if provided
@@ -140,6 +153,27 @@ export function sopRoutes() {
   r.delete("/sops/:id", async (req, res) => {
     await prisma.sop.update({ where: { id: req.params.id }, data: { status: "archived" } });
     res.json({ ok: true });
+  });
+
+  r.post("/sops/:id/publish", async (req, res) => {
+    const sop = await prisma.sop.findFirst({ where: { id: req.params.id } });
+    if (!sop) return res.status(404).json({ error: "not found" });
+    if (!isComplete(sop)) {
+      const missing: string[] = [];
+      if (!sop.sopContent) missing.push("sopContent");
+      if (!sop.supervisionContent) missing.push("supervisionContent");
+      if (!sop.reportContent) missing.push("reportContent");
+      return res.status(400).json({ error: "SOP 不完整，缺少: " + missing.join(", ") });
+    }
+    await prisma.sop.update({ where: { id: req.params.id }, data: { published: true } });
+    res.json({ ok: true, published: true });
+  });
+
+  r.post("/sops/:id/unpublish", async (req, res) => {
+    const sop = await prisma.sop.findFirst({ where: { id: req.params.id } });
+    if (!sop) return res.status(404).json({ error: "not found" });
+    await prisma.sop.update({ where: { id: req.params.id }, data: { published: false } });
+    res.json({ ok: true, published: false });
   });
 
   // Keyword match — returns SOPs whose keywords appear in the given text
