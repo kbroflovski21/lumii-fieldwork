@@ -110,24 +110,27 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
     <>
       <section aria-label="服务记录" className="sw-page">
         <div className="sw-page__inner">
+          <div style={{ display: "flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16 }}>
+            <button
+              onClick={() => setViewMode("records")}
+              style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
+            >服务记录</button>
+            <button
+              onClick={() => setViewMode("recordings")}
+              style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "recordings" ? "#fff" : "transparent", color: viewMode === "recordings" ? "#0F172A" : "#64748B", boxShadow: viewMode === "recordings" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
+            >录音记录</button>
+          </div>
+
           <header className="sw-header">
             <div className="sw-header__title-group">
-              <h2 className="sw-header__title">服务记录</h2>
-              <p className="sw-header__desc">查看和复核已完成的服务事实，确认归属和导出结算材料</p>
-              <div style={{ display: "flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginTop: 8 }}>
-                <button
-                  onClick={() => setViewMode("records")}
-                  style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-                >服务记录</button>
-                <button
-                  onClick={() => setViewMode("recordings")}
-                  style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "recordings" ? "#fff" : "transparent", color: viewMode === "recordings" ? "#0F172A" : "#64748B", boxShadow: viewMode === "recordings" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-                >录音记录</button>
-              </div>
+              <h2 className="sw-header__title">{viewMode === "records" ? "服务记录" : "录音记录"}</h2>
+              <p className="sw-header__desc">{viewMode === "records" ? "查看和复核已完成的服务事实，确认归属和导出结算材料" : "查看工牌录音原始数据，管理录音与服务记录的匹配关系"}</p>
             </div>
-            <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} type="button">
-              <Download size={15} /> 导出记录
-            </button>
+            {viewMode === "records" && (
+              <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} type="button">
+                <Download size={15} /> 导出记录
+              </button>
+            )}
           </header>
 
           {viewMode === "records" && (
