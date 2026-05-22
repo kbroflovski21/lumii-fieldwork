@@ -629,20 +629,21 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
   const excerpts = item.transcriptExcerpts ?? [];
   const hasExcerpts = excerpts.length > 0;
   const hasLegacyTranscript = !hasExcerpts && !!item.transcript;
+  const hasDetail = hasExcerpts || hasLegacyTranscript || !!item.abnormalReason || !!item.requirementText;
 
   return (
     <div className="rec-si" data-status={item.status}>
-      <button className="rec-si__row" onClick={onToggle} type="button">
+      <button className="rec-si__row" onClick={hasDetail ? onToggle : undefined} type="button" style={{ cursor: hasDetail ? "pointer" : "default" }}>
         {itemStatusIcon(item.status)}
-        <span className="rec-si__seq">{item.seq}</span>
         <span className="rec-si__title">{item.title}</span>
-        {item.source ? <span className="rec-si__source">{item.source === "general" ? "通用" : "服务"}</span> : null}
-        {item.startTime ? (
-          <span className="rec-si__time">{item.startTime}-{item.endTime}{item.audioDurationSeconds ? ` · ${item.audioDurationSeconds}s` : ""}</span>
+        {hasExcerpts && excerpts[0].startTime ? (
+          <span className="rec-si__time">{excerpts[0].startTime}{excerpts[0].endTime ? `-${excerpts[0].endTime}` : ""}</span>
         ) : null}
-        <ChevronRightIcon size={14} className={`rec-si__chevron ${expanded ? "rec-si__chevron--open" : ""}`} />
+        {item.status === "skipped" ? <span className="rec-si__skipped-label">未检测到</span> : null}
+        {item.status === "abnormal" ? <span className="rec-si__abnormal-label">异常</span> : null}
+        {hasDetail ? <ChevronRightIcon size={14} className={`rec-si__chevron ${expanded ? "rec-si__chevron--open" : ""}`} /> : null}
       </button>
-      {expanded ? (
+      {expanded && hasDetail ? (
         <div className="rec-si__detail">
           {item.requirementText ? (
             <div className="rec-si__requirement">
@@ -650,26 +651,27 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
               <p>{item.requirementText}</p>
             </div>
           ) : null}
-          {hasExcerpts ? excerpts.map((ex, i) => (
-            <div className="rec-si__evidence" key={i}>
-              <MessageSquare size={14} />
-              <p>
-                {ex.startTime ? <span className="rec-si__excerpt-time">[{ex.startTime}{ex.endTime ? `-${ex.endTime}` : ""}]</span> : null}
-                {ex.text}
-              </p>
-            </div>
-          )) : null}
-          {hasLegacyTranscript ? (
-            <div className="rec-si__evidence">
-              <MessageSquare size={14} />
-              <p>{item.transcript}</p>
+          {hasExcerpts ? (
+            <div className="rec-si__excerpts">
+              <span className="rec-si__excerpts-label">录音证据</span>
+              {excerpts.map((ex, i) => (
+                <div className="rec-si__evidence" key={i}>
+                  <MessageSquare size={14} />
+                  <div>
+                    {ex.startTime ? <span className="rec-si__excerpt-time">{ex.startTime}{ex.endTime ? ` - ${ex.endTime}` : ""}</span> : null}
+                    <p>{ex.text}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : null}
-          {item.audioDurationSeconds ? (
-            <div className="rec-si__evidence rec-si__audio">
-              <Headphones size={14} />
-              <audio controls preload="none" src="/mock-audio.wav" style={{ height: 30, flex: 1 }}>音频</audio>
-              <small>{item.audioDurationSeconds}秒</small>
+          {hasLegacyTranscript ? (
+            <div className="rec-si__excerpts">
+              <span className="rec-si__excerpts-label">录音证据</span>
+              <div className="rec-si__evidence">
+                <MessageSquare size={14} />
+                <p>{item.transcript}</p>
+              </div>
             </div>
           ) : null}
           {item.abnormalReason ? (
@@ -677,9 +679,6 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
               <AlertTriangle size={14} />
               <p>{item.abnormalReason}</p>
             </div>
-          ) : null}
-          {!hasExcerpts && !hasLegacyTranscript && !item.audioDurationSeconds && !item.abnormalReason ? (
-            <p className="sw-text-muted" style={{ fontSize: 12, margin: 0 }}>暂无证据记录</p>
           ) : null}
         </div>
       ) : null}

@@ -4921,9 +4921,54 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   white-space: pre-wrap;
 }
 .rec-si__excerpt-time {
-  color: #9CA3AF;
+  color: #6B7280;
   font-size: 11px;
-  margin-right: 4px;
+  font-weight: 600;
+  background: #F3F4F6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  display: inline-block;
+  margin-bottom: 2px;
+}
+
+.rec-si__skipped-label {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-left: auto;
+  padding: 1px 8px;
+  background: #F9FAFB;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.rec-si__abnormal-label {
+  font-size: 11px;
+  color: #DC2626;
+  margin-left: auto;
+  padding: 1px 8px;
+  background: #FEF2F2;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.rec-si__excerpts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rec-si__excerpts-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rec-si__evidence div {
+  flex: 1;
 }
 
 .rec-missing-count {
