@@ -6989,6 +6989,80 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 .copilot-header-input__send:hover {
   background: #4F46E5;
 }
+/* Voice button */
+.copilot-header-input__voice {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--site-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.copilot-header-input__voice:hover {
+  color: #6366F1;
+}
+.copilot-header-input__voice--active {
+  color: #EF4444;
+  animation: voice-pulse 1s infinite;
+}
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+/* Slash command menu (drops down from header) */
+.copilot-header-input__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--site-line);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: 100;
+}
+.copilot-header-input__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--site-text);
+  transition: background 0.1s;
+}
+.copilot-header-input__menu-item:hover,
+.copilot-header-input__menu-item[data-selected="true"] {
+  background: var(--site-muted-bg);
+}
+.copilot-header-input__menu-cmd {
+  font-weight: 600;
+  color: #6366F1;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+.copilot-header-input__menu-desc {
+  color: var(--site-muted);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ── Mobile FAB (floating action button) ── */
 .copilot-mobile-fab {

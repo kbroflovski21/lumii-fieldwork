@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Bot, Mic } from "lucide-react";
 
 export interface SlashCommand {
   command: string;
@@ -195,6 +196,120 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
         aria-label="发送"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+        </svg>
+      </button>
+    </form>
+  );
+}
+
+export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
+  onSend: (msg: string) => void;
+  onOpenPanel: () => void;
+  commands: SlashCommand[];
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  const filtered = value.startsWith("/")
+    ? commands.filter(c => c.command.startsWith(value.toLowerCase()))
+    : [];
+  const menuVisible = showMenu && filtered.length > 0;
+
+  useEffect(() => {
+    if (value.startsWith("/")) { setShowMenu(true); setSelectedIdx(0); }
+    else setShowMenu(false);
+  }, [value]);
+
+  const selectCommand = useCallback((cmd: SlashCommand) => {
+    setValue(cmd.command + " ");
+    setShowMenu(false);
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const v = value.trim();
+    if (!v) { onOpenPanel(); return; }
+    onSend(v);
+    setValue("");
+    setShowMenu(false);
+  }, [value, onSend, onOpenPanel]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (menuVisible) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx(i => Math.min(i + 1, filtered.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx(i => Math.max(i - 1, 0)); return; }
+      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) { e.preventDefault(); selectCommand(filtered[selectedIdx]); return; }
+      if (e.key === "Escape") { setShowMenu(false); return; }
+    } else if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as unknown as React.FormEvent);
+    }
+  }, [menuVisible, filtered, selectedIdx, selectCommand, handleSubmit]);
+
+  const toggleVoice = useCallback(() => {
+    if (!SpeechRecognition) return;
+    if (listening) { recognitionRef.current?.stop(); setListening(false); return; }
+    const r = new SpeechRecognition();
+    r.lang = "zh-CN"; r.continuous = false; r.interimResults = true;
+    r.onresult = (ev: any) => {
+      const t = Array.from(ev.results as SpeechRecognitionResultList).map((x: any) => x[0].transcript).join("");
+      setValue(t);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recognitionRef.current = r;
+    r.start();
+    setListening(true);
+  }, [listening]);
+
+  return (
+    <form className="copilot-header-input" onSubmit={handleSubmit}>
+      {menuVisible && (
+        <div className="copilot-header-input__menu">
+          {filtered.map((cmd, i) => (
+            <button
+              key={cmd.command}
+              type="button"
+              className="copilot-header-input__menu-item"
+              data-selected={i === selectedIdx}
+              onMouseDown={(ev) => { ev.preventDefault(); selectCommand(cmd); }}
+              onMouseEnter={() => setSelectedIdx(i)}
+            >
+              <span className="copilot-header-input__menu-cmd">{cmd.command}</span>
+              <span className="copilot-header-input__menu-desc">{cmd.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <Bot size={16} className="copilot-header-input__icon" />
+      <input
+        ref={inputRef}
+        type="text"
+        className="copilot-header-input__field"
+        placeholder="输入指令或问题..."
+        value={value}
+        onChange={(ev) => setValue(ev.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => setTimeout(() => setShowMenu(false), 150)}
+      />
+      {SpeechRecognition && (
+        <button
+          type="button"
+          className={`copilot-header-input__voice${listening ? " copilot-header-input__voice--active" : ""}`}
+          onClick={toggleVoice}
+          aria-label={listening ? "停止语音" : "语音输入"}
+        >
+          <Mic size={14} />
+        </button>
+      )}
+      <button type="submit" className="copilot-header-input__send" aria-label="发送">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
         </svg>
       </button>
