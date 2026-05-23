@@ -211,9 +211,6 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
 
     const raw = content.replace(/^\[ctx:[^\]]*\]\s*/, "").trim();
     if (raw === "/new") {
-      setMessages([]);
-      setWip(false);
-      setSending(false);
       wsRef.current.send(JSON.stringify({ type: "send", content: "/new" }));
       return;
     }

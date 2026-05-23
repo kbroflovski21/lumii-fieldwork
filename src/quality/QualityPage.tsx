@@ -1768,55 +1768,61 @@ function FeishuView() {
         )}
       </div>
 
-      {editUser && (
-        <ConfirmModal
-          title="编辑飞书用户角色"
-          confirmLabel="保存"
-          onCancel={() => setEditUser(null)}
-          onConfirm={saveEdit}
-          submitting={editSubmitting}
-        >
-          <div className="quality-user-modal__field">
-            <label className="quality-user-modal__label">飞书昵称</label>
-            <div style={{ padding: "8px 0", fontWeight: 500 }}>{editUser.name}</div>
+      {editUser && (<>
+        <div className="sw-scrim" style={{ zIndex: 40 }} onClick={() => setEditUser(null)} />
+        <div className="quality-user-modal" style={{ zIndex: 41 }} role="dialog">
+          <div className="quality-user-modal__header">
+            <div><div className="quality-user-modal__title">编辑飞书用户角色</div></div>
           </div>
-          <div className="quality-user-modal__field">
-            <label className="quality-user-modal__label">角色</label>
-            <select className="quality-user-modal__input" value={editRole} onChange={e => setEditRole(e.target.value)}>
-              <option value="unset">未分配</option>
-              <option value="org_admin">集团管理</option>
-              <option value="service_supervisor">服务主管</option>
-            </select>
-          </div>
-          {editRole === "service_supervisor" && (
+          <div className="quality-user-modal__body">
             <div className="quality-user-modal__field">
-              <label className="quality-user-modal__label">管理站点</label>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                {sites.map(s => (
-                  <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                    <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
-                      setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
-                    }} />
-                    {s.name}
-                  </label>
-                ))}
-              </div>
+              <label className="quality-user-modal__label">飞书昵称</label>
+              <div style={{ padding: "8px 0", fontWeight: 500 }}>{editUser.name || editUser.openId}</div>
             </div>
-          )}
-        </ConfirmModal>
-      )}
+            <div className="quality-user-modal__field">
+              <label className="quality-user-modal__label">角色</label>
+              <select className="quality-user-modal__input" value={editRole} onChange={e => setEditRole(e.target.value)}>
+                <option value="unset">未分配</option>
+                <option value="org_admin">集团管理</option>
+                <option value="service_supervisor">服务主管</option>
+              </select>
+            </div>
+            {editRole === "service_supervisor" && (
+              <div className="quality-user-modal__field">
+                <label className="quality-user-modal__label">管理站点</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                  {sites.map(s => (
+                    <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                      <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
+                        setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
+                      }} />
+                      {s.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="quality-user-modal__footer">
+            <div />
+            <div className="quality-user-modal__footer-right">
+              <button className="sw-btn sw-btn--secondary" onClick={() => setEditUser(null)} type="button">取消</button>
+              <button className="sw-btn sw-btn--primary" disabled={editSubmitting} onClick={saveEdit} type="button">{editSubmitting ? "保存中..." : "保存"}</button>
+            </div>
+          </div>
+        </div>
+      </>)}
 
       {confirmAction && (
-        <ConfirmModal
+        <ConfirmDialog
           title="确认删除"
+          message={`确定要删除飞书用户「${confirmAction.user.name || confirmAction.user.openId}」的绑定记录吗？`}
           confirmLabel="删除"
-          danger
-          onCancel={() => setConfirmAction(null)}
-          onConfirm={handleConfirm}
+          danger={true}
           submitting={confirmSubmitting}
-        >
-          <p>确定要删除飞书用户 <strong>{confirmAction.user.name}</strong> 的绑定记录吗？</p>
-        </ConfirmModal>
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmAction(null)}
+        />
       )}
     </>
   );
