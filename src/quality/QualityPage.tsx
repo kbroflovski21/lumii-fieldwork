@@ -1649,146 +1649,176 @@ const FEISHU_ROLE_LABELS: Record<string, string> = {
 };
 
 function FeishuView() {
+  const { token } = useAuth();
   const [users, setUsers] = useState<FeishuUserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState("");
   const [editUser, setEditUser] = useState<FeishuUserRow | null>(null);
   const [editRole, setEditRole] = useState("unset");
   const [editSiteIds, setEditSiteIds] = useState<string[]>([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [sites, setSites] = useState<Array<{ id: string; name: string }>>([]);
-  const [confirmDelete, setConfirmDelete] = useState<FeishuUserRow | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "delete"; user: FeishuUserRow } | null>(null);
+  const [confirmSubmitting, setConfirmSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
 
-  const token = localStorage.getItem("gy_auth_token") ?? "";
-  const authH = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
-  const fetchUsers = useCallback(() => {
-    setLoading(true);
-    fetch("/api/admin/feishu-users", { headers: authH })
-      .then(r => r.json())
-      .then(d => { setUsers(d.feishuUsers ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [authH]);
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/feishu-users", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setUsers(data.feishuUsers ?? []); }
+    } catch {}
+    setLoading(false);
+  }, [token]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   useEffect(() => {
-    fetch("/api/admin/sites", { headers: authH })
-      .then(r => r.json())
-      .then(d => setSites((d.sites ?? d ?? []).map((s: any) => ({ id: s.id, name: s.name }))))
-      .catch(() => {});
-  }, [authH]);
+    fetch("/api/admin/sites", { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json()).then(d => setSites((d.sites ?? d ?? []).map((s: any) => ({ id: s.id, name: s.name })))).catch(() => {});
+  }, [token]);
 
-  const openEdit = (u: FeishuUserRow) => {
-    setEditUser(u);
-    setEditRole(u.role);
-    setEditSiteIds(Array.isArray(u.siteIds) ? u.siteIds : []);
-  };
+  const openEdit = (u: FeishuUserRow) => { setEditUser(u); setEditRole(u.role); setEditSiteIds(Array.isArray(u.siteIds) ? u.siteIds : []); };
 
   const saveEdit = async () => {
     if (!editUser) return;
+    setEditSubmitting(true);
     await fetch(`/api/admin/feishu-users/${editUser.id}`, {
-      method: "PATCH",
-      headers: { ...authH, "Content-Type": "application/json" },
+      method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role: editRole, siteIds: editRole === "service_supervisor" ? editSiteIds : [] }),
     });
-    setEditUser(null);
-    fetchUsers();
+    setEditUser(null); setEditSubmitting(false); fetchUsers(); showToast("飞书用户角色已更新");
   };
 
-  const doDelete = async () => {
-    if (!confirmDelete) return;
-    await fetch(`/api/admin/feishu-users/${confirmDelete.id}`, { method: "DELETE", headers: authH });
-    setConfirmDelete(null);
-    fetchUsers();
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    setConfirmSubmitting(true);
+    await fetch(`/api/admin/feishu-users/${confirmAction.user.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setConfirmAction(null); setConfirmSubmitting(false); fetchUsers(); showToast("飞书用户已删除");
   };
 
   const siteName = (id: string) => sites.find(s => s.id === id)?.name ?? id;
 
-  return (
-    <div style={{ padding: "24px 32px" }}>
-      <h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 4px" }}>飞书管理</h2>
-      <p style={{ color: "var(--quality-muted)", fontSize: 13, margin: "0 0 20px" }}>
-        管理飞书机器人用户的角色绑定。飞书用户首次给机器人发消息后自动出现在此列表。
-      </p>
+  const ROLE_FILTER_MAP: Record<string, string> = { "集团管理": "org_admin", "服务主管": "service_supervisor", "未分配": "unset" };
+  const filteredUsers = users.filter(u => {
+    if (roleFilter && u.role !== ROLE_FILTER_MAP[roleFilter]) return false;
+    if (!search.trim()) return true;
+    return u.name.toLowerCase().includes(search.trim().toLowerCase());
+  });
 
-      {loading ? <p>加载中...</p> : users.length === 0 ? <p style={{ color: "var(--quality-muted)" }}>暂无飞书用户</p> : (
-        <table className="quality-table" style={{ width: "100%" }}>
-          <thead>
-            <tr><th>飞书昵称</th><th>角色</th><th>管理站点</th><th>注册时间</th><th>操作</th></tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u.id}>
-                <td style={{ fontWeight: 500 }}>{u.name}</td>
-                <td>
-                  <span style={{
-                    padding: "2px 10px", borderRadius: 12, fontSize: 12, fontWeight: 500,
-                    background: u.role === "unset" ? "#FFF3E0" : u.role === "org_admin" ? "#E8F5E9" : "#E3F2FD",
-                    color: u.role === "unset" ? "#E65100" : u.role === "org_admin" ? "#2E7D32" : "#1565C0",
-                  }}>
-                    {FEISHU_ROLE_LABELS[u.role] ?? u.role}
-                  </span>
-                </td>
-                <td>{u.role === "org_admin" ? "全部" : u.role === "service_supervisor" && Array.isArray(u.siteIds) && u.siteIds.length > 0 ? u.siteIds.map(siteName).join(", ") : "—"}</td>
-                <td>{new Date(u.createdAt).toLocaleDateString("zh-CN")}</td>
-                <td>
-                  <button onClick={() => openEdit(u)} className="sw-btn sw-btn--secondary" style={{ marginRight: 8, padding: "4px 12px", fontSize: 12 }}>编辑</button>
-                  <button onClick={() => setConfirmDelete(u)} className="sw-btn sw-btn--danger" style={{ padding: "4px 12px", fontSize: 12 }}>删除</button>
-                </td>
+  return (
+    <>
+      {toast && <div className="quality-toast">{toast}</div>}
+
+      <div className="quality-records__header">
+        <div>
+          <div className="quality-records__title">飞书管理</div>
+          <div className="quality-records__subtitle">管理飞书机器人用户的角色绑定。飞书用户首次给机器人发消息后自动出现在此列表。</div>
+        </div>
+      </div>
+
+      <div className="quality-table-wrap">
+        <div className="quality-toolbar">
+          <div className="quality-toolbar__search-wrap">
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索飞书昵称..." className="quality-toolbar__search" />
+          </div>
+          <div className="quality-toolbar__spacer" />
+          <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+            <option value="">全部角色</option>
+            <option value="集团管理">集团管理</option>
+            <option value="服务主管">服务主管</option>
+            <option value="未分配">未分配</option>
+          </select>
+        </div>
+        {loading ? (
+          <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
+        ) : (
+          <table className="quality-records-table">
+            <thead>
+              <tr>
+                {["飞书昵称", "角色", "管理站点", "注册时间", "操作"].map(h => (<th key={h}>{h}</th>))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {filteredUsers.length === 0 && (
+                <tr><td colSpan={5} className="quality-records-table__empty">暂无飞书用户</td></tr>
+              )}
+              {filteredUsers.map(u => (
+                <tr key={u.id} onClick={() => openEdit(u)} style={{ cursor: "pointer" }}>
+                  <td className="quality-records-table__worker">{u.name || u.openId}</td>
+                  <td>
+                    <span className={`quality-status-badge quality-status-badge--${u.role === "unset" ? "anomaly" : "normal"}`}>
+                      {FEISHU_ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                  </td>
+                  <td>{u.role === "org_admin" ? "全部" : u.role === "service_supervisor" && Array.isArray(u.siteIds) && u.siteIds.length > 0 ? u.siteIds.map(siteName).join(", ") : "—"}</td>
+                  <td>{new Date(u.createdAt).toLocaleDateString("zh-CN")}</td>
+                  <td>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       {editUser && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setEditUser(null)}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 24, width: 400, maxWidth: "90vw" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16 }}>编辑飞书用户角色</h3>
-            <p style={{ margin: "0 0 12px", fontSize: 14 }}>飞书昵称：<strong>{editUser.name}</strong></p>
-            <label style={{ display: "block", marginBottom: 12, fontSize: 13 }}>
-              角色
-              <select value={editRole} onChange={e => setEditRole(e.target.value)} style={{ display: "block", width: "100%", padding: 8, marginTop: 4, borderRadius: 6, border: "1px solid var(--quality-line)" }}>
-                <option value="unset">未分配</option>
-                <option value="org_admin">集团管理</option>
-                <option value="service_supervisor">服务主管</option>
-              </select>
-            </label>
-            {editRole === "service_supervisor" && (
-              <label style={{ display: "block", marginBottom: 12, fontSize: 13 }}>
-                管理站点
-                <div style={{ marginTop: 4 }}>
-                  {sites.map(s => (
-                    <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
-                        setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
-                      }} />
-                      {s.name}
-                    </label>
-                  ))}
-                </div>
-              </label>
-            )}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setEditUser(null)} className="sw-btn sw-btn--secondary">取消</button>
-              <button onClick={saveEdit} className="sw-btn sw-btn--primary">保存</button>
-            </div>
+        <ConfirmModal
+          title="编辑飞书用户角色"
+          confirmLabel="保存"
+          onCancel={() => setEditUser(null)}
+          onConfirm={saveEdit}
+          submitting={editSubmitting}
+        >
+          <div className="quality-user-modal__field">
+            <label className="quality-user-modal__label">飞书昵称</label>
+            <div style={{ padding: "8px 0", fontWeight: 500 }}>{editUser.name}</div>
           </div>
-        </div>
+          <div className="quality-user-modal__field">
+            <label className="quality-user-modal__label">角色</label>
+            <select className="quality-user-modal__input" value={editRole} onChange={e => setEditRole(e.target.value)}>
+              <option value="unset">未分配</option>
+              <option value="org_admin">集团管理</option>
+              <option value="service_supervisor">服务主管</option>
+            </select>
+          </div>
+          {editRole === "service_supervisor" && (
+            <div className="quality-user-modal__field">
+              <label className="quality-user-modal__label">管理站点</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                {sites.map(s => (
+                  <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
+                      setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
+                    }} />
+                    {s.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </ConfirmModal>
       )}
 
-      {confirmDelete && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setConfirmDelete(null)}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 24, width: 360 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 16 }}>确认删除</h3>
-            <p style={{ fontSize: 14 }}>确定要删除飞书用户 <strong>{confirmDelete.name}</strong> 的绑定记录吗？</p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={() => setConfirmDelete(null)} className="sw-btn sw-btn--secondary">取消</button>
-              <button onClick={doDelete} className="sw-btn sw-btn--danger">删除</button>
-            </div>
-          </div>
-        </div>
+      {confirmAction && (
+        <ConfirmModal
+          title="确认删除"
+          confirmLabel="删除"
+          danger
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={handleConfirm}
+          submitting={confirmSubmitting}
+        >
+          <p>确定要删除飞书用户 <strong>{confirmAction.user.name}</strong> 的绑定记录吗？</p>
+        </ConfirmModal>
       )}
-    </div>
+    </>
   );
 }
 

@@ -208,6 +208,16 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
 
   const handleSend = useCallback((content: string) => {
     if (!content.trim() || !wsRef.current || wsRef.current.readyState !== 1) return;
+
+    const raw = content.replace(/^\[ctx:[^\]]*\]\s*/, "").trim();
+    if (raw === "/new") {
+      setMessages([]);
+      setWip(false);
+      setSending(false);
+      wsRef.current.send(JSON.stringify({ type: "send", content: "/new" }));
+      return;
+    }
+
     setSending(true);
     setWip(true);
 
