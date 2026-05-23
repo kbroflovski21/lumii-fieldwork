@@ -212,6 +212,14 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
     const raw = content.replace(/^\[ctx:[^\]]*\]\s*/, "").trim();
     if (raw === "/new") {
       wsRef.current.send(JSON.stringify({ type: "send", content: "/new" }));
+      const confirmation: ChatMessage = {
+        id: `sys-${Date.now()}`,
+        role: "assistant",
+        content: "✅ 新会话已创建",
+        msgType: "text",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, confirmation]);
       return;
     }
 

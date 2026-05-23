@@ -1769,39 +1769,53 @@ function FeishuView() {
       </div>
 
       {editUser && (<>
-        <div className="sw-scrim" style={{ zIndex: 40 }} onClick={() => setEditUser(null)} />
-        <div className="quality-user-modal" style={{ zIndex: 41 }} role="dialog">
+        <div className="sw-scrim" onClick={() => setEditUser(null)} />
+        <div className="quality-user-modal" role="dialog" aria-label={editUser.name || editUser.openId}>
           <div className="quality-user-modal__header">
-            <div><div className="quality-user-modal__title">编辑飞书用户角色</div></div>
+            <div>
+              <div className="quality-user-modal__title">{editUser.name || editUser.openId}</div>
+              <div className="quality-user-modal__tags">
+                <span className={`so-modal__chip ${editUser.role === "unset" ? "so-modal__chip--danger" : ""}`}>
+                  {FEISHU_ROLE_LABELS[editUser.role] ?? editUser.role}
+                </span>
+              </div>
+            </div>
+            <CloseBtn onClick={() => setEditUser(null)} />
           </div>
           <div className="quality-user-modal__body">
-            <div className="quality-user-modal__field">
-              <label className="quality-user-modal__label">飞书昵称</label>
-              <div style={{ padding: "8px 0", fontWeight: 500 }}>{editUser.name || editUser.openId}</div>
+            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>角色设置</h4>
+            <div className="so-overview-grid">
+              <dl className="so-overview-item"><dt>飞书昵称</dt><dd>{editUser.name || editUser.openId}</dd></dl>
+              <dl className="so-overview-item"><dt>Open ID</dt><dd style={{ fontSize: 11, fontFamily: "monospace" }}>{editUser.openId}</dd></dl>
+              <dl className="so-overview-item"><dt>注册时间</dt><dd>{new Date(editUser.createdAt).toLocaleDateString("zh-CN")}</dd></dl>
+              <dl className="so-overview-item">
+                <dt>角色</dt>
+                <dd>
+                  <select className="quality-user-modal__inline-input" value={editRole} onChange={e => setEditRole(e.target.value)} style={{ width: "100%", padding: "4px 8px" }}>
+                    <option value="unset">未分配</option>
+                    <option value="org_admin">集团管理</option>
+                    <option value="service_supervisor">服务主管</option>
+                  </select>
+                </dd>
+              </dl>
+              {editRole === "service_supervisor" && (
+                <dl className="so-overview-item" style={{ gridColumn: "1 / -1" }}>
+                  <dt>管理站点</dt>
+                  <dd>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {sites.map(s => (
+                        <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                          <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
+                            setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
+                          }} />
+                          {s.name}
+                        </label>
+                      ))}
+                    </div>
+                  </dd>
+                </dl>
+              )}
             </div>
-            <div className="quality-user-modal__field">
-              <label className="quality-user-modal__label">角色</label>
-              <select className="quality-user-modal__input" value={editRole} onChange={e => setEditRole(e.target.value)}>
-                <option value="unset">未分配</option>
-                <option value="org_admin">集团管理</option>
-                <option value="service_supervisor">服务主管</option>
-              </select>
-            </div>
-            {editRole === "service_supervisor" && (
-              <div className="quality-user-modal__field">
-                <label className="quality-user-modal__label">管理站点</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                  {sites.map(s => (
-                    <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                      <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
-                        setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
-                      }} />
-                      {s.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
           <div className="quality-user-modal__footer">
             <div />
