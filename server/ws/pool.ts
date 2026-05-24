@@ -133,6 +133,11 @@ export class AgentConnectionPool {
     if (isBridgeReply(frame)) {
       // Skip lak progress cards — they are ephemeral status updates, not real messages
       if (frame.content.startsWith("__lak_progress_card_v1__:")) return;
+      // Skip if an active stream for this session has the same content (stream_end will handle it)
+      const hasActiveStream = [...this.activeStreams.values()].some(
+        s => s.sessionKey === frame.session_key && s.content === frame.content
+      );
+      if (hasActiveStream) return;
       const id = await this.config.chatDb.insert(this.config.agentId, frame.session_key, "assistant", frame.content, "text");
       this.broadcastToUsers(frame.session_key, { type: "message", id, role: "assistant", content: frame.content, msg_type: "text", timestamp: new Date().toISOString() } as UserMessageFrame);
       await this.broadcastWip(frame.session_key);
