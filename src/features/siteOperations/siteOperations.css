@@ -6805,6 +6805,7 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   border-top: none;
   background: var(--site-card, #FFFCF8);
   position: relative;
+  position: relative;
   align-items: center;
 }
 .command-input__menu {
@@ -7093,13 +7094,28 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   50% { opacity: 0.4; }
 }
 /* Voice error toast */
-.copilot-header-input__error,
-.command-input__error {
+.copilot-header-input__error {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
   margin-top: 4px;
+  padding: 8px 14px;
+  background: #FEF2F2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 101;
+  text-align: center;
+  animation: fadeIn 0.15s;
+}
+.command-input__error {
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  right: 8px;
+  margin-bottom: 4px;
   padding: 8px 14px;
   background: #FEF2F2;
   color: #B91C1C;
