@@ -7,6 +7,18 @@ import { authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 
+let _clipPlayer: HTMLAudioElement | null = null;
+let _clipTimer: ReturnType<typeof setTimeout> | null = null;
+function playClip(url: string, startSec: number, endSec: number) {
+  if (_clipTimer) clearTimeout(_clipTimer);
+  if (_clipPlayer) { _clipPlayer.pause(); _clipPlayer.src = ""; }
+  const a = new Audio(url);
+  a.currentTime = startSec;
+  a.play();
+  _clipPlayer = a;
+  if (endSec > startSec) _clipTimer = setTimeout(() => a.pause(), (endSec - startSec) * 1000);
+}
+
 type DrawerMode = { kind: "closed" } | { kind: "view"; record: ServiceRecord };
 type DateFilter = "" | "today" | "week" | "month";
 type ReviewFilter = "" | ServiceRecord["reviewStatus"];
@@ -670,11 +682,7 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
                       {audioUrl && ex.startTime ? (
                         <button className="rec-si__play-btn" type="button" title="播放此片段" onClick={(e) => {
                           e.stopPropagation();
-                          const a = document.createElement("audio");
-                          a.src = audioUrl;
-                          a.currentTime = startSec;
-                          a.play();
-                          if (endSec > startSec) setTimeout(() => a.pause(), (endSec - startSec) * 1000);
+                          playClip(audioUrl!, startSec, endSec);
                         }}><Play size={12} /></button>
                       ) : null}
                       <p>{ex.text}</p>
