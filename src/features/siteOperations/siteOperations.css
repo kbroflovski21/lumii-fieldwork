@@ -4971,6 +4971,26 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   flex: 1;
 }
 
+.rec-si__play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: #EEF2FF;
+  color: #4F46E5;
+  cursor: pointer;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.rec-si__play-btn:hover {
+  background: #C7D2FE;
+}
+
 .rec-missing-count {
   color: var(--site-warning-text);
   font-size: 10px;

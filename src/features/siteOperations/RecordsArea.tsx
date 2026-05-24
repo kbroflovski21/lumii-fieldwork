@@ -487,11 +487,11 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const gItems = group.items ?? [];
               const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
               const gAbnormal = gItems.filter((i: any) => i.status === "abnormal").length;
-              const isCollapsed = collapsedGroups[group.sopName];
+              const isExpanded = collapsedGroups[group.sopName] === true;
               return (
                 <div className="so-tab-section" key={group.sopName}>
                   <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
-                    <ChevronRightIcon size={14} style={{ transform: isCollapsed ? "none" : "rotate(90deg)", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
+                    <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
                       <span className="rec-si-stats__done">{gCompleted}完成</span>
@@ -499,10 +499,10 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                       <span className="rec-si-stats__total">共{gItems.length}项</span>
                     </span>
                   </h4>
-                  {!isCollapsed && (
+                  {isExpanded && (
                     <div className="rec-si-list">
                       {gItems.map((item: any) => (
-                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} />
+                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
                       ))}
                     </div>
                   )}
@@ -523,7 +523,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                     </h4>
                     <div className="rec-si-list">
                       {processItems.map(item => (
-                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
+                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
                       ))}
                     </div>
                   </div>
@@ -540,7 +540,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                     </h4>
                     <div className="rec-si-list">
                       {businessItems.map(item => (
-                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} />
+                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
                       ))}
                     </div>
                   </div>
@@ -574,9 +574,11 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                   完整对话记录 ({transcript.segments.length}条)
                   <button className="rec-download-btn" onClick={() => {
                     const text = transcript.segments.map((seg: any) => {
-                      const name = seg.speaker === "social_worker" ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
-                      const m = Math.floor(seg.startSecond / 60);
-                      const s = seg.startSecond % 60;
+                      const isW = seg.speaker === "social_worker" || seg.speaker === "社工";
+                      const name = isW ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
+                      const raw = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : 0);
+                      const m = Math.floor(raw / 60);
+                      const s = raw % 60;
                       return `[${m}:${String(s).padStart(2, "0")}] ${name}: ${seg.text}`;
                     }).join("\n");
                     const blob = new Blob([text], { type: "text/plain" });
@@ -589,10 +591,11 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                 </h4>
                 <div className="rec-chat">
                   {transcript.segments.map((seg: any, i: number) => {
-                    const isWorker = seg.speaker === "social_worker";
+                    const isWorker = seg.speaker === "social_worker" || seg.speaker === "社工";
                     const name = isWorker ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
-                    const mins = Math.floor(seg.startSecond / 60);
-                    const secs = seg.startSecond % 60;
+                    const rawSeconds = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : null);
+                    const mins = rawSeconds != null && !isNaN(rawSeconds) ? Math.floor(rawSeconds / 60) : null;
+                    const secs = rawSeconds != null && !isNaN(rawSeconds) ? rawSeconds % 60 : null;
                     const ac = avatarColor(name);
                     return (
                       <div className={`rec-chat__row ${isWorker ? "rec-chat__row--left" : "rec-chat__row--right"}`} key={i}>
@@ -600,7 +603,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                         <div className={`rec-chat__bubble ${isWorker ? "rec-chat__bubble--worker" : "rec-chat__bubble--object"}`}>
                           <div className="rec-chat__meta">
                             <span className="rec-chat__name" style={{ color: isWorker ? "#4F46E5" : "#059669" }}>{name}</span>
-                            <span className="rec-chat__time">{mins}:{String(secs).padStart(2, "0")}</span>
+                            {mins != null ? <span className="rec-chat__time">{mins}:{String(secs).padStart(2, "0")}</span> : null}
                           </div>
                           <p className="rec-chat__text">{seg.text}</p>
                         </div>
@@ -622,9 +625,10 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   );
 }
 
-function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
+function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: {
   item: ServiceItem; expanded: boolean; onToggle: () => void;
   itemStatusIcon: (s: string) => React.ReactNode;
+  audioUrl?: string;
 }) {
   const excerpts = item.transcriptExcerpts ?? [];
   const hasExcerpts = excerpts.length > 0;
@@ -654,15 +658,30 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon }: {
           {hasExcerpts ? (
             <div className="rec-si__excerpts">
               <span className="rec-si__excerpts-label">录音证据</span>
-              {excerpts.map((ex, i) => (
-                <div className="rec-si__evidence" key={i}>
-                  <MessageSquare size={14} />
-                  <div>
-                    {ex.startTime ? <span className="rec-si__excerpt-time">{ex.startTime}{ex.endTime ? ` - ${ex.endTime}` : ""}</span> : null}
-                    <p>{ex.text}</p>
+              {excerpts.map((ex, i) => {
+                const parseTime = (t?: string) => { if (!t) return 0; const p = t.split(":").map(Number); return (p[0] ?? 0) * 60 + (p[1] ?? 0); };
+                const startSec = parseTime(ex.startTime);
+                const endSec = parseTime(ex.endTime);
+                return (
+                  <div className="rec-si__evidence" key={i}>
+                    <MessageSquare size={14} />
+                    <div>
+                      {ex.startTime ? <span className="rec-si__excerpt-time">{ex.startTime}{ex.endTime ? ` - ${ex.endTime}` : ""}</span> : null}
+                      {audioUrl && ex.startTime ? (
+                        <button className="rec-si__play-btn" type="button" title="播放此片段" onClick={(e) => {
+                          e.stopPropagation();
+                          const a = document.createElement("audio");
+                          a.src = audioUrl;
+                          a.currentTime = startSec;
+                          a.play();
+                          if (endSec > startSec) setTimeout(() => a.pause(), (endSec - startSec) * 1000);
+                        }}><Play size={12} /></button>
+                      ) : null}
+                      <p>{ex.text}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : null}
           {hasLegacyTranscript ? (
