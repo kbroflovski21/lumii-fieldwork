@@ -127,7 +127,7 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
         case "message":
           if (frame.content?.startsWith(PROGRESS_PREFIX)) break;
           setMessages((prev) => {
-            // Dedup: if this message ID already exists (from stream_end), skip
+            // Dedup by message ID
             if (prev.some((m) => m.id === frame.id)) return prev;
             // Echo dedup: match optimistic user bubble by content (strip [ctx:] prefix)
             if (frame.role === "user") {
@@ -136,15 +136,6 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
               if (idx >= 0) {
                 const updated = [...prev];
                 updated[idx] = { ...updated[idx], id: frame.id, sendStatus: "sent", timestamp: frame.timestamp };
-                return updated;
-              }
-            }
-            // Dedup: if a STREAMING assistant message with same content exists, update ID (stream_end → message race)
-            if (frame.role === "assistant" && frame.content) {
-              const dup = prev.findIndex((m) => m.role === "assistant" && m.isStreaming && m.content === frame.content);
-              if (dup >= 0) {
-                const updated = [...prev];
-                updated[dup] = { ...updated[dup], id: frame.id, timestamp: frame.timestamp, isStreaming: false };
                 return updated;
               }
             }
