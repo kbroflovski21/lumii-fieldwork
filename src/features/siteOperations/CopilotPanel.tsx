@@ -6,7 +6,7 @@ import type { ChatMessage } from "./useAgentChat";
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 600;
-const DEFAULT_WIDTH = 360;
+const DEFAULT_WIDTH = 420;
 
 interface CopilotPanelProps {
   isOpen: boolean;
@@ -88,7 +88,7 @@ export function CopilotPanel({ isOpen, onClose, messages, connected, wip, endRef
             onSend={onSend}
             commands={commands}
             disabled={!connected}
-            placeholder="输入 / 查看命令..."
+            placeholder="询问您的AI助手"
             compact
           />
         </footer>

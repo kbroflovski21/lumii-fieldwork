@@ -314,6 +314,7 @@ export function QualityPage() {
             onSend={(msg) => { sendWithContext(msg); setCopilotOpen(true); }}
             onOpenPanel={() => setCopilotOpen(true)}
             commands={ADMIN_COMMANDS}
+            panelOpen={copilotOpen}
           />
         </div>
       </header>
@@ -362,6 +363,31 @@ export function QualityPage() {
         title="AI 助手"
         commands={ADMIN_COMMANDS}
       />
+      {/* Mobile bottom nav */}
+      <nav className="quality-mobile-nav">
+        {navItems.map((n) => (
+          <button
+            key={n.key}
+            className="quality-mobile-nav__btn"
+            data-active={view === n.key}
+            onClick={() => handleSelectView(n.key)}
+            type="button"
+          >
+            {n.icon}
+            <span>{n.label}</span>
+          </button>
+        ))}
+      </nav>
+      {!copilotOpen && (
+        <button
+          className="copilot-mobile-fab"
+          onClick={() => setCopilotOpen(true)}
+          type="button"
+          aria-label="打开 AI 助手"
+        >
+          <Bot size={24} color="#FFFCF8" />
+        </button>
+      )}
 
     </div>
   );

@@ -138,6 +138,7 @@ export function SiteOperationsShell({ activeArea, children, onSelectArea, onCopi
               onSend={openCopilotWithMessage}
               onOpenPanel={() => setCopilotOpen(true)}
               commands={SITE_OPS_COMMANDS}
+              panelOpen={copilotOpen}
             />
           </div>
         </header>

@@ -168,7 +168,7 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => setTimeout(() => setShowMenu(false), 150)}
-        placeholder={placeholder ?? "输入 / 查看命令..."}
+        placeholder={placeholder ?? "询问您的AI助手"}
         disabled={disabled}
       />
       <button
@@ -194,10 +194,11 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
   );
 }
 
-export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
+export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }: {
   onSend: (msg: string) => void;
   onOpenPanel: () => void;
   commands: SlashCommand[];
+  panelOpen?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
@@ -269,7 +270,7 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
   }, [listening, toggleVoice, value]);
 
   return (
-    <form className="copilot-header-input" onSubmit={handleSubmit}>
+    <form className={`copilot-header-input${panelOpen ? " copilot-header-input--dimmed" : ""}`} onSubmit={handleSubmit}>
       {menuVisible && (
         <div className="copilot-header-input__menu">
           {filtered.map((cmd, i) => (
@@ -292,7 +293,7 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands }: {
         ref={inputRef}
         type="text"
         className="copilot-header-input__field"
-        placeholder="输入指令或问题..."
+        placeholder="询问您的AI助手"
         value={value}
         onChange={(ev) => setValue(ev.target.value)}
         onKeyDown={handleKeyDown}

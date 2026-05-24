@@ -281,7 +281,7 @@
 /* ── Left panel: Directory ── */
 .sv-dir {
   background: var(--sv-surface);
-  border-right: 2px solid #DDD5CC;
+  border-right: 1px solid var(--sv-line);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -381,7 +381,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   border: none;
   text-align: left;
@@ -704,7 +704,7 @@
   line-height: 1.8;
   color: var(--sv-text);
   border: 1px solid var(--sv-line);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 14px;
   background: var(--sv-surface);
   resize: vertical;
@@ -789,14 +789,17 @@
 
 /* ── Buttons ── */
 .sv-btn {
-  height: 30px;
+  height: 32px;
   padding: 0 14px;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 600;
-  border: none;
+  font-weight: 500;
+  border: 1px solid var(--sv-line);
+  background: var(--sv-surface);
+  color: var(--sv-text);
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.2s ease;
 }
 
 .sv-btn:hover {
@@ -840,7 +843,8 @@
 .sv-chat {
   flex-shrink: 0;
   min-width: 0;
-  background: #FAF6F1;
+  background: var(--sv-surface-subtle);
+  border-left: 1px solid var(--sv-line);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -849,7 +853,7 @@
 .sv-chat__hdr {
   padding: 8px 12px;
   border-bottom: 1px solid var(--sv-line);
-  background: rgba(99, 102, 241, 0.03);
+  background: var(--sv-surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1119,18 +1123,18 @@
 }
 .sv-layer-toggle {
   display: flex;
-  background: #E4DDD6;
-  border-radius: 10px;
-  padding: 4px;
-  gap: 4px;
+  background: var(--sv-muted-bg);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 2px;
   flex-shrink: 0;
 }
 .sv-layer-btn {
-  padding: 8px 22px;
-  border-radius: 8px;
-  border: 1.5px solid transparent;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 7px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
   background: transparent;
   color: var(--sv-muted-text);
   cursor: pointer;
@@ -1138,7 +1142,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-
 }
 .sv-layer-btn:hover {
   background: rgba(45, 37, 32, 0.04);
@@ -1147,15 +1150,14 @@
 .sv-layer-btn--active {
   background: var(--sv-surface);
   color: var(--sv-accent);
-  font-weight: 700;
-  border-color: rgba(235, 100, 32, 0.2);
+  font-weight: 600;
+  border-color: var(--sv-line);
 }
 .sv-layer-btn--ai-active {
   background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
   color: #fff;
-  font-weight: 700;
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35);
+  font-weight: 600;
+  border-color: rgba(99, 102, 241, 0.3);
 }
 .sv-layer-btn__dot {
   width: 8px;
@@ -1344,25 +1346,88 @@
 }
 
 /* ── Responsive: hide chat on narrow screens ── */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  .sv-page-header {
+    padding: 16px 16px 0;
+  }
+
+  .sv-page-header__title {
+    font-size: 18px;
+  }
+
+  .sv-content-body {
+    flex-direction: column;
+  }
+
+  .sv-dir {
+    width: 100% !important;
+    max-height: 180px;
+    border-right: none;
+    border-bottom: 1px solid var(--sv-line);
+  }
+
+  .sv-dir--collapsed {
+    display: none;
+  }
+
+  .sv-panel-hdr__toggle {
+    display: none;
+  }
+
   .sv-chat {
     display: none;
   }
 
-  .sv-dir {
-    max-width: 200px;
+  .sv-layer-bar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .sv-layer-bar__breadcrumb {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .sv-layer-toggle {
+    width: 100%;
+  }
+
+  .sv-layer-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 12px;
   }
 
   .sv-doc__toolbar {
     flex-direction: column;
     align-items: flex-start;
+    padding: 12px 16px;
+    gap: 8px;
   }
 
   .sv-doc__toolbar-actions {
     flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .sv-doc__body {
+    padding: 16px;
+  }
+
+  .sv-doc__body-content {
+    font-size: 13px;
+    line-height: 1.7;
   }
 
   .sv-ai-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sv-btn {
+    font-size: 11px;
+    height: 30px;
+    padding: 0 10px;
   }
 }
