@@ -57,7 +57,7 @@ export function requireAuth(jwtSecret: string, gyTokenSecret?: string) {
           name: "CC Session",
           role,
           orgId: "org-001",
-          siteIds: gyPayload.siteIds ?? [],
+          siteIds: gyPayload.siteIds ?? (gyPayload as any).site_ids ?? [],
           forceSiteId,
         };
         next();
