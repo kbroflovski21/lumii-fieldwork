@@ -58,21 +58,16 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
   const [selectedIdx, setSelectedIdx] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const segmentsRef = useRef<Map<number, string>>(new Map());
   const prefixRef = useRef("");
 
   const { listening, toggle: toggleVoiceRaw, error: voiceError } = useAsrVoice(
-    useCallback((text: string, _isFinal: boolean, segId?: number) => {
-      const segs = segmentsRef.current;
-      segs.set(segId ?? 0, text);
-      const assembled = Array.from(segs.entries()).sort((a, b) => a[0] - b[0]).map(e => e[1]).join("");
-      setValue(prefixRef.current + assembled);
+    useCallback((text: string) => {
+      setValue(prefixRef.current + text);
     }, [])
   );
 
   const toggleVoice = useCallback(() => {
     if (!listening) {
-      segmentsRef.current.clear();
       prefixRef.current = value;
     }
     toggleVoiceRaw();
@@ -205,24 +200,12 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
   const [value, setValue] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const segmentsRef = useRef<Map<number, string>>(new Map());
   const prefixRef = useRef("");
 
-  const onAsrText = useCallback((text: string, isFinal: boolean, segId?: number) => {
-    const segs = segmentsRef.current;
-    const id = segId ?? 0;
-    segs.set(id, text);
-    const assembled = Array.from(segs.entries()).sort((a, b) => a[0] - b[0]).map(e => e[1]).join("");
-    setValue(prefixRef.current + assembled);
-    if (isFinal) {
-      // nothing extra — keep accumulating segments
-    }
-  }, []);
-
   const { listening, toggle: toggleVoice, error: voiceError } = useAsrVoice(
-    useCallback((text: string, isFinal: boolean, segId?: number) => {
-      onAsrText(text, isFinal, segId);
-    }, [onAsrText])
+    useCallback((text: string) => {
+      setValue(prefixRef.current + text);
+    }, [])
   );
 
   const filtered = value.startsWith("/")
@@ -264,7 +247,6 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
 
   const handleVoiceClick = useCallback(() => {
     if (!listening) {
-      segmentsRef.current.clear();
       prefixRef.current = value;
     }
     toggleVoice();
