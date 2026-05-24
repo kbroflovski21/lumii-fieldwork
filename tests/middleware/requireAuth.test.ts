@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import express from "express";
 import request from "supertest";
+import jwt from "jsonwebtoken";
 import { requireAuth, requireRole } from "../../server/middleware/requireAuth";
 import { signJwt, signGyToken } from "../../server/ws/auth";
 
@@ -211,5 +212,69 @@ describe("requireAuth with gyTokenSecret fallback", () => {
 
     const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(401);
+  });
+
+  it("GY token with site scope sets forceSiteId for data isolation", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "site_operator",
+      siteIds: ["site-001"],
+      scope: "site-001",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.forceSiteId).toBe("site-001");
+  });
+
+  it("GY token with admin scope does not set forceSiteId", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "cc-user",
+      role: "org_admin",
+      siteIds: [],
+      scope: "admin",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.forceSiteId).toBeUndefined();
+  });
+
+  it("GY token with snake_case site_ids field is read correctly (Go agent compatibility)", async () => {
+    const app = createAppWithGy();
+    // Simulate what Go agent signs: site_ids in snake_case
+    const payload = {
+      sub: "feishu-user",
+      role: "service_supervisor",
+      site_ids: ["site-001", "site-002"],  // snake_case as Go signs it
+      scope: "site-001",
+      permissions: {},
+    };
+    const token = jwt.sign(payload, GY_SECRET, { expiresIn: "30m" });
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.siteIds).toEqual(["site-001", "site-002"]);
+    expect(res.body.user.forceSiteId).toBe("site-001");
+  });
+
+  it("GY token with camelCase siteIds field also works", async () => {
+    const app = createAppWithGy();
+    const token = signGyToken({
+      sub: "web-user",
+      role: "site_operator",
+      siteIds: ["site-003"],
+      scope: "site-003",
+      permissions: {},
+    }, GY_SECRET);
+
+    const res = await request(app).get("/protected").set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.siteIds).toEqual(["site-003"]);
+    expect(res.body.user.forceSiteId).toBe("site-003");
   });
 });

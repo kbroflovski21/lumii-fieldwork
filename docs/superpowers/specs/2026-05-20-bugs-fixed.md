@@ -255,3 +255,153 @@
 - lak config: `type = "codex"`, `mode = "yolo"`, `model = "deepseek-v4-flash"`.
 - New components: LiteLLM Proxy (port 4000), Codex CLI with litellm provider.
 - Deployment guide: `lumii-goldenyears-agent/docs/deploy-codex-deepseek.md`
+
+---
+
+## Bug Fixes & Features (2026-05-22 ~ 2026-05-23): Feishu Integration
+
+### Bug 37: Feishu scope_check returning wrong action field
+
+- **Description:** lak reads the `action` field from scope_check response (not `allow`). The agent was only returning `allow:false` which lak ignored, allowing messages to pass through.
+- **Root cause:** lak's scope_check handler checks `response.Action == "deny"`, not `response.Allow == false`.
+- **Fix:** ScopeCheckResponse now includes `action:"deny"` or `action:"allow"` field. The `allow` boolean is kept for backward compatibility.
+- **File:** `lumii-goldenyears-agent/internal/hooks/scope_check.go`
+
+### Bug 38: Feishu scope_check not detecting feishu users
+
+- **Description:** When lak calls scope_check for a feishu user, it may not pass a `platform` field. The handler only checked `platform == "feishu"`, so feishu users fell through to the generic "actor not registered" deny path.
+- **Root cause:** lak doesn't always include `platform` in the scope_check payload for feishu sessions.
+- **Fix:** Added `ou_` prefix detection: `isFeishu := req.Platform == "feishu" || strings.HasPrefix(req.ActorID, "ou_")`. Feishu open IDs always start with `ou_`.
+- **File:** `lumii-goldenyears-agent/internal/hooks/scope_check.go`
+
+### Bug 39: lak skill commands bypassing prepare_session
+
+- **Description:** When lak forwards a slash command that matches a skill definition, it skipped calling `prepare_session` hook, so the Codex session started without `GY_API_TOKEN` and other environment variables.
+- **Fix:** Patched lak's `engine.go` to call `prepare_session` before skill forwarding, ensuring env injection occurs.
+- **File:** (lumii-agent-keeper repo) `engine.go`
+
+### Bug 40: lak scope_check deny with custom message
+
+- **Description:** When scope_check denies a feishu user (unset role), lak should display the deny reason message to the user. But lak only read the `reason` field, not `message`.
+- **Fix:** Added `Message` field to `ScopeCheckResponse`. lak reads `message` for user-facing denial text (falls back to `reason` if empty).
+- **File:** `lumii-goldenyears-agent/internal/hooks/scope_check.go`
+
+### Bug 41: Per-project display config (tool_messages=false)
+
+- **Description:** lak's display config didn't support hiding tool execution messages per-project. GoldenYears copilot showed raw tool call outputs to end users.
+- **Fix:** Patched lak's `ProjectConfig` to support `Display` field with `tool_messages = false`. Only applied to goldenyears project.
+- **File:** (lumii-agent-keeper repo) `ProjectConfig`, lak config.toml
+
+### Bug 42: gy:// links in feishu output
+
+- **Description:** Agent output contained `[text](gy://...)` markdown links and bare `gy://` URLs which are meaningless in feishu (no in-app navigation). Users see broken links.
+- **Fix:** Two-layer sanitization: (a) lak's `scrubSensitive` strips `[text](gy://...)` patterns (keeps text) and bare `gy://` URLs. (b) Stream preview `finish()` also sanitizes before sending to feishu.
+- **File:** (lumii-agent-keeper repo) `scrubSensitive`, agent `prepare_session.go` (platform=feishu prompt injection)
+
+### Bug 43: GY token siteIds field name mismatch
+
+- **Description:** Go agent signs JWT with `site_ids` (snake_case) field, but TypeScript `requireAuth` middleware reads `siteIds` (camelCase). Feishu users with assigned sites got empty `siteIds`.
+- **Root cause:** Go `jwt.MapClaims` uses struct tag `json:"site_ids"`, TypeScript interface expects `siteIds`.
+- **Fix:** Added fallback in `requireAuth.ts`: `siteIds: gyPayload.siteIds ?? (gyPayload as any).site_ids ?? []`.
+- **File:** `server/middleware/requireAuth.ts`
+
+### Bug 44: /api/admin/sites permission too restrictive
+
+- **Description:** `/api/admin/sites` required `org_admin` role. Service supervisors and feishu users with `service_supervisor` role couldn't fetch site list (needed for site picker).
+- **Fix:** Changed to require any authenticated user. Non-admin users get filtered results (only their assigned sites).
+- **File:** `server/routes/admin.ts`
+
+### Bug 45: Feishu user siteId derivation in prepare_session
+
+- **Description:** `prepare_session` derived `siteId` from the session_key for web users. Feishu session keys don't contain siteId (format: `feishu:chatId:ou_xxx`), so feishu users always got empty `GY_SITE_ID`.
+- **Fix:** For feishu users, query DB to get assigned `siteIds` and use the first one as `GY_SITE_ID` (service_supervisors). org_admin feishu users keep empty siteId (see all sites).
+- **File:** `lumii-goldenyears-agent/internal/hooks/prepare_session.go`
+
+### Bug 46: /help command role-aware for feishu users
+
+- **Description:** `/help` only checked web session_key format (`web:...:admin` vs `web:...:site-xxx`) to determine role. Feishu users always got site_operator help regardless of their actual role.
+- **Fix:** `resolveRoleFromSessionKey` now handles feishu session_key format (`feishu:chatId:ou_xxx`) by querying the Dashboard DB for the feishu user's role.
+- **File:** `lumii-goldenyears-agent/internal/hooks/help_command.go`
+
+### Bug 47: Message dedup changed from content-based to ID-based
+
+- **Description:** Content-based dedup caused false positives when agent sent identical content in different messages (e.g., repeated confirmations). Also didn't handle the race between `stream_end` and `message` events reliably.
+- **Fix:** Changed to ID-based dedup: skip `message` frame if `msg_id` already exists from prior `stream_end`. Content-based dedup removed.
+- **File:** `src/features/siteOperations/useAgentChat.ts`
+
+### Bug 48: pool.ts user echo ordering
+
+- **Description:** When user sends a message, the DB insert took ~5ms. If the agent replied very quickly (< 5ms, e.g., for /help), the agent's reply frame arrived before the user echo was stored, appearing above the user's message in chat history.
+- **Fix:** Send user echo frame to client WebSocket BEFORE the DB insert, ensuring correct visual ordering regardless of agent speed.
+- **File:** `server/ws/pool.ts`
+
+### Bug 49: Voice input duplicate text (XFyun ASR)
+
+- **Description:** XFyun real-time ASR returns `seg_id` which was treated as a segment identifier for multi-segment accumulation. Actually, `seg_id` is an incrementing sequence number per partial result. Accumulating segments by `seg_id` resulted in duplicated text.
+- **Root cause:** Misunderstanding of XFyun's response format. `seg_id` increments within a single recognition session; the `data` field of the latest response already contains the full accumulated text.
+- **Fix:** Use the latest response's text directly (overwrite, don't append by seg_id).
+- **File:** `src/features/siteOperations/CommandInput.tsx` (frontend ASR handler)
+
+### Bug 50: Voice error toast for getUserMedia failures
+
+- **Description:** When microphone access failed (HTTP context, permission denied, no device), the voice button silently failed with no user feedback.
+- **Fix:** Catch `getUserMedia` errors and show a toast notification with the specific error message.
+- **File:** `src/features/siteOperations/CommandInput.tsx`
+
+### Bug 51: Caddy HTTPS configuration for staging
+
+- **Description:** Staging server (stage-gy.lumii-ai.cn) needed HTTPS for XFyun ASR (getUserMedia requires secure context) and production-like testing.
+- **Fix:** Configured Caddy reverse proxy with automatic TLS certificate provisioning via ACME. Routes `/api/*` and `/ws/*` to Node.js backend (port 3001), static files served directly.
+- **File:** `/etc/caddy/Caddyfile` (staging server)
+
+---
+
+## Features Shipped (2026-05-22 ~ 2026-05-23): Feishu Integration
+
+### Feishu bot integration
+
+- Feishu users can interact with GoldenYears copilot via Feishu messenger (private chat or group @ mention).
+- Architecture: Feishu messages → lak feishu platform → lifecycle hooks → Codex session.
+- Shares the same agent backend (goldenyears-agent sidecar + Codex + DeepSeek) as web copilot.
+- gy:// links automatically stripped for feishu output.
+
+### Feishu user role binding
+
+- New `FeishuUser` table in MySQL (Prisma): openId, name, role (unset/org_admin/service_supervisor), siteIds, orgId.
+- Admin page "飞书管理" tab in QualityPage for managing feishu user roles.
+- Auto-registration: feishu users are created with `role=unset` on first message, denied until admin assigns a role.
+- CRUD API: `GET/POST /api/feishu-users`, `GET/PATCH/DELETE /api/admin/feishu-users`.
+
+### Copilot commands: /feishu-bindlist, /feishu-bind, /feishu-unbind
+
+- Three new admin copilot commands for managing feishu user roles via chat.
+- `/feishu-bindlist`: list all feishu users and their role bindings.
+- `/feishu-bind`: assign role (org_admin / service_supervisor) to a feishu user by name.
+- `/feishu-unbind`: revoke role (set back to unset).
+- **Files:** `skills/.../sub-skills/lumii-feishu-{bindlist,bind,unbind}.md`
+
+### XFyun ASR voice input (streaming)
+
+- Replaced Web Speech API with XFyun real-time ASR for reliable Chinese voice recognition.
+- Architecture: browser microphone → WebSocket `/api/ws/asr` → server proxy → `wss://rtasr.xfyun.cn`.
+- Server-side proxy (`server/ws/asr.ts`) handles XFyun auth (HMAC-SHA1 signature), JWT validation.
+- Frontend sends raw PCM audio chunks, receives partial transcription results in real-time.
+- Environment variables: `XFYUN_ASR_APP_ID`, `XFYUN_ASR_API_KEY`.
+
+### /new command (new session)
+
+- Added `/new` command to both web copilot and feishu for creating a fresh session (clearing context).
+- Available in the slash command menu for both site_operator and org_admin roles.
+- Triggers lak session reset (new Codex process with clean env injection).
+
+### Header slash command menu
+
+- Desktop copilot input (header area) now shows a dropdown menu of available slash commands.
+- Includes `/new` command and voice input button.
+- Keyboard navigation: Arrow Up/Down, Tab, Enter, Escape.
+
+### /elder-xxx commands (renamed from /object-xxx)
+
+- Renamed service object commands from `/object-create`, `/object-query`, `/object-update` to `/elder-create`, `/elder-query`, `/elder-update`.
+- More intuitive naming for the elderly care domain.
+- Sub-skill files renamed accordingly.

@@ -298,7 +298,31 @@ Web 端和飞书端的消息入口不同：
   → lak → after_send → agent 审计日志
 ```
 
-#### 6.1.1 Web 端聊天链路（已实现）
+#### 6.1.1 飞书端聊天链路（已实现）
+
+```
+飞书用户 → 私聊或群聊 @机器人
+  → lak feishu platform (接收消息, 解析 @mention)
+  → scope_check hook: 检查 ou_xxx 是否已注册且有 role
+    ├─ 未注册 → 自动 POST /api/feishu-users 注册 → deny + "请联系管理员"
+    ├─ role=unset → deny + "请联系管理员分配角色"
+    └─ role 有效 → allow + role + siteIds
+  → prepare_session hook: 查 DB 获取 siteIds, 注入 platform=feishu
+  → Codex session (system prompt 包含 "当前平台: feishu", 不输出 gy:// 链接)
+  → Codex curl API (携带 GY_API_TOKEN, forceSiteId 隔离)
+  → 响应返回 → lak scrubSensitive (剥离残留 gy:// 链接)
+  → 飞书回复用户
+```
+
+关键差异 vs Web 端：
+- 飞书消息不经过 Dashboard API WSS，lak 直连飞书平台
+- scope_check 通过 `ou_` 前缀或 platform 字段判断飞书用户
+- siteId 从 DB 查询获取（非 session_key 解析）
+- system prompt 注入 `平台: feishu`，agent 不输出 gy:// 链接
+- lak `scrubSensitive` 额外兜底剥离 gy:// 模式
+- `/help` 命令根据 feishu session_key 查 DB 确定角色
+
+#### 6.1.2 Web 端聊天链路（已实现）
 
 实际实现的 Web 端聊天链路：
 

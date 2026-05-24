@@ -1,7 +1,8 @@
 # 飞书机器人接入 GoldenYears Copilot
 
-> **Status:** DESIGN
+> **Status:** IMPLEMENTED
 > **Date:** 2026-05-22
+> **Implemented:** 2026-05-23
 
 **Goal:** 飞书用户通过私聊或群聊 @机器人使用 GoldenYears copilot 全部功能，支持集团管理和服务主管两种角色，角色绑定在 org admin 页面和 copilot 命令中管理。飞书端不输出 gy:// 智能链接。
 
@@ -231,3 +232,44 @@ lak feishu platform 自动处理：
 - 角色变更操作仅 org_admin 可执行（API 层 requireRole 校验）
 - 自动注册不赋予任何权限（role = unset），必须管理员手动分配
 - GY_API_TOKEN 的 scope 对飞书用户同样生效（forceSiteId 数据隔离）
+
+---
+
+## 11. Implementation Notes (2026-05-23)
+
+### Deviations from Design
+
+1. **scope_check uses `action` field, not just `allow`**: lak reads `action:"deny"` / `action:"allow"`, not the boolean `allow` field. Both are returned for compatibility.
+2. **Feishu detection by `ou_` prefix**: Because lak doesn't always pass `platform` field, feishu users are additionally detected by `ou_` prefix on `actor_id`.
+3. **gy:// link stripping**: Implemented at two layers: (a) lak-level `scrubSensitive` and (b) system prompt injection telling agent not to produce gy:// links when `platform=feishu`.
+4. **siteId derivation for feishu**: Web users derive siteId from session_key (`copilot:site-001`). Feishu users derive it from DB query of their assigned siteIds (first entry).
+5. **GY token `site_ids` vs `siteIds`**: Go signs with snake_case; TypeScript reads with camelCase fallback.
+6. **`/help` role resolution**: For feishu session keys (`feishu:chatId:ou_xxx`), role is resolved by querying Dashboard DB rather than parsing session_key format.
+7. **`/new` command**: Added to both platforms for session reset. Not in original design.
+
+### Files Actually Changed
+
+**lumii-goldenyears-agent:**
+- `internal/hooks/scope_check.go` — feishu user lookup, auto-register, `ou_` detection, `action` field
+- `internal/hooks/prepare_session.go` — feishu siteId derivation from DB, platform detection
+- `internal/hooks/help_command.go` — feishu session_key role resolution, 3 new feishu commands in adminHelp
+- `CLAUDE.md` / `AGENTS.md` — feishu commands added to command table
+- `skills/.../prompt.md` — feishu command routing
+- `skills/.../sub-skills/lumii-feishu-{bindlist,bind,unbind}.md` — new sub-skills
+
+**lumii-goldenyears-dashboard:**
+- `prisma/schema.prisma` — FeishuUser model
+- `server/routes/feishuUsers.ts` — CRUD API
+- `server/routes/admin.ts` — feishu-users admin endpoints
+- `server/middleware/requireAuth.ts` — `site_ids` fallback
+- `src/quality/QualityPage.tsx` — 飞书管理 tab
+
+**lak (lumii-agent-keeper):**
+- `config.toml` — feishu platform added, display config
+- `engine.go` — prepare_session before skill forwarding
+- `scrubSensitive` — gy:// link stripping
+- `ScopeCheckResponse` — Message field support
+
+### Bugs Encountered During Implementation
+
+See `2026-05-20-bugs-fixed.md` bugs #37-#51 for all issues discovered and fixed during feishu integration.

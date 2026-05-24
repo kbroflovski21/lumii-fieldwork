@@ -28,9 +28,11 @@ DeepSeek-v4-flash (via Tencent TokenHub)
 
 | 服务 | 端口 | 位置 | 职责 |
 |------|------|------|------|
-| goldenyears-api | 3001 | 公网服务器 | REST API + WSS relay + 消息持久化 |
-| Vite/Nginx | 5173/80 | 公网服务器 | 前端静态文件 + API/WSS 代理 |
+| goldenyears-api | 3001 | 公网服务器 | REST API + WSS relay + 消息持久化 + ASR proxy |
+| Caddy | 443/80 | 公网服务器 | HTTPS 反向代理 + 自动 TLS |
+| Vite/Nginx | 5173/80 | 公网服务器 | 前端静态文件 + API/WSS 代理 (dev 模式) |
 | lak | — | 内网服务器 | Agent session 管理, 主动连接 API 的 WSS |
+| lak feishu platform | — | 内网服务器 | 飞书消息接收/回复, @ mention 解析 |
 | goldenyears-agent | 4072 | 内网服务器 | 业务 sidecar (hooks, token 签发, /help) |
 | LiteLLM Proxy | 4000 | 内网服务器 | API 翻译：Responses API → Chat Completions |
 | Codex CLI | — | 内网服务器 | AI coding agent，读取 AGENTS.md + skills/ |
@@ -220,26 +222,131 @@ API 翻译代理，将 Codex 的 Responses API 请求转换为 Chat Completions 
 
 详细配置见 `lumii-goldenyears-agent/docs/deploy-codex-deepseek.md` 第 1-2 节。
 
-## 5. 安全配置
+### 4.5 飞书平台 (Feishu)
 
-### 5.1 Token 配置清单
+lak 内置 feishu platform，配置在 config.toml 中：
+
+```toml
+[[projects.platforms]]
+  type = "feishu"
+
+  [projects.platforms.options]
+    app_id = "<飞书应用AppID>"
+    app_secret = "<飞书应用AppSecret>"
+```
+
+lak feishu platform 自动处理：
+- 飞书消息接收和回复（私聊 + 群聊 @机器人）
+- @ mention 解析（提取 open_id 和昵称）
+- open_id → actor_id 映射（`ou_xxx` 格式）
+- 群聊/私聊区分（通过 chat_type 字段）
+- gy:// 链接自动剥离（`scrubSensitive`）
+
+飞书用户生命周期：
+1. 首次发消息 → scope_check 调 Dashboard API 自动注册（role=unset）→ 返回 deny + 提示
+2. 管理员在"飞书管理" tab 或 `/feishu-bind` 命令分配角色
+3. 后续消息 → scope_check 查到有效 role → allow → prepare_session 注入环境
+
+飞书相关的 Dashboard API：
+
+| 端点 | 方法 | 认证 | 说明 |
+|------|------|------|------|
+| `GET /api/feishu-users?openId=ou_xxx` | GET | GY token | agent 按 openId 查询 |
+| `POST /api/feishu-users` | POST | GY token | 自动注册：{openId, name} |
+| `GET /api/admin/feishu-users` | GET | org_admin | 列出所有飞书用户 |
+| `PATCH /api/admin/feishu-users/:id` | PATCH | org_admin | 设置角色和站点 |
+| `DELETE /api/admin/feishu-users/:id` | DELETE | org_admin | 删除用户记录 |
+
+## 5. ASR 语音代理
+
+### 5.1 XFyun 实时 ASR 代理
+
+Dashboard API 内置 WebSocket ASR 代理端点，将浏览器录音转发到讯飞实时语音转写服务：
+
+```
+浏览器麦克风 → WebSocket /api/ws/asr?token=<JWT>
+  → goldenyears-api (asr.ts proxy)
+  → wss://rtasr.xfyun.cn (XFyun 实时 ASR)
+  → 返回流式转写结果
+```
+
+环境变量：
+
+| 变量 | 说明 |
+|------|------|
+| `XFYUN_ASR_APP_ID` | 讯飞应用 ID |
+| `XFYUN_ASR_API_KEY` | 讯飞 API Key (用于 HMAC-SHA1 签名) |
+
+端点：`/api/ws/asr?token=<JWT>`
+
+- JWT 认证：只允许已登录用户使用
+- 代理逻辑在 `server/ws/asr.ts`
+- 客户端发送 PCM 音频块，接收 JSON 转写结果
+- XFyun 鉴权：HMAC-SHA1(MD5(appId + timestamp), apiKey)
+- **注意**：getUserMedia 需要 HTTPS（secure context），所以 ASR 在 HTTP 环境下不可用
+
+## 6. HTTPS (Caddy)
+
+Staging 使用 Caddy 作为 HTTPS 反向代理，自动申请和续期 TLS 证书。
+
+```
+# /etc/caddy/Caddyfile
+stage-gy.lumii-ai.cn {
+    # API + WebSocket
+    handle /api/* {
+        reverse_proxy localhost:3001
+    }
+
+    # ASR WebSocket proxy
+    handle /api/ws/asr {
+        reverse_proxy localhost:3001
+    }
+
+    # Static files
+    handle {
+        root * /opt/goldenyears/lumii-goldenyears-dashboard/dist
+        try_files {path} /index.html
+        file_server
+    }
+}
+```
+
+安装和启动：
+
+```bash
+sudo apt install caddy
+sudo systemctl enable caddy
+sudo systemctl start caddy
+```
+
+注意事项：
+- Caddy 自动处理 HTTPS 证书（ACME + Let's Encrypt）
+- 域名 DNS 必须指向服务器 IP
+- 端口 80 和 443 必须开放（Caddy 需要 80 端口做 ACME 挑战）
+- 配合 getUserMedia 要求安全上下文（HTTPS 或 localhost）
+
+## 7. 安全配置
+
+### 7.1 Token 配置清单
 
 | Token | 位置 | 用途 |
 |-------|------|------|
 | `JWT_SECRET` | API 服务器 env | 签发/验证前端用户 JWT |
 | `WS_TOKEN` | API 服务器 env + lak config | agent WSS 连接认证 |
-| `GY_TOKEN_SECRET` | agent sidecar env | 签发 GY_API_TOKEN (未来用) |
+| `GY_TOKEN_SECRET` | agent sidecar env | 签发 GY_API_TOKEN |
+| `XFYUN_ASR_APP_ID` | API 服务器 env | 讯飞 ASR 应用 ID |
+| `XFYUN_ASR_API_KEY` | API 服务器 env | 讯飞 ASR API Key |
 
-### 5.2 注意事项
+### 7.2 注意事项
 
 - `WS_TOKEN` 必须在 API 服务器和 lak config 中保持一致
 - 生产环境不要使用默认的 `dev-*` token
 - CC 的 `bypassPermissions` 模式配合 `disallowed_tools` 限制文件修改
 - agent 目录不要有 `.claude/` 子目录
 
-## 6. 验证部署
+## 8. 验证部署
 
-### 6.1 健康检查
+### 8.1 健康检查
 
 ```bash
 # API 服务器
@@ -255,7 +362,7 @@ grep "connected and registered" /var/log/lak.log
 # 预期: dashboard: connected and registered agent_id=lumii-goldenyears
 ```
 
-### 6.2 E2E 验证
+### 8.2 E2E 验证
 
 E2E 测试支持两种模式，通过环境变量切换:
 
@@ -293,7 +400,7 @@ Local 模式需要 `globalSetup` 启动测试 server，修改 `playwright.config
 | `E2E_JWT_SECRET` | `staging-jwt-secret` | JWT 签名密钥 |
 | `E2E_WS_TOKEN` | `staging-ws-token` | WSS agent 认证 token |
 
-### 6.3 Real-lak E2E
+### 8.3 Real-lak E2E
 
 需要真实 lak + Codex + agent sidecar + LiteLLM 全部就绪:
 
@@ -302,7 +409,7 @@ npx playwright test --project=real-lak --reporter=line
 # 预期: 17 passed
 ```
 
-## 7. 故障排查
+## 9. 故障排查
 
 | 现象 | 原因 | 解决 |
 |------|------|------|
@@ -319,8 +426,13 @@ npx playwright test --project=real-lak --reporter=line
 | `401 wss://api.openai.com` | Codex 没读到 litellm config | 检查 CODEX_HOME 环境变量 |
 | `tools[N].type must be 'function'` | Tencent 不支持 computer_use tool | 确认 LiteLLM DeepSeek provider 补丁 |
 | `LITELLM_API_KEY` 未设置 | 环境变量缺失 | 添加到 /etc/environment 或 lak 启动参数 |
+| 飞书用户消息无响应 | scope_check deny 但 lak 不回复 | 确认 ScopeCheckResponse 有 `message` 字段 |
+| 飞书用户 siteId 为空 | prepare_session 未查 DB | 确认 `ou_` 前缀检测和 feishu user DB 查询 |
+| 语音按钮无反应 | getUserMedia 需要 HTTPS | 确认通过 HTTPS (Caddy) 访问 |
+| ASR 连接失败 | XFyun 配置缺失 | 检查 `XFYUN_ASR_APP_ID` 和 `XFYUN_ASR_API_KEY` 环境变量 |
+| `/new` 命令无效 | lak 不识别 /new | 确认 lak 版本支持 session reset 命令 |
 
-## 8. 已知 Bug 与修复
+## 10. 已知 Bug 与修复
 
 ### Bug #1: CC 在 root 下拒绝 bypassPermissions (2026-05-17)
 
@@ -388,7 +500,7 @@ rsync -az deploy/fieldwork.db staging:data/fieldwork.db
 
 **预防:** 部署脚本应始终在停止服务后、替换 DB 前清理 WAL 文件。
 
-## 9. Copilot UI 架构 (2026-05-22)
+## 11. Copilot UI 架构 (2026-05-22)
 
 ### 共享 Session 架构
 
@@ -430,8 +542,9 @@ Agent 通过 lak card frame 返回确认/选择按钮，前端 CardBubble 组件
 ### 斜杠命令
 
 - 站点运营: 15 条命令 (`/worker-create`, `/badge-activate` 等)
-- 集团管理: 8 条命令 (`/quality-overview`, `/site-query` 等)
+- 集团管理: 11 条命令 (`/quality-overview`, `/site-query`, `/feishu-bindlist` 等)
 - `/help`: 由 goldenyears-agent binary 直接返回命令列表（不启动 Codex session）
+- `/new`: 新建会话，清除上下文（两端通用，触发 lak session reset）
 
 ### 相关文件
 
@@ -445,9 +558,9 @@ Agent 通过 lak card frame 返回确认/选择按钮，前端 CardBubble 组件
 | `SiteOperationsShell.tsx` | 站点运营 Shell（owns useAgentChat） |
 | `QualityPage.tsx` | 集团管理页面（owns useAgentChat） |
 
-## 8. 用户认证
+## 12. 用户认证
 
-### 8.1 默认账号
+### 12.1 默认账号
 
 系统 seed 数据包含 3 个默认账号：
 
@@ -467,7 +580,7 @@ Agent 通过 lak card frame 返回确认/选择按钮，前端 CardBubble 组件
 | `/api/admin/users/:id` | PATCH | 更新用户 |
 | `/api/admin/users/:id/reset-password` | POST | 重置密码 |
 
-### 8.4 服务人员账号
+### 12.4 服务人员账号
 
 服务人员账号由站点运营在"服务人员"tab 的 Modal 中生成：
 - 用户名: 手机号
@@ -477,15 +590,15 @@ Agent 通过 lak card frame 返回确认/选择按钮，前端 CardBubble 组件
 
 服务人员通过 `/careworker` H5 页面登录（手机号 + 密码）。
 
-### 8.3 部署注意
+### 12.3 部署注意
 
 - 生产环境必须修改默认密码
 - `JWT_SECRET` 必须设置为强密钥（不要使用默认的 dev 值）
 - `deploy/fieldwork.db` 包含预置 seed 数据，可用于首次部署
 
-## 9. Token 认证链路
+## 13. Token 认证链路
 
-### 9.1 完整链路图
+### 13.1 完整链路图
 
 ```
 浏览器用户
@@ -512,7 +625,7 @@ lak (内网)
           → requireAuth 中间件: 验证 GY_API_TOKEN → 提取 forceSiteId → 硬性过滤
 ```
 
-### 9.2 Token 类型
+### 13.2 Token 类型
 
 | Token | 签发方 | 用途 | 有效期 | 验证方 |
 |-------|--------|------|--------|--------|
@@ -521,7 +634,7 @@ lak (内网)
 | GY_API_TOKEN | agent prepare_session (HS256) | Codex session curl API，**scope 字段用于站点数据隔离** | 30min | requireAuth (verifyGyToken → forceSiteId) |
 | 服务人员 JWT | `POST /api/auth/login` (phone+pwd) | Careworker H5 认证 | 24h | requireAuth |
 
-### 9.4 修改密码
+### 13.4 修改密码
 
 `PATCH /api/auth/change-password`
 - Header: `Authorization: Bearer <JWT>`
@@ -529,7 +642,7 @@ lak (内网)
 - 验证旧密码 + 新密码至少 6 位
 - 所有角色均可使用
 
-### 9.3 安全要求
+### 13.3 安全要求
 
 - **生产环境禁止使用默认密钥**: `JWT_SECRET`, `WS_TOKEN`, `GY_TOKEN_SECRET` 必须设置为强随机值
 - **dev-token 端点已移除**: 无匿名 JWT 签发入口，必须通过登录获取 token
@@ -539,7 +652,7 @@ lak (内网)
 - **ws_token 必须一致**: API 服务器的 `WS_TOKEN` 环境变量必须与 lak config.toml 中的 `token` 一致
 - **LITELLM_API_KEY**: lak 进程环境中必须设置，传递给 Codex 子进程用于访问 LiteLLM Proxy
 
-## 10. 多模块部署
+## 14. 多模块部署
 
 系统包含 4 个角色模块，通过统一路由分发：
 
