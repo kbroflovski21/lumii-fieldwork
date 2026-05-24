@@ -139,9 +139,9 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
                 return updated;
               }
             }
-            // Dedup: if assistant message with same content exists (from stream), update ID
+            // Dedup: if a STREAMING assistant message with same content exists, update ID (stream_end → message race)
             if (frame.role === "assistant" && frame.content) {
-              const dup = prev.findIndex((m) => m.role === "assistant" && m.content === frame.content);
+              const dup = prev.findIndex((m) => m.role === "assistant" && m.isStreaming && m.content === frame.content);
               if (dup >= 0) {
                 const updated = [...prev];
                 updated[dup] = { ...updated[dup], id: frame.id, timestamp: frame.timestamp, isStreaming: false };
