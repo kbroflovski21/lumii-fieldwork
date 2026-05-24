@@ -60,7 +60,7 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
   const inputRef = useRef<HTMLInputElement>(null);
   const prefixRef = useRef("");
 
-  const { listening, toggle: toggleVoiceRaw, error: voiceError } = useAsrVoice(
+  const { listening, toggle: toggleVoiceRaw, stop, error: voiceError } = useAsrVoice(
     useCallback((text: string) => {
       setValue(prefixRef.current + text);
     }, [])
@@ -170,9 +170,13 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
       <button
         type="button"
         className={`command-input__voice${listening ? " command-input__voice--active" : ""}`}
-        onClick={toggleVoice}
+        onMouseDown={toggleVoice}
+        onMouseUp={stop}
+        onMouseLeave={listening ? stop : undefined}
+        onTouchStart={toggleVoice}
+        onTouchEnd={stop}
         disabled={disabled}
-        aria-label={listening ? "停止语音" : "语音输入"}
+        aria-label="按住说话"
       >
         <Mic size={16} />
       </button>
@@ -202,7 +206,7 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
   const [selectedIdx, setSelectedIdx] = useState(0);
   const prefixRef = useRef("");
 
-  const { listening, toggle: toggleVoice, error: voiceError } = useAsrVoice(
+  const { listening, toggle: toggleVoice, stop: stopVoice, error: voiceError } = useAsrVoice(
     useCallback((text: string) => {
       setValue(prefixRef.current + text);
     }, [])
@@ -286,8 +290,12 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
       <button
         type="button"
         className={`copilot-header-input__voice${listening ? " copilot-header-input__voice--active" : ""}`}
-        onClick={handleVoiceClick}
-        aria-label={listening ? "停止语音" : "语音输入"}
+        onMouseDown={handleVoiceClick}
+        onMouseUp={stopVoice}
+        onMouseLeave={listening ? stopVoice : undefined}
+        onTouchStart={handleVoiceClick}
+        onTouchEnd={stopVoice}
+        aria-label="按住说话"
       >
         <Mic size={14} />
       </button>
