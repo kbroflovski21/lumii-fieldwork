@@ -7,25 +7,37 @@ export function siteRoutes() {
 
   r.get("/admin/sites", async (req, res) => {
     const user = (req as any).authUser;
-    if (!user || user.role !== "org_admin") { res.status(403).json({ error: "无权限" }); return; }
+    if (!user) { res.status(401).json({ error: "未登录" }); return; }
 
-    try {
-      const sites = await prisma.site.findMany({
-        where: { orgId: user.orgId },
-        include: { siteUsers: { include: { user: { select: { id: true, username: true, name: true, role: true } } } } },
-        orderBy: { createdAt: "desc" },
-      });
-
-      res.json({
-        sites: sites.map(s => ({
-          ...s,
-          operators: s.siteUsers.map(su => su.user),
-          siteUsers: undefined,
-        })),
-      });
-    } catch {
-      res.json({ sites: [] });
+    // org_admin: all sites with operator details
+    if (user.role === "org_admin") {
+      try {
+        const sites = await prisma.site.findMany({
+          where: { orgId: user.orgId },
+          include: { siteUsers: { include: { user: { select: { id: true, username: true, name: true, role: true } } } } },
+          orderBy: { createdAt: "desc" },
+        });
+        res.json({
+          sites: sites.map(s => ({
+            ...s,
+            operators: s.siteUsers.map(su => su.user),
+            siteUsers: undefined,
+          })),
+        });
+      } catch {
+        res.json({ sites: [] });
+      }
+      return;
     }
+
+    // Other roles: only their assigned sites (basic info, no operators)
+    if (Array.isArray(user.siteIds) && user.siteIds.length > 0) {
+      const sites = await prisma.site.findMany({ where: { id: { in: user.siteIds }, status: "active" }, orderBy: { name: "asc" } });
+      res.json({ sites });
+      return;
+    }
+    const assignments = await prisma.siteUser.findMany({ where: { userId: user.id }, include: { site: true } });
+    res.json({ sites: assignments.map(a => a.site).filter(s => s.status === "active") });
   });
 
   r.post("/admin/sites", async (req, res) => {
