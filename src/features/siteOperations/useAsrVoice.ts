@@ -6,6 +6,7 @@ const SEND_INTERVAL_MS = 40;
 
 export function useAsrVoice(onText: (text: string, isFinal: boolean, segId?: number) => void) {
   const [listening, setListening] = useState(false);
+  const [error, setError] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -109,15 +110,22 @@ export function useAsrVoice(onText: (text: string, isFinal: boolean, segId?: num
       }, SEND_INTERVAL_MS);
 
       setListening(true);
-    } catch (err) {
-      console.error("[ASR] start failed:", err);
+    } catch (err: any) {
+      const msg = err?.name === "NotAllowedError" || err?.message?.includes("permission")
+        ? "麦克风权限被拒绝，请在浏览器设置中允许"
+        : !navigator.mediaDevices || location.protocol === "http:"
+          ? "语音输入需要 HTTPS 环境"
+          : "语音输入启动失败: " + (err?.message ?? "未知错误");
+      setError(msg);
+      setTimeout(() => setError(""), 5000);
       stop();
     }
   }, [onText, stop]);
 
   const toggle = useCallback(() => {
+    setError("");
     if (listening) stop(); else start();
   }, [listening, start, stop]);
 
-  return { listening, toggle, stop };
+  return { listening, toggle, stop, error };
 }

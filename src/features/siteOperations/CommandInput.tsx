@@ -61,7 +61,7 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
   const segmentsRef = useRef<Map<number, string>>(new Map());
   const prefixRef = useRef("");
 
-  const { listening, toggle: toggleVoiceRaw } = useAsrVoice(
+  const { listening, toggle: toggleVoiceRaw, error: voiceError } = useAsrVoice(
     useCallback((text: string, _isFinal: boolean, segId?: number) => {
       const segs = segmentsRef.current;
       segs.set(segId ?? 0, text);
@@ -143,6 +143,7 @@ export function CommandInput({ onSend, commands, disabled, placeholder, compact 
 
   return (
     <form className={`command-input ${compact ? "command-input--compact" : ""}`} onSubmit={handleSubmit}>
+      {voiceError && <div className="command-input__error">{voiceError}</div>}
       {menuVisible && (
         <div className="command-input__menu" ref={menuRef}>
           {filtered.map((cmd, i) => (
@@ -218,7 +219,7 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
     }
   }, []);
 
-  const { listening, toggle: toggleVoice } = useAsrVoice(
+  const { listening, toggle: toggleVoice, error: voiceError } = useAsrVoice(
     useCallback((text: string, isFinal: boolean, segId?: number) => {
       onAsrText(text, isFinal, segId);
     }, [onAsrText])
@@ -271,6 +272,7 @@ export function HeaderCopilotInput({ onSend, onOpenPanel, commands, panelOpen }:
 
   return (
     <form className={`copilot-header-input${panelOpen ? " copilot-header-input--dimmed" : ""}`} onSubmit={handleSubmit}>
+      {voiceError && <div className="copilot-header-input__error">{voiceError}</div>}
       {menuVisible && (
         <div className="copilot-header-input__menu">
           {filtered.map((cmd, i) => (
