@@ -188,8 +188,11 @@ export class AgentConnectionPool {
 
   private async onUserMessage(uc: UserConnection, frame: { type: string; [k: string]: unknown }): Promise<void> {
     if (frame.type === "send" && typeof frame.content === "string") {
+      const ts = new Date().toISOString();
+      const tempId = Date.now();
+      // Send user echo immediately (before DB insert) to guarantee ordering before lak reply
+      uc.ws.send(JSON.stringify({ type: "message", id: tempId, role: "user", content: frame.content, msg_type: "text", timestamp: ts } as UserMessageFrame));
       const id = await this.config.chatDb.insert(this.config.agentId, uc.sessionKey, "user", frame.content, "text");
-      uc.ws.send(JSON.stringify({ type: "message", id, role: "user", content: frame.content, msg_type: "text", timestamp: new Date().toISOString() } as UserMessageFrame));
       if (this.agentConn && this.agentConn.ws.readyState === WebSocket.OPEN) {
         const bridge: BridgeOutgoing = { type: "message", msg_id: String(id), session_key: uc.sessionKey, user_id: uc.userId, user_name: uc.userName, org: "", content: frame.content, reply_ctx: uc.sessionKey, attachments: frame.attachments as any };
         this.agentConn.ws.send(JSON.stringify(bridge));
