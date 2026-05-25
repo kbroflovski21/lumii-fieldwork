@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../db/prisma";
 
 const LLM_API_KEY = process.env.LLM_API_KEY ?? "";
 const LLM_MODEL = process.env.LLM_MODEL ?? "qwen3-max";
@@ -540,6 +541,90 @@ export function aiRoutes() {
     } catch (err: any) {
       console.error("[ai] generate-doc error:", err.message);
       res.json({ content: "AI 生成失败，请稍后重试。" });
+    }
+  });
+
+  r.post("/ai/generate-schedule", async (req, res) => {
+    const { prompt, today } = req.body;
+    if (!prompt) { res.status(400).json({ error: "prompt required" }); return; }
+    if (!LLM_API_KEY) { res.json({ error: "AI 服务未配置" }); return; }
+
+    // Fetch published service SOPs for matching
+    const sops = await prisma.sop.findMany({
+      where: { type: "service", status: "active", published: true },
+      select: { id: true, name: true, keywords: true },
+    });
+    const sopList = sops.map(s => `- ID: ${s.id}, 名称: ${s.name}, 关键词: ${JSON.stringify(s.keywords)}`).join("\n");
+
+    const currentDate = today || new Date().toISOString().slice(0, 10);
+    const systemPrompt = `你是一个养老服务排期助手。用户用自然语言描述服务安排，你需要解析成结构化数据。
+
+当前日期：${currentDate}（以此为基准计算"今天""明天""下周"等相对日期）
+
+解析规则：
+- "今天"就是当前日期本身
+- "明天"是当前日期+1天
+- "每周X"是周期性计划，isRecurring=true
+- "每天"等同于每周一到周五（工作日），isRecurring=true
+- 时间精确解析："下午2点到3点"→14:00-15:00
+- 如果只说"上午"默认9:00-11:00，只说"下午"默认14:00-16:00
+- cadenceRule格式：WEEKLY:1,3,5（数字是星期几，0=周日,1=周一,...6=周六）
+- 非周期性的一次性服务：isRecurring=false，cadenceRule为空字符串
+- startDate：周期计划取第一个匹配日期，一次性取具体日期
+
+服务项目匹配：根据用户描述的服务内容，从以下已有服务项目中匹配：
+${sopList}
+
+输出严格JSON格式，不要输出其他文字：
+{
+  "plan": {
+    "cadenceRule": "WEEKLY:1,3,5",
+    "cadenceLabel": "每周一、三、五",
+    "timeWindow": { "start": "HH:MM", "end": "HH:MM" },
+    "startDate": "YYYY-MM-DD",
+    "isRecurring": true,
+    "serviceContent": "用户描述的服务内容摘要"
+  },
+  "matchedSopIds": ["sop-id-1", "sop-id-2"],
+  "preview": [
+    { "date": "YYYY-MM-DD", "dayLabel": "周X", "timeLabel": "上午/下午 HH:MM-HH:MM" }
+  ]
+}
+
+preview只输出前3条。matchedSopIds只包含上面列表中存在的ID。`;
+
+    try {
+      const resp = await fetch(LLM_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LLM_API_KEY}` },
+        body: JSON.stringify({
+          model: LLM_MODEL,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 4000,
+        }),
+      });
+      const data = await resp.json();
+      let content = data.choices?.[0]?.message?.content ?? "";
+      content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      const parsed = JSON.parse(content);
+
+      // Resolve matched SOP names
+      const matchedSops = sops
+        .filter(s => (parsed.matchedSopIds ?? []).includes(s.id))
+        .map(s => ({ id: s.id, name: s.name }));
+
+      res.json({
+        plan: parsed.plan,
+        matchedSops,
+        preview: parsed.preview ?? [],
+      });
+    } catch (err: any) {
+      console.error("[ai] generate-schedule error:", err.message);
+      res.json({ error: "AI 生成失败，请稍后重试。" });
     }
   });
 

@@ -26,6 +26,16 @@ export function sopRoutes() {
     } catch { res.json({ sops: [] }); }
   });
 
+  // List published service SOPs (id, name, keywords) for plan matching
+  r.get("/sops/service-list", async (_req, res) => {
+    const rows = await prisma.sop.findMany({
+      where: { type: "service", status: "active", published: true },
+      select: { id: true, name: true, keywords: true },
+      orderBy: { name: "asc" },
+    });
+    res.json({ sops: rows });
+  });
+
   // Get single SOP
   r.get("/sops/:id", async (req, res) => {
     const sop = await prisma.sop.findFirst({
