@@ -273,9 +273,9 @@ export function serviceObjectsRoutes() {
       where: {
         servicePlanId: planId,
         serviceDate: { gte: today },
-        status: { notIn: ["completed", "cancelled"] },
+        status: { notIn: ["completed", "cancelled", "suspended"] },
       },
-      data: { status: "cancelled" },
+      data: { status: "suspended" },
     });
 
     res.json({ ok: true });
@@ -288,8 +288,14 @@ export function serviceObjectsRoutes() {
 
     await prisma.servicePlan.update({ where: { id: planId }, data: { status: "active" } });
 
-    const { generateDates } = await import("../lib/cadenceRule");
     const today = new Date().toISOString().slice(0, 10);
+    const newStatus = plan.primarySocialWorkerId ? "scheduled" : "unassigned";
+    await prisma.serviceSchedule.updateMany({
+      where: { servicePlanId: planId, serviceDate: { gte: today }, status: "suspended" },
+      data: { status: newStatus as any },
+    });
+
+    const { generateDates } = await import("../lib/cadenceRule");
     const obj = await prisma.serviceObject.findFirst({
       where: { id: plan.serviceObjectId },
       select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true },
@@ -298,7 +304,7 @@ export function serviceObjectsRoutes() {
     const dates = generateDates(plan.cadenceRule, today, 28);
     const existing = new Set(
       (await prisma.serviceSchedule.findMany({
-        where: { servicePlanId: planId, serviceDate: { gte: today }, status: { not: "cancelled" } },
+        where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["cancelled"] } },
         select: { serviceDate: true },
       })).map(s => s.serviceDate)
     );
@@ -338,8 +344,16 @@ export function serviceObjectsRoutes() {
 
   r.delete("/service-plans/:id", async (req, res) => {
     const planId = req.params.id;
-    await prisma.serviceScheduleSop.deleteMany({ where: { schedule: { servicePlanId: planId } } });
-    await prisma.serviceSchedule.deleteMany({ where: { servicePlanId: planId } });
+    const today = new Date().toISOString().slice(0, 10);
+    const futureSchedules = await prisma.serviceSchedule.findMany({
+      where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed"] } },
+      select: { id: true },
+    });
+    const futureIds = futureSchedules.map(s => s.id);
+    if (futureIds.length > 0) {
+      await prisma.serviceScheduleSop.deleteMany({ where: { scheduleId: { in: futureIds } } });
+      await prisma.serviceSchedule.deleteMany({ where: { id: { in: futureIds } } });
+    }
     await prisma.servicePlanSop.deleteMany({ where: { planId } });
     await prisma.servicePlanException.deleteMany({ where: { servicePlanId: planId } });
     await prisma.servicePlan.delete({ where: { id: planId } });
@@ -373,7 +387,7 @@ export function serviceObjectsRoutes() {
         where: {
           servicePlanId: planId,
           serviceDate: { gte: today },
-          status: { notIn: ["completed", "cancelled"] },
+          status: { notIn: ["completed", "cancelled", "suspended"] },
         },
         data: {
           assignedSocialWorkerId: primarySocialWorkerId || null,
@@ -394,7 +408,7 @@ export function serviceObjectsRoutes() {
 
         // 3. Update all future schedule SOPs
         const futureSchedules = await prisma.serviceSchedule.findMany({
-          where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled"] } },
+          where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled", "suspended"] } },
           select: { id: true },
         });
         if (futureSchedules.length > 0) {
@@ -411,7 +425,7 @@ export function serviceObjectsRoutes() {
     // 4. If cadenceRule changed, cancel future schedules and regenerate
     if (cadenceRule !== undefined && cadenceRule !== plan.cadenceRule) {
       await prisma.serviceSchedule.updateMany({
-        where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled"] } },
+        where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled", "suspended"] } },
         data: { status: "cancelled" },
       });
 

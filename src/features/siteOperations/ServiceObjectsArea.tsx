@@ -351,7 +351,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     authFetch(`/api/service-schedule-occurrences?rangeStart=${rs}&rangeEnd=${re}`)
       .then(r => r.json())
       .then(data => {
-        const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id && s.status !== "cancelled");
+        const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id && s.status !== "cancelled" && s.status !== "suspended");
         setSavedSchedules(mine);
       })
       .catch(() => {});

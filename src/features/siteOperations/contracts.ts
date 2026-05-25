@@ -544,6 +544,7 @@ export const statusText: Record<string, string> = {
   assigned: "待执行",
   adjusted: "待执行",
   cancelled: "已取消",
+  suspended: "已停用",
   completed: "已完成",
   one_time: "单次服务",
   plan_generated: "周期生成",

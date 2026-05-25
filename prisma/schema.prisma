@@ -82,6 +82,7 @@ enum ScheduleStatus {
   completed
   cancelled
   unassigned
+  suspended
 }
 
 enum ReviewStatus {

@@ -1781,7 +1781,7 @@ export function CareworkerPage() {
       .then(data => {
         const schedules = data.serviceSchedules ?? [];
         const tasks: ServiceTask[] = schedules
-          .filter((s: any) => s.status !== "cancelled")
+          .filter((s: any) => s.status !== "cancelled" && s.status !== "suspended")
           .map((s: any) => ({
             id: s.id,
             serviceType: s.serviceProject || "探访关爱",
