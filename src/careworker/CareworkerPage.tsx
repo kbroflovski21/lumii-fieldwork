@@ -86,6 +86,13 @@ interface BadgeEvent {
 
 /* ─── Mock Data ─── */
 
+const SITE_NAME_MAP: Record<string, string> = {
+  "site-001": "翠苑站",
+  "site-002": "三墩站",
+  "site-003": "古荡站",
+  "site-004": "文新站",
+};
+
 const DEMO_WORKERS: DemoWorker[] = [
   { id: "w1", name: "王建国", phone: "138****1234", site: "红培社区站" },
   { id: "w2", name: "张敏", phone: "138****5678", site: "红培社区站" },
@@ -1012,7 +1019,7 @@ function TaskDetailDrawer({
                         {step}
                       </span>
                       {isExpanded && detail && (
-                        <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6, marginTop: 6, paddingRight: 8 }}>
+                        <div style={{ fontSize: 12, color: "#8C8279", lineHeight: 1.6, marginTop: 6, paddingRight: 8 }}>
                           {detail}
                         </div>
                       )}
@@ -1160,11 +1167,7 @@ function ChangePasswordScreen({ token, onDone }: { token: string; onDone: () => 
     <div className="cw-login">
       <div className="cw-login__card">
         <div className="cw-login__logo">
-          <div className="cw-login__icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="金色年华" width="56" height="56" style={{ borderRadius: 14 }} />
           <h1 className="cw-login__title">首次登录</h1>
           <p className="cw-login__subtitle">请设置您的新密码</p>
         </div>
@@ -1248,12 +1251,7 @@ function LoginScreen({ onLogin }: { onLogin: (worker: DemoWorker) => void }) {
     <div className="cw-login">
       <div className="cw-login__card">
         <div className="cw-login__logo">
-          <div className="cw-login__icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
-          </div>
+          <img src="/logo.png" alt="金色年华" width="56" height="56" style={{ borderRadius: 14 }} />
           <h1 className="cw-login__title">金色年华</h1>
           <p className="cw-login__subtitle">养老智慧服务平台</p>
         </div>
@@ -1908,8 +1906,8 @@ export function CareworkerPage() {
         <div className="cw-header__user">
           <div className="cw-header__avatar">{worker.name[0]}</div>
           <div>
-            <div className="cw-header__name">{worker.name}</div>
-            <div className="cw-header__role">{worker.site}</div>
+            <div className="cw-header__name">服务人员 · {worker.name}</div>
+            <div className="cw-header__role">{SITE_NAME_MAP[worker.site] ?? worker.site}</div>
           </div>
         </div>
         <div className="cw-header__actions">
@@ -1996,7 +1994,7 @@ export function CareworkerPage() {
         {activeTab === "badge" && (
           <div style={{ padding: "16px 0", textAlign: "center" }}>
             <div style={{ padding: "40px 20px" }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: myBadge ? "linear-gradient(135deg,#0052CC,#2684FF)" : "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: myBadge ? "linear-gradient(135deg,#EB6420,#E8944A)" : "#DDD5CC", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={myBadge ? "white" : "#94A3B8"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
               </div>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px" }}>我的工牌</h3>
@@ -2004,9 +2002,9 @@ export function CareworkerPage() {
                 <>
                   <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 16px", background: "#F0F7FF", borderRadius: 20, marginBottom: 20 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A" }} />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#0052CC" }}>{myBadge.deviceCode}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#EB6420" }}>{myBadge.deviceCode}</span>
                   </div>
-                  <p style={{ fontSize: 13, color: "#64748B", margin: "0 0 24px" }}>工牌已绑定，点击下方按钮开始录音</p>
+                  <p style={{ fontSize: 13, color: "#8C8279", margin: "0 0 24px" }}>工牌已绑定，点击下方按钮开始录音</p>
                   <button
                     onClick={() => window.open("/careworker/hardware", "_blank")}
                     style={{ padding: "14px 40px", background: "linear-gradient(135deg,#DC2626,#EF4444)", color: "#fff", border: "none", borderRadius: 28, fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(220,38,38,.3)" }}
@@ -2031,21 +2029,21 @@ export function CareworkerPage() {
           className={`cw-tabbar__item ${activeTab === "tasks" ? "cw-tabbar__item--active" : ""}`}
           onClick={() => setActiveTab("tasks")}
         >
-          <IconCalendar color={activeTab === "tasks" ? "#0052CC" : "#9CA3AF"} />
+          <IconCalendar color={activeTab === "tasks" ? "#EB6420" : "#A89E96"} />
           <span className="cw-tabbar__label">我的任务</span>
         </button>
         <button
           className={`cw-tabbar__item ${activeTab === "reference" ? "cw-tabbar__item--active" : ""}`}
           onClick={() => setActiveTab("reference")}
         >
-          <IconBook color={activeTab === "reference" ? "#0052CC" : "#9CA3AF"} />
+          <IconBook color={activeTab === "reference" ? "#EB6420" : "#A89E96"} />
           <span className="cw-tabbar__label">参考资料</span>
         </button>
         <button
           className={`cw-tabbar__item ${activeTab === "badge" ? "cw-tabbar__item--active" : ""}`}
           onClick={() => setActiveTab("badge")}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={activeTab === "badge" ? "#0052CC" : "#9CA3AF"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={activeTab === "badge" ? "#EB6420" : "#A89E96"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
           <span className="cw-tabbar__label">我的工牌</span>
         </button>
       </nav>
