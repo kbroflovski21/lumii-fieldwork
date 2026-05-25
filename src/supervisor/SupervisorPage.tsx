@@ -299,6 +299,13 @@ function SOPContent() {
           version: s.supervisionVersion ?? 1,
           history: s.supervisionHistory ?? [],
         } : null,
+        guidance: s.guidanceContent ? {
+          status: "complete" as const,
+          content: s.guidanceContent,
+          source: s.guidanceSource ?? "ai_generated",
+          version: s.guidanceVersion ?? 1,
+          history: s.guidanceHistory ?? [],
+        } : null,
         report: s.reportContent ? {
           status: "complete" as const,
           content: s.reportContent,
