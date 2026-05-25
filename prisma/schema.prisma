@@ -430,6 +430,10 @@ model Sop {
   supervisionSource  String   @default("ai_generated") @map("supervision_source") @db.VarChar(32)
   supervisionVersion Int      @default(1) @map("supervision_version")
   supervisionHistory Json     @default("[]") @map("supervision_history")
+  guidanceContent    String?  @map("guidance_content") @db.Text
+  guidanceSource     String   @default("ai_generated") @map("guidance_source") @db.VarChar(32)
+  guidanceVersion    Int      @default(1) @map("guidance_version")
+  guidanceHistory    Json     @default("[]") @map("guidance_history")
   reportContent      String?  @map("report_content") @db.Text
   reportSource       String   @default("ai_generated") @map("report_source") @db.VarChar(32)
   reportVersion      Int      @default(1) @map("report_version")
