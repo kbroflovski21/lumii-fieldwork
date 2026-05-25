@@ -453,7 +453,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     if (!aiResult) return;
     const p = aiResult.plan;
     const worker = workerOptions.find(w => w.id === planWorkerId);
-    const serviceProject = p.serviceContent || aiResult.matchedSops?.map(s => s.name).join("、") || "长护险";
+    const serviceProject = (aiResult.matchedSops?.length > 0 ? aiResult.matchedSops.map(s => s.name).join("、") : null) || p.serviceContent || "长护险";
     if (p.isRecurring) {
       await authFetch(`/api/service-objects/${obj.id}/service-plans`, {
         method: "POST",
