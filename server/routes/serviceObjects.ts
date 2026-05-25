@@ -174,28 +174,209 @@ export function serviceObjectsRoutes() {
   });
 
   r.get("/service-objects/:id/service-plans", async (req, res) => {
-    const plans = await prisma.servicePlan.findMany({ where: { serviceObjectId: req.params.id } });
-    res.json(plans);
+    const plans = await prisma.servicePlan.findMany({
+      where: { serviceObjectId: req.params.id },
+      include: {
+        exceptions: true,
+        sopLinks: { select: { sopId: true, sopName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ servicePlans: plans });
   });
 
   r.post("/service-objects/:id/service-plans", async (req, res) => {
     const id = genId("plan");
     const b = req.body;
+    const serviceObjectId = req.params.id;
+
+    // 1. Create ServicePlan
     await prisma.servicePlan.create({
       data: {
         id,
-        serviceObjectId: req.params.id,
-        serviceProject: b.serviceProject ?? "",
+        serviceObjectId,
+        serviceProject: b.serviceProject ?? "长护险",
         cadenceRule: b.cadenceRule ?? "",
         cadenceLabel: b.cadenceLabel ?? "",
         preferredTimeWindow: b.preferredTimeWindow ?? {},
         startDate: b.startDate ?? new Date().toISOString().slice(0, 10),
         primarySocialWorkerId: b.primarySocialWorkerId ?? null,
+        primarySocialWorkerName: b.primarySocialWorkerName ?? null,
+        description: b.description ?? null,
         status: "active",
       },
     });
-    const row = await prisma.servicePlan.findFirst({ where: { id } });
+
+    // 2. Create plan-level SOP associations
+    const sopIds: string[] = b.sopIds ?? [];
+    if (sopIds.length > 0) {
+      const sops = await prisma.sop.findMany({ where: { id: { in: sopIds } }, select: { id: true, name: true } });
+      await prisma.servicePlanSop.createMany({
+        data: sops.map(s => ({ planId: id, sopId: s.id, sopName: s.name })),
+      });
+    }
+
+    // 3. Batch-generate 4 weeks of ServiceSchedule
+    if (b.cadenceRule) {
+      const { generateDates } = await import("../lib/cadenceRule");
+      const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } });
+      const dates = generateDates(b.cadenceRule, b.startDate ?? new Date().toISOString().slice(0, 10), 28);
+      const tw = b.preferredTimeWindow ?? {};
+      const scheduleData = dates.map(date => ({
+        id: genId("schedule"),
+        source: "service_plan" as const,
+        servicePlanId: id,
+        serviceObjectId,
+        siteId: obj?.siteId ?? "site-001",
+        serviceObjectName: obj?.name ?? "",
+        serviceProject: b.serviceProject ?? "长护险",
+        addressSnapshot: obj?.address ?? "",
+        address: obj?.address ?? null,
+        mapDisplayPoint: obj?.mapDisplayPoint ?? undefined,
+        serviceDate: date,
+        startTime: tw.start ?? null,
+        endTime: tw.end ?? null,
+        timeWindow: tw,
+        assignedSocialWorkerId: b.primarySocialWorkerId ?? null,
+        assignedSocialWorkerName: b.primarySocialWorkerName ?? null,
+        status: "scheduled" as const,
+        riskTags: obj?.riskTags ?? [],
+      }));
+      await prisma.serviceSchedule.createMany({ data: scheduleData });
+
+      // 4. Copy plan SOPs to each schedule
+      if (sopIds.length > 0) {
+        const planSops = await prisma.servicePlanSop.findMany({ where: { planId: id } });
+        const scheduleSopData = scheduleData.flatMap(sch =>
+          planSops.map(ps => ({ scheduleId: sch.id, sopId: ps.sopId, sopName: ps.sopName }))
+        );
+        await prisma.serviceScheduleSop.createMany({ data: scheduleSopData });
+      }
+    }
+
+    const row = await prisma.servicePlan.findFirst({
+      where: { id },
+      include: { sopLinks: { select: { sopId: true, sopName: true } } },
+    });
     res.json(row);
+  });
+
+  r.post("/service-plans/:id/cancel", async (req, res) => {
+    const planId = req.params.id;
+    const today = new Date().toISOString().slice(0, 10);
+
+    await prisma.servicePlan.update({
+      where: { id: planId },
+      data: { status: "archived" },
+    });
+
+    await prisma.serviceSchedule.updateMany({
+      where: {
+        servicePlanId: planId,
+        serviceDate: { gte: today },
+        status: { notIn: ["completed", "cancelled"] },
+      },
+      data: { status: "cancelled" },
+    });
+
+    res.json({ ok: true });
+  });
+
+  r.patch("/service-plans/:id", async (req, res) => {
+    const planId = req.params.id;
+    const { description, sopIds, cadenceRule, cadenceLabel, preferredTimeWindow } = req.body;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const plan = await prisma.servicePlan.findFirst({ where: { id: planId } });
+    if (!plan) { res.status(404).json({ error: "plan not found" }); return; }
+
+    // 1. Update plan fields
+    const updateData: any = {};
+    if (description !== undefined) updateData.description = description;
+    if (cadenceRule !== undefined) updateData.cadenceRule = cadenceRule;
+    if (cadenceLabel !== undefined) updateData.cadenceLabel = cadenceLabel;
+    if (preferredTimeWindow !== undefined) updateData.preferredTimeWindow = preferredTimeWindow;
+    if (Object.keys(updateData).length > 0) {
+      await prisma.servicePlan.update({ where: { id: planId }, data: updateData });
+    }
+
+    // 2. Update plan-level SOPs if provided
+    if (Array.isArray(sopIds)) {
+      await prisma.servicePlanSop.deleteMany({ where: { planId } });
+      if (sopIds.length > 0) {
+        const sops = await prisma.sop.findMany({ where: { id: { in: sopIds } }, select: { id: true, name: true } });
+        await prisma.servicePlanSop.createMany({
+          data: sops.map(s => ({ planId, sopId: s.id, sopName: s.name })),
+        });
+
+        // 3. Update all future schedule SOPs
+        const futureSchedules = await prisma.serviceSchedule.findMany({
+          where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled"] } },
+          select: { id: true },
+        });
+        if (futureSchedules.length > 0) {
+          const scheduleIds = futureSchedules.map(s => s.id);
+          await prisma.serviceScheduleSop.deleteMany({ where: { scheduleId: { in: scheduleIds } } });
+          const newSopData = scheduleIds.flatMap(schId =>
+            sops.map(s => ({ scheduleId: schId, sopId: s.id, sopName: s.name }))
+          );
+          await prisma.serviceScheduleSop.createMany({ data: newSopData });
+        }
+      }
+    }
+
+    // 4. If cadenceRule changed, cancel future schedules and regenerate
+    if (cadenceRule !== undefined && cadenceRule !== plan.cadenceRule) {
+      await prisma.serviceSchedule.updateMany({
+        where: { servicePlanId: planId, serviceDate: { gte: today }, status: { notIn: ["completed", "cancelled"] } },
+        data: { status: "cancelled" },
+      });
+
+      if (cadenceRule) {
+        const { generateDates } = await import("../lib/cadenceRule");
+        const obj = await prisma.serviceObject.findFirst({
+          where: { id: plan.serviceObjectId },
+          select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true },
+        });
+        const tw = preferredTimeWindow ?? plan.preferredTimeWindow as any;
+        const dates = generateDates(cadenceRule, today, 28);
+        const scheduleData = dates.map(date => ({
+          id: genId("schedule"),
+          source: "service_plan" as const,
+          servicePlanId: planId,
+          serviceObjectId: plan.serviceObjectId,
+          siteId: obj?.siteId ?? "site-001",
+          serviceObjectName: obj?.name ?? "",
+          serviceProject: plan.serviceProject,
+          addressSnapshot: obj?.address ?? "",
+          address: obj?.address ?? null,
+          mapDisplayPoint: obj?.mapDisplayPoint ?? undefined,
+          serviceDate: date,
+          startTime: tw?.start ?? null,
+          endTime: tw?.end ?? null,
+          timeWindow: tw ?? {},
+          assignedSocialWorkerId: plan.primarySocialWorkerId,
+          assignedSocialWorkerName: plan.primarySocialWorkerName,
+          status: "scheduled" as const,
+          riskTags: obj?.riskTags ?? [],
+        }));
+        await prisma.serviceSchedule.createMany({ data: scheduleData });
+
+        const planSops = await prisma.servicePlanSop.findMany({ where: { planId } });
+        if (planSops.length > 0) {
+          const sopData = scheduleData.flatMap(sch =>
+            planSops.map(ps => ({ scheduleId: sch.id, sopId: ps.sopId, sopName: ps.sopName }))
+          );
+          await prisma.serviceScheduleSop.createMany({ data: sopData });
+        }
+      }
+    }
+
+    const updated = await prisma.servicePlan.findFirst({
+      where: { id: planId },
+      include: { sopLinks: { select: { sopId: true, sopName: true } } },
+    });
+    res.json(updated);
   });
 
   r.post("/service-plans/:id/exceptions", async (req, res) => {
