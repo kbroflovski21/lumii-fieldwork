@@ -453,6 +453,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     if (!aiResult) return;
     const p = aiResult.plan;
     const worker = workerOptions.find(w => w.id === planWorkerId);
+    const serviceProject = p.serviceContent || aiResult.matchedSops?.map(s => s.name).join("、") || "长护险";
     if (p.isRecurring) {
       await authFetch(`/api/service-objects/${obj.id}/service-plans`, {
         method: "POST",
@@ -463,7 +464,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
           cadenceLabel: p.cadenceLabel,
           preferredTimeWindow: p.timeWindow,
           startDate: p.startDate,
-          serviceProject: "长护险",
+          serviceProject,
           sopIds: selectedSopIds,
           primarySocialWorkerId: planWorkerId || null,
           primarySocialWorkerName: worker?.name ?? null,
@@ -472,10 +473,12 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     } else {
       await siteOperationsApi.createOneTimeServiceSchedule({
         serviceObjectId: obj.id,
-        serviceProject: "长护险",
+        serviceProject,
         serviceDate: p.startDate,
         timeWindow: p.timeWindow,
-      });
+        assignedSocialWorkerId: planWorkerId || undefined,
+        sopIds: selectedSopIds.length > 0 ? selectedSopIds : undefined,
+      } as any);
     }
     setAiResult(null);
     setAiInput("");

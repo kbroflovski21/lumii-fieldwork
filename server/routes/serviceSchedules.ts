@@ -141,6 +141,11 @@ export function serviceSchedulesRoutes() {
       });
       if (obj) { objName = obj.name; addr = obj.address; mapPoint = obj.mapDisplayPoint; }
     }
+    let workerName: string | null = null;
+    if (b.assignedSocialWorkerId) {
+      const sw = await prisma.socialWorker.findFirst({ where: { id: b.assignedSocialWorkerId }, select: { name: true } });
+      if (sw) workerName = sw.name;
+    }
     const newStatus = b.assignedSocialWorkerId ? "scheduled" : "unassigned";
     await prisma.serviceSchedule.create({
       data: {
@@ -158,11 +163,20 @@ export function serviceSchedulesRoutes() {
         endTime: b.timeWindow?.end ?? "",
         timeWindow: b.timeWindow ?? {},
         assignedSocialWorkerId: b.assignedSocialWorkerId ?? null,
+        assignedSocialWorkerName: workerName,
         status: newStatus as any,
         riskTags: [],
       },
     });
-    const row = await prisma.serviceSchedule.findFirst({ where: { id } });
+    if (Array.isArray(b.sopIds) && b.sopIds.length > 0) {
+      const sops = await prisma.sop.findMany({ where: { id: { in: b.sopIds } }, select: { id: true, name: true } });
+      if (sops.length > 0) {
+        await prisma.serviceScheduleSop.createMany({
+          data: sops.map(s => ({ id: genId("sss"), scheduleId: id, sopId: s.id, sopName: s.name })),
+        });
+      }
+    }
+    const row = await prisma.serviceSchedule.findFirst({ where: { id }, include: { sopLinks: { select: { sopId: true, sopName: true } } } });
     res.json({ ok: true, id, message: "created", serviceSchedule: toApi(row) });
   });
 
