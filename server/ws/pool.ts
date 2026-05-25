@@ -84,6 +84,7 @@ export class AgentConnectionPool {
         try { this.onUserMessage(uc, JSON.parse(raw.toString())); } catch {}
       });
       ws.on("close", () => { this.userConns.delete(uc); });
+      ws.on("error", () => { this.userConns.delete(uc); });
     });
   }
 
@@ -125,6 +126,9 @@ export class AgentConnectionPool {
 
     ws.on("close", () => {
       clearTimeout(timeout);
+      if (this.agentConn?.ws === ws) { this.agentConn = null; this.broadcastStatus(false); }
+    });
+    ws.on("error", () => {
       if (this.agentConn?.ws === ws) { this.agentConn = null; this.broadcastStatus(false); }
     });
   }

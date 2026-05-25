@@ -59,7 +59,7 @@ function formatTime(totalSec: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-const PROCESSOR_URL = (import.meta as any).env?.VITE_PROCESSOR_URL || window.location.origin;
+const PROCESSOR_URL = (import.meta as any).env?.VITE_PROCESSOR_URL || (window.location.origin + "/processor");
 const WS_URL = PROCESSOR_URL.replace(/^http/, "ws") + "/ws/badge";
 
 let ttsQueue: { type: string; data?: string; text?: string }[] = [];
