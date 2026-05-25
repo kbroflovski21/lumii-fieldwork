@@ -143,7 +143,7 @@
 }
 
 .sv-page-header {
-  padding: 20px 28px 0;
+  padding: 28px 32px 0;
   flex-shrink: 0;
 }
 
@@ -166,6 +166,10 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--sv-line, #DDD5CC);
+  margin: 16px 32px 28px;
+  background: var(--sv-surface, #FFFCF8);
 }
 
 /* Inherit tokens when embedded outside .sv-page (e.g. inside QualityPage) */
@@ -1195,6 +1199,12 @@
   gap: 16px;
 }
 
+.sv-ai-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* AI card */
 .sv-ai-card {
   background: var(--sv-surface);
@@ -1284,6 +1294,14 @@
 .sv-ai-card__footer-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+.sv-ai-card__footer-actions .sv-btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* AI tag */
@@ -1357,10 +1375,13 @@
 
   .sv-content-body {
     flex-direction: column;
+    margin: 12px;
+    border-radius: 12px;
   }
 
   .sv-dir {
     width: 100% !important;
+    border-radius: 12px 12px 0 0;
     max-height: 180px;
     border-right: none;
     border-bottom: 1px solid var(--sv-line);

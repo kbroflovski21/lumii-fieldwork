@@ -21,10 +21,11 @@ interface StdFolder {
   published: boolean;
   sop: StdDoc | null;
   supervision: StdDoc | null;
+  guidance: StdDoc | null;
   report: StdDoc | null;
 }
 
-type DocType = "sop" | "supervision" | "report";
+type DocType = "sop" | "supervision" | "guidance" | "report";
 type ActiveLayer = "sop" | "ai";
 
 interface ChatMessage {
@@ -35,7 +36,7 @@ interface ChatMessage {
 }
 
 interface GeneratePreview {
-  docType: "supervision" | "report";
+  docType: "supervision" | "guidance" | "report";
   folderId: string;
   content: string;
   basedOnSopVersion: number;
@@ -122,6 +123,9 @@ function buildInitialFolders(): StdFolder[] {
         { version: 1, date: "2026-04-01", summary: "AI 初始生成" },
         { version: 2, date: "2026-05-14", summary: "AI 基于 SOP v3 重新推理" },
       ]),
+      guidance: mkDoc("1. 到达后提示完成自我介绍和身份确认\n2. 提示记录老人健康状态\n3. 服务结束前提示复述服务内容并询问满意度", "ai_generated", 1, [
+        { version: 1, date: "2026-05-14", summary: "AI 初始生成" },
+      ]),
       report: mkDoc(GENERAL_REPORT, "ai_generated", 2, [
         { version: 1, date: "2026-04-01", summary: "AI 初始生成" },
         { version: 2, date: "2026-05-14", summary: "AI 基于 SOP v3 重新推理" },
@@ -136,6 +140,7 @@ function buildInitialFolders(): StdFolder[] {
       supervision: mkDoc(ORAL_SUPERVISION, "ai_generated", 1, [
         { version: 1, date: "2026-05-14", summary: "AI 基于 SOP 生成" },
       ]),
+      guidance: null,
       report: mkDoc(ORAL_REPORT, "ai_generated", 1, [
         { version: 1, date: "2026-05-14", summary: "AI 基于 SOP 生成" },
       ]),
@@ -148,6 +153,7 @@ function buildInitialFolders(): StdFolder[] {
       supervision: mkDoc(VITALS_SUPERVISION, "ai_generated", 1, [
         { version: 1, date: "2026-05-14", summary: "AI 基于 SOP 生成" },
       ]),
+      guidance: null,
       report: mkDoc(VITALS_REPORT, "ai_generated", 1, [
         { version: 1, date: "2026-05-14", summary: "AI 基于 SOP 生成" },
       ]),
@@ -157,7 +163,8 @@ function buildInitialFolders(): StdFolder[] {
 
 const DOC_LABELS: Record<DocType, string> = {
   sop: "SOP",
-  supervision: "服务中实时督导要求",
+  supervision: "服务中督导要求",
+  guidance: "服务中引导要求",
   report: "服务后报告要求",
 };
 
@@ -175,24 +182,32 @@ function mockAiReply(text: string): string {
   return `收到您的消息：「${text}」。目前 AI 功能为模拟状态，后续将接入 LLM API 提供智能回复。`;
 }
 
-function mockGenerateDoc(sopContent: string, docType: "supervision" | "report"): string {
+function mockGenerateDoc(sopContent: string, docType: "supervision" | "guidance" | "report"): string {
   if (docType === "supervision") {
-    return `基于当前 SOP 自动生成的实时督导要求：
+    return `基于当前 SOP 自动生成的服务中督导要求：
 
-1. 服务开始时检查是否按规范完成身份确认和开场流程
-2. 监测服务过程中的关键操作步骤是否遗漏
-3. 关注安全隐患和违规行为
-4. 服务结束前检查是否完成总结和满意度询问
+1. 开场 1 分钟内未做自报家门和身份确认 → 语音提示一次
+2. 出现服务结束迹象但未复述服务内容和询问满意度 → 语音提示一次
+3. 检测到推销商品、私下收费等违规行为 → 具体描述违规并提示
+
+（此为 AI 模拟生成，后续将接入 LLM API）`;
+  }
+  if (docType === "guidance") {
+    return `基于当前 SOP 自动生成的服务中引导要求：
+
+1. 到达后提示服务人员完成自我介绍和身份确认
+2. 根据服务项目提示关键操作步骤（如助餐需确认饮食禁忌）
+3. 服务过程中提示记录老人健康状态（血压、体温等）
+4. 服务结束前提示复述服务内容并询问满意度
 
 （此为 AI 模拟生成，后续将接入 LLM API）`;
   }
   return `基于当前 SOP 自动生成的服务后报告要求：
 
-1. 提取服务基本信息（时间、地点、人员）
-2. 逐项核对 SOP 要求的执行情况
-3. 记录服务过程中的异常事件
-4. 评估整体合规性
-5. 生成改进建议
+1. 是否做了开场确认，如有则记录信息，如无则提示缺失
+2. 是否询问了身体情况并总结结果
+3. 是否做了结束确认，复述服务内容和询问满意度
+4. 检查是否有推销或违规行为，如有则标注
 
 （此为 AI 模拟生成，后续将接入 LLM API）`;
 }
@@ -307,11 +322,17 @@ function SOPContent() {
     danger?: boolean;
   } | null>(null);
 
+  /* Prompt modal (replaces window.prompt) */
+  const [promptModal, setPromptModal] = useState<{
+    title: string;
+    onConfirm: (value: string) => void;
+  } | null>(null);
+
   /* Generate preview */
   const [generatePreview, setGeneratePreview] = useState<GeneratePreview | null>(null);
 
   /* AI layer: which doc is being viewed in version history */
-  const [aiViewingDoc, setAiViewingDoc] = useState<"supervision" | "report" | null>(null);
+  const [aiViewingDoc, setAiViewingDoc] = useState<"supervision" | "guidance" | "report" | null>(null);
   const [aiViewingVersion, setAiViewingVersion] = useState<number | null>(null);
 
   /* Derived */
@@ -414,8 +435,8 @@ function SOPContent() {
       }),
     );
     // Persist to API
-    const fieldMap: Record<DocType, string> = { sop: "sopContent", supervision: "supervisionContent", report: "reportContent" };
-    const sourceMap: Record<DocType, string> = { sop: "sopSource", supervision: "supervisionSource", report: "reportSource" };
+    const fieldMap: Record<DocType, string> = { sop: "sopContent", supervision: "supervisionContent", guidance: "guidanceContent", report: "reportContent" };
+    const sourceMap: Record<DocType, string> = { sop: "sopSource", supervision: "supervisionSource", guidance: "guidanceSource", report: "reportSource" };
     const body: any = { [fieldMap[docType]]: editContent, [sourceMap[docType]]: folder[docType]?.source ?? "manual" };
     authFetch(`/api/sops/${folder.id}`, {
       method: "PATCH",
@@ -434,7 +455,7 @@ function SOPContent() {
   };
 
   /* ── Generate and confirm flow ── */
-  const handleGenerate = (docType: "supervision" | "report") => {
+  const handleGenerate = (docType: "supervision" | "guidance" | "report") => {
     if (!folder || !sopDoc) return;
     setGeneratePreview({
       docType,
@@ -483,8 +504,8 @@ function SOPContent() {
       }),
     );
     // Persist AI-generated content to API
-    const fieldMap: Record<string, string> = { supervision: "supervisionContent", report: "reportContent" };
-    const sourceMap: Record<string, string> = { supervision: "supervisionSource", report: "reportSource" };
+    const fieldMap: Record<string, string> = { supervision: "supervisionContent", guidance: "guidanceContent", report: "reportContent" };
+    const sourceMap: Record<string, string> = { supervision: "supervisionSource", guidance: "guidanceSource", report: "reportSource" };
     const summaryMap: Record<string, string> = { supervision: "supervisionChangeSummary", report: "reportChangeSummary" };
     const body: any = {
       [fieldMap[docType]]: content,
@@ -544,9 +565,15 @@ function SOPContent() {
   };
 
   /* ── Add new folder ── */
-  const handleAddFolder = async (type: "general" | "service") => {
-    const name = prompt(type === "general" ? "请输入通用规范名称：" : "请输入服务项目规范名称：");
-    if (!name?.trim()) return;
+  const handleAddFolder = (type: "general" | "service") => {
+    setPromptModal({
+      title: type === "general" ? "请输入通用规范名称" : "请输入服务项目规范名称",
+      onConfirm: (name) => doAddFolder(type, name),
+    });
+  };
+
+  const doAddFolder = async (type: "general" | "service", name: string) => {
+    if (!name.trim()) return;
     try {
       const resp = await authFetch("/api/sops", {
         method: "POST",
@@ -561,6 +588,7 @@ function SOPContent() {
         published: false,
         sop: null,
         supervision: null,
+        guidance: null,
         report: null,
       };
       setFolders(prev => [...prev, newFolder]);
@@ -683,7 +711,7 @@ function SOPContent() {
                   onClick={() => { setActiveLayer("ai"); setIsEditing(false); setViewingVersion(null); }}
                 >
                   {activeLayer === "ai" && <span className="sv-layer-btn__dot sv-layer-btn__dot--white" />}
-                  AI 督导配置
+                  AI 辅助配置
                 </button>
               </div>
             </div>
@@ -752,10 +780,11 @@ function SOPContent() {
                   />
                 </div>
               ) : folder ? (
-                <div className="sv-doc__empty">
+                <div className="sv-doc__empty" style={{ flexDirection: "column", gap: 12 }}>
                   <div>该规范尚未创建 SOP 文档</div>
                   <button
-                    style={{ marginTop: 12, padding: "8px 20px", background: "var(--sv-accent, #0052cc)", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+                    className="sv-btn sv-btn--primary"
+                    style={{ height: 36, padding: "0 24px", fontSize: 14 }}
                     onClick={() => { setIsEditing(true); setEditingDocType("sop"); setEditContent(""); }}
                   >开始编写</button>
                 </div>
@@ -776,7 +805,7 @@ function SOPContent() {
               isEditing={isEditing}
               editingDocType={editingDocType}
               editContent={editContent}
-              onStartEdit={(dt: "supervision" | "report") => {
+              onStartEdit={(dt: "supervision" | "guidance" | "report") => {
                 const doc = folder[dt];
                 if (!doc) return;
                 setIsEditing(true);
@@ -877,7 +906,50 @@ function SOPContent() {
           </div>
         </div>
       )}
+      {promptModal && (
+        <PromptModal
+          title={promptModal.title}
+          onConfirm={(v) => { promptModal.onConfirm(v); setPromptModal(null); }}
+          onCancel={() => setPromptModal(null)}
+        />
+      )}
     </>
+  );
+}
+
+/* ═══ Prompt Modal ═══ */
+
+function PromptModal({ title, onConfirm, onCancel }: { title: string; onConfirm: (value: string) => void; onCancel: () => void }) {
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  return (
+    <div className="sv-modal-backdrop">
+      <div className="sv-modal-overlay" onClick={onCancel} />
+      <div className="sv-modal">
+        <div className="sv-modal__title">{title}</div>
+        <div className="sv-modal__body">
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && value.trim()) { onConfirm(value.trim()); } if (e.key === "Escape") onCancel(); }}
+            placeholder="请输入名称..."
+            style={{
+              width: "100%", height: 40, padding: "0 14px",
+              border: "1px solid var(--sv-line, #DDD5CC)", borderRadius: 10,
+              fontSize: 14, outline: "none", background: "var(--sv-surface, #FFFCF8)",
+              color: "var(--sv-text, #2D2520)", fontFamily: "inherit",
+            }}
+          />
+        </div>
+        <div className="sv-modal__actions">
+          <button onClick={onCancel} className="sv-btn sv-btn--muted">取消</button>
+          <button onClick={() => value.trim() && onConfirm(value.trim())} className="sv-btn sv-btn--primary" disabled={!value.trim()}>确定</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -992,23 +1064,24 @@ function AiConfigView({
 }: {
   folder: StdFolder;
   generatePreview: GeneratePreview | null;
-  onGenerate: (dt: "supervision" | "report") => void;
+  onGenerate: (dt: "supervision" | "guidance" | "report") => void;
   onAcceptGenerate: () => void;
   onDiscardGenerate: () => void;
   isEditing: boolean;
   editingDocType: DocType | null;
   editContent: string;
-  onStartEdit: (dt: "supervision" | "report") => void;
+  onStartEdit: (dt: "supervision" | "guidance" | "report") => void;
   onSave: (dt: DocType) => void;
   onCancelEdit: () => void;
   onEditContentChange: (v: string) => void;
-  aiViewingDoc: "supervision" | "report" | null;
+  aiViewingDoc: "supervision" | "guidance" | "report" | null;
   aiViewingVersion: number | null;
-  onViewVersion: (dt: "supervision" | "report", v: number) => void;
+  onViewVersion: (dt: "supervision" | "guidance" | "report", v: number) => void;
   onBackFromVersion: () => void;
 }) {
   const sopDoc = folder.sop;
   const svDoc = folder.supervision;
+  const gdDoc = folder.guidance;
   const rpDoc = folder.report;
 
   return (
@@ -1016,16 +1089,15 @@ function AiConfigView({
       {/* Banner */}
       <div className="sv-ai-banner">
         <div className="sv-ai-banner__text">
-          以下配置用于 <strong>AI 督导系统</strong>（ASR + LLM + TTS 架构）。
-          「服务中督导要求」指导实时语音分析；「服务后报告要求」指导自动报告生成。
-          修改将直接影响 AI 对服务过程的判断逻辑，建议由技术专家审核后发布。
+          以下配置用于定义基于上门服务录音的 <strong>AI 辅助功能</strong>。
+          「服务中督导要求」对服务中不适当的行为进行监督；「服务中引导要求」在服务过程中针对需要服务人员完成的任务进行提示和引导；「服务后报告要求」定义服务完成后系统自动生成服务记录的关注重点与报告内容。
         </div>
       </div>
 
-      {/* Two cards */}
-      <div className="sv-ai-grid">
+      {/* Three cards — vertical stack */}
+      <div className="sv-ai-stack">
         <AiDocCard
-          title="服务中实时督导要求"
+          title="服务中督导要求"
           docType="supervision"
           doc={svDoc}
           sopDoc={sopDoc}
@@ -1041,6 +1113,25 @@ function AiConfigView({
           onEditContentChange={onEditContentChange}
           viewingVersion={aiViewingDoc === "supervision" ? aiViewingVersion : null}
           onViewVersion={(v) => onViewVersion("supervision", v)}
+          onBackFromVersion={onBackFromVersion}
+        />
+        <AiDocCard
+          title="服务中引导要求"
+          docType="guidance"
+          doc={gdDoc}
+          sopDoc={sopDoc}
+          generatePreview={generatePreview?.docType === "guidance" ? generatePreview : null}
+          onGenerate={() => onGenerate("guidance")}
+          onAcceptGenerate={onAcceptGenerate}
+          onDiscardGenerate={onDiscardGenerate}
+          isEditing={isEditing && editingDocType === "guidance"}
+          editContent={editContent}
+          onStartEdit={() => onStartEdit("guidance")}
+          onSave={() => onSave("guidance")}
+          onCancelEdit={onCancelEdit}
+          onEditContentChange={onEditContentChange}
+          viewingVersion={aiViewingDoc === "guidance" ? aiViewingVersion : null}
+          onViewVersion={(v) => onViewVersion("guidance", v)}
           onBackFromVersion={onBackFromVersion}
         />
         <AiDocCard
@@ -1077,7 +1168,7 @@ function AiDocCard({
   viewingVersion, onViewVersion, onBackFromVersion,
 }: {
   title: string;
-  docType: "supervision" | "report";
+  docType: "supervision" | "guidance" | "report";
   doc: StdDoc | null;
   sopDoc: StdDoc | null;
   generatePreview: GeneratePreview | null;
