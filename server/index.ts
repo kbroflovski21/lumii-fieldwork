@@ -29,6 +29,7 @@ import { requireAuth } from "./middleware/requireAuth";
 // optionalAuth no longer used — all routes require auth (JWT or GY token)
 import { requireServiceToken } from "./middleware/serviceAuth";
 import { internalRoutes } from "./routes/internal";
+import { startPlanScheduler } from "./scheduler/planScheduler";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -122,6 +123,7 @@ httpServer.listen(PORT, "0.0.0.0", () => {
   if (existsSync(STATIC_ROOT)) {
     console.log(`[server] Serving static files from ${STATIC_ROOT}`);
   }
+  startPlanScheduler();
 });
 
 process.on("SIGINT", async () => { pool.shutdown(); await prisma.$disconnect(); process.exit(0); });
