@@ -1993,36 +1993,34 @@ export function CareworkerPage() {
           <ReferenceList onSelectSop={setSelectedSop} />
         )}
 
-        {activeTab === "badge" && (
-          <div style={{ padding: "16px 0", textAlign: "center" }}>
-            <div style={{ padding: "40px 20px" }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: myBadge ? "linear-gradient(135deg,#EB6420,#E8944A)" : "#DDD5CC", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={myBadge ? "white" : "#94A3B8"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+        {/* Badge tab: always mounted to keep WebSocket alive during tab switches */}
+        <div style={{ display: activeTab === "badge" ? "block" : "none" }}>
+          <div style={{ padding: "16px 16px 0" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: myBadge ? "linear-gradient(135deg,#EB6420,#E8944A)" : "#DDD5CC", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={myBadge ? "white" : "#94A3B8"} strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
               </div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 8px" }}>我的工牌</h3>
-              {myBadge ? (
-                <>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 16px", background: "#F0F7FF", borderRadius: 20, marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>我的工牌</h3>
+                {myBadge ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16A34A" }} />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#EB6420" }}>{myBadge.deviceCode}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#EB6420" }}>{myBadge.deviceCode}</span>
+                    <span style={{ fontSize: 12, color: "#8C8279" }}>已绑定</span>
                   </div>
-                  <p style={{ fontSize: 13, color: "#8C8279", margin: "0 0 24px" }}>工牌已绑定，点击下方按钮开始录音</p>
-                  <button
-                    onClick={() => window.open("/careworker/hardware", "_blank")}
-                    style={{ padding: "14px 40px", background: "linear-gradient(135deg,#DC2626,#EF4444)", color: "#fff", border: "none", borderRadius: 28, fontSize: 16, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 16px rgba(220,38,38,.3)" }}
-                  >
-                    开始录音
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p style={{ fontSize: 14, color: "#94A3B8", margin: "0 0 8px" }}>暂未绑定工牌</p>
-                  <p style={{ fontSize: 13, color: "#CBD5E1" }}>请联系站长为您绑定工牌后即可使用</p>
-                </>
-              )}
+                ) : (
+                  <p style={{ fontSize: 13, color: "#94A3B8", margin: "4px 0 0" }}>暂未绑定，请联系站长</p>
+                )}
+              </div>
             </div>
           </div>
-        )}
+          {myBadge && worker && <HardwareSimulator worker={worker} embedded />}
+          {!myBadge && (
+            <div style={{ padding: "40px 20px", textAlign: "center" }}>
+              <p style={{ fontSize: 14, color: "#94A3B8" }}>绑定工牌后即可使用录音功能</p>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Tab bar */}
