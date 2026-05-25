@@ -6,8 +6,8 @@ function genId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
 
-function isComplete(sop: { sopContent?: string | null; supervisionContent?: string | null; reportContent?: string | null }) {
-  return !!(sop.sopContent && sop.supervisionContent && sop.reportContent);
+function isComplete(sop: { sopContent?: string | null; supervisionContent?: string | null; guidanceContent?: string | null; reportContent?: string | null }) {
+  return !!(sop.sopContent && sop.supervisionContent && sop.guidanceContent && sop.reportContent);
 }
 
 export function sopRoutes() {
@@ -68,6 +68,10 @@ export function sopRoutes() {
         supervisionSource: b.supervisionSource ?? "ai_generated",
         supervisionVersion: b.supervisionVersion ?? 0,
         supervisionHistory: b.supervisionHistory ?? [],
+        guidanceContent: b.guidanceContent ?? null,
+        guidanceSource: b.guidanceSource ?? "ai_generated",
+        guidanceVersion: b.guidanceVersion ?? 0,
+        guidanceHistory: b.guidanceHistory ?? [],
         reportContent: b.reportContent ?? null,
         reportSource: b.reportSource ?? "ai_generated",
         reportVersion: b.reportVersion ?? 0,
@@ -121,6 +125,16 @@ export function sopRoutes() {
         history.push({ version: existing.supervisionVersion ?? 1, date: new Date().toISOString().slice(0, 10), summary: b.supervisionChangeSummary ?? "内容更新", content: existing.supervisionContent });
       }
       data.supervisionHistory = history;
+    }
+    if (b.guidanceContent !== undefined) {
+      data.guidanceContent = b.guidanceContent;
+      data.guidanceSource = b.guidanceSource ?? "ai_generated";
+      data.guidanceVersion = ((existing as any).guidanceVersion ?? 0) + 1;
+      const history = Array.isArray((existing as any).guidanceHistory) ? [...((existing as any).guidanceHistory as any[])] : [];
+      if ((existing as any).guidanceContent) {
+        history.push({ version: (existing as any).guidanceVersion ?? 1, date: new Date().toISOString().slice(0, 10), summary: b.guidanceChangeSummary ?? "内容更新", content: (existing as any).guidanceContent });
+      }
+      data.guidanceHistory = history;
     }
     if (b.reportContent !== undefined) {
       data.reportContent = b.reportContent;
@@ -180,6 +194,7 @@ export function sopRoutes() {
       const missing: string[] = [];
       if (!sop.sopContent) missing.push("sopContent");
       if (!sop.supervisionContent) missing.push("supervisionContent");
+      if (!(sop as any).guidanceContent) missing.push("guidanceContent");
       if (!sop.reportContent) missing.push("reportContent");
       return res.status(400).json({ error: "SOP 不完整，缺少: " + missing.join(", ") });
     }
