@@ -219,7 +219,9 @@ export function serviceObjectsRoutes() {
     if (b.cadenceRule) {
       const { generateDates } = await import("../lib/cadenceRule");
       const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } });
-      const dates = generateDates(b.cadenceRule, b.startDate ?? new Date().toISOString().slice(0, 10), 28);
+      const today = new Date().toISOString().slice(0, 10);
+      const effectiveStart = (b.startDate && b.startDate >= today) ? b.startDate : today;
+      const dates = generateDates(b.cadenceRule, effectiveStart, 28);
       const tw = b.preferredTimeWindow ?? {};
       const scheduleData = dates.map(date => ({
         id: genId("schedule"),

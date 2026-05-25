@@ -531,22 +531,27 @@ export function aiRoutes() {
     });
     const sopList = sops.map(s => `- ID: ${s.id}, 名称: ${s.name}, 关键词: ${JSON.stringify(s.keywords)}`).join("\n");
 
-    const currentDate = today || new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const currentDate = today || now.toISOString().slice(0, 10);
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const systemPrompt = `你是一个养老服务排期助手。用户用自然语言描述服务安排，你需要解析成结构化数据。
 
-当前日期：${currentDate}（以此为基准计算"今天""明天""下周"等相对日期）
+当前日期：${currentDate}，当前时间：${currentTime}
 
 解析规则：
 - "今天"就是当前日期本身
 - "明天"是当前日期+1天
 - "每周X"是周期性计划，isRecurring=true
 - "每天"指每周7天（周一到周日），cadenceRule为WEEKLY:0,1,2,3,4,5,6，isRecurring=true
-- 时间精确解析："下午2点到3点"→14:00-15:00
+- 时间精确解析："下午2点到3点"→14:00-15:00，"下午4点"→16:00-17:00
 - 如果只说"上午"默认9:00-11:00，只说"下午"默认14:00-16:00
 - cadenceRule格式：WEEKLY:1,3,5（数字是星期几，0=周日,1=周一,...6=周六）
 - 非周期性的一次性服务：isRecurring=false，cadenceRule为空字符串
-- startDate：如果用户说"今天"就用当前日期，否则取从当前日期起第一个匹配cadenceRule的日期
-- preview中的日期必须从startDate开始，且每个日期都在cadenceRule包含的星期中
+- startDate规则：
+  - 不能早于当前日期
+  - 如果当前时间已经超过了服务的结束时间，startDate从明天开始
+  - 例如：当前是17:19，服务时间是16:00-17:00，那么今天已过，startDate应为明天
+- preview中的日期必须从startDate开始，且每个日期都在cadenceRule包含的星期中，不能包含过去的日期
 
 服务项目匹配：根据用户描述的服务内容，从以下已有服务项目中匹配：
 ${sopList}
@@ -593,10 +598,24 @@ preview只输出前3条。matchedSopIds只包含上面列表中存在的ID。`;
         .filter(s => (parsed.matchedSopIds ?? []).includes(s.id))
         .map(s => ({ id: s.id, name: s.name }));
 
+      // Server-side safety: filter out past dates
+      const plan = parsed.plan ?? {};
+      const endTime = plan.timeWindow?.end ?? "23:59";
+      const cutoff = currentDate + "T" + currentTime;
+      let preview = (parsed.preview ?? []).filter((p: any) => {
+        const pEnd = p.date + "T" + endTime;
+        return pEnd >= cutoff;
+      });
+      if (plan.startDate && (plan.startDate + "T" + endTime) < cutoff) {
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        plan.startDate = tomorrow.toISOString().slice(0, 10);
+      }
+
       res.json({
-        plan: parsed.plan,
+        plan,
         matchedSops,
-        preview: parsed.preview ?? [],
+        preview,
       });
     } catch (err: any) {
       console.error("[ai] generate-schedule error:", err.message);
