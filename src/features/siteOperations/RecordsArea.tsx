@@ -404,9 +404,50 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   };
 
   const tabs: Array<{ id: RecTab; label: string }> = [
-    { id: "sop", label: "SOP 检查" },
+    { id: "sop", label: "服务详情" },
     { id: "audio", label: "录音 · 对话" },
     { id: "gps", label: "GPS 定位" },
+  ];
+
+  // Build SOP comparison sections from expectedSops vs actual sopGroups
+  const expectedSopNames = (r.expectedSops ?? []).map((e: any) => e.sopName?.toLowerCase().replace(/sop$/i, "").trim()).filter(Boolean);
+  const hasExpected = expectedSopNames.length > 0;
+
+  const generalGroups = (r.sopGroups ?? []).filter((g: any) => g.sopType === "general");
+  const serviceGroups = (r.sopGroups ?? []).filter((g: any) => g.sopType !== "general");
+
+  let completedGroups: any[] = [];
+  let incompleteGroups: any[] = [];
+  let extraGroups: any[] = [];
+
+  if (hasExpected) {
+    for (const g of serviceGroups) {
+      const gName = g.sopName?.toLowerCase().replace(/sop$/i, "").trim() ?? "";
+      const isExpected = expectedSopNames.some((en: string) => en.includes(gName) || gName.includes(en));
+      const allDone = (g.items ?? []).every((i: any) => i.status === "completed");
+      if (isExpected) {
+        if (allDone) completedGroups.push(g);
+        else incompleteGroups.push(g);
+      } else {
+        extraGroups.push(g);
+      }
+    }
+    // expectedSops that have no matching sopGroup at all → fully incomplete
+    for (const e of (r.expectedSops ?? [])) {
+      const eName = e.sopName?.toLowerCase().replace(/sop$/i, "").trim() ?? "";
+      const found = serviceGroups.some((g: any) => {
+        const gn = g.sopName?.toLowerCase().replace(/sop$/i, "").trim() ?? "";
+        return gn.includes(eName) || eName.includes(gn);
+      });
+      if (!found) {
+        incompleteGroups.push({ sopName: e.sopName, sopType: "service", items: [], _missing: true });
+      }
+    }
+  } else {
+    completedGroups = serviceGroups;
+  }
+
+  const sopTabs = [
   ];
 
   return (
@@ -492,8 +533,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               );
             })() : null}
 
-            {/* SOP Groups — grouped by source SOP */}
-            {(r.sopGroups && r.sopGroups.length > 0) ? r.sopGroups.map((group: any) => {
+            {/* 通用规范 — always show after summary */}
+            {generalGroups.map((group: any) => {
               const gItems = group.items ?? [];
               const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
               const gAbnormal = gItems.filter((i: any) => i.status === "abnormal").length;
@@ -518,45 +559,101 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                   )}
                 </div>
               );
-            }) : (
-              <>
-                {/* Fallback: flat display for old data without sopGroups */}
-                {processItems.length > 0 && (
-                  <div className="so-tab-section">
-                    <h4 className="so-tab-section-title">
-                      流程规范
-                      <span className="rec-si-stats">
-                        <span className="rec-si-stats__done">{procCompleted}通过</span>
-                        {procAbnormal > 0 ? <span className="rec-si-stats__abnormal">{procAbnormal}异常</span> : null}
-                        <span className="rec-si-stats__total">共{processItems.length}项</span>
-                      </span>
-                    </h4>
-                    <div className="rec-si-list">
-                      {processItems.map(item => (
-                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {businessItems.length > 0 && (
-                  <div className="so-tab-section">
-                    <h4 className="so-tab-section-title">
-                      服务内容
-                      <span className="rec-si-stats">
-                        <span className="rec-si-stats__done">{bizCompleted}完成</span>
-                        {bizAbnormal > 0 ? <span className="rec-si-stats__abnormal">{bizAbnormal}异常</span> : null}
-                        <span className="rec-si-stats__total">共{businessItems.length}项</span>
-                      </span>
-                    </h4>
-                    <div className="rec-si-list">
-                      {businessItems.map(item => (
-                        <ServiceItemRow key={item.id} item={item} expanded={expandedItemId === item.id} onToggle={() => setExpandedItemId(expandedItemId === item.id ? null : item.id)} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+            })}
+
+            {/* 已完成 — 排班要求且全部完成的服务 */}
+            {completedGroups.length > 0 && (
+              <div className="rec-section-divider">
+                <span className="rec-section-label" style={{ color: "#16A34A" }}>已完成</span>
+              </div>
             )}
+            {completedGroups.map((group: any) => {
+              const gItems = group.items ?? [];
+              const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
+              const isExpanded = collapsedGroups[group.sopName] === true;
+              return (
+                <div className="so-tab-section" key={group.sopName}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                    <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
+                    {group.sopName}
+                    <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
+                    {hasExpected && <span className="rec-sop-tag rec-sop-tag--scheduled">已排班</span>}
+                  </h4>
+                  {isExpanded && gItems.length > 0 && (
+                    <div className="rec-si-list">
+                      {gItems.map((item: any) => (
+                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* 未完成 — 排班要求但有未完成步骤的服务 */}
+            {incompleteGroups.length > 0 && (
+              <div className="rec-section-divider">
+                <span className="rec-section-label" style={{ color: "#DC2626" }}>未完成</span>
+              </div>
+            )}
+            {incompleteGroups.map((group: any) => {
+              const gItems = group.items ?? [];
+              const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
+              const isMissing = (group as any)._missing;
+              const isExpanded = collapsedGroups[group.sopName] === true;
+              return (
+                <div className="so-tab-section" key={group.sopName} style={{ borderLeft: "3px solid #FCA5A5", paddingLeft: 12 }}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                    <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
+                    {group.sopName}
+                    <span className="rec-si-stats">
+                      {isMissing
+                        ? <span className="rec-si-stats__abnormal">未执行</span>
+                        : <><span className="rec-si-stats__done">{gCompleted}完成</span><span className="rec-si-stats__total">共{gItems.length}项</span></>
+                      }
+                    </span>
+                    <span className="rec-sop-tag rec-sop-tag--scheduled">已排班</span>
+                  </h4>
+                  {isExpanded && gItems.length > 0 && (
+                    <div className="rec-si-list">
+                      {gItems.map((item: any) => (
+                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
+                      ))}
+                    </div>
+                  )}
+                  {isMissing && <p style={{ fontSize: 12, color: "#DC2626", margin: "4px 0 0" }}>排班要求此服务但录音中未检测到执行</p>}
+                </div>
+              );
+            })}
+
+            {/* 额外完成 — 排班未要求但录音中做了的服务 */}
+            {extraGroups.length > 0 && (
+              <div className="rec-section-divider">
+                <span className="rec-section-label" style={{ color: "#2563EB" }}>额外完成</span>
+              </div>
+            )}
+            {extraGroups.map((group: any) => {
+              const gItems = group.items ?? [];
+              const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
+              const isExpanded = collapsedGroups[group.sopName] === true;
+              return (
+                <div className="so-tab-section" key={group.sopName}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                    <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
+                    {group.sopName}
+                    <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
+                    <span className="rec-sop-tag rec-sop-tag--extra">额外</span>
+                  </h4>
+                  {isExpanded && (
+                    <div className="rec-si-list">
+                      {gItems.map((item: any) => (
+                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
 

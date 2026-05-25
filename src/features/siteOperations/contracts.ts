@@ -470,6 +470,7 @@ export type ServiceRecord = {
   serviceExceptions: ServiceException[];
   serviceItems?: ServiceItem[];
   sopGroups?: SopGroup[];
+  expectedSops?: Array<{ sopId: string; sopName: string }>;
   exceptionTags: string[];
   missingFields: string[];
   audioAssetId: string;
