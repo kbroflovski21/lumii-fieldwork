@@ -786,7 +786,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                           <div style={{ position: "relative" }}>
                             <button className="so-plan-card__action" onClick={() => setCancelPlanConfirmId(cancelPlanConfirmId === plan.id ? null : plan.id)} type="button">停用</button>
                             {cancelPlanConfirmId === plan.id && (
-                              <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FDE68A", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FDE68A", padding: "10px 14px", zIndex: 100, whiteSpace: "nowrap" }}>
                                 <div style={{ fontSize: 13, color: "#92400E", marginBottom: 8 }}>确定停用此计划？排期将被暂停。</div>
                                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                                   <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setCancelPlanConfirmId(null)} type="button">取消</button>
@@ -801,7 +801,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                         <div style={{ position: "relative" }}>
                           <button className="so-plan-card__action so-plan-card__action--danger" onClick={() => setDeletePlanConfirmId(deletePlanConfirmId === plan.id ? null : plan.id)} type="button">删除</button>
                           {deletePlanConfirmId === plan.id && (
-                            <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 100, whiteSpace: "nowrap" }}>
                               <div style={{ fontSize: 13, color: "#B42318", marginBottom: 8 }}>确定删除此计划？相关排期将被永久删除。</div>
                               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                                 <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeletePlanConfirmId(null)} type="button">取消</button>
@@ -995,7 +995,7 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
                       onClick={() => setDeleteConfirmId(deleteConfirmId === c.id ? null : c.id)}
                       type="button">删除</button>
                     {deleteConfirmId === c.id && (
-                      <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                      <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 100, whiteSpace: "nowrap" }}>
                         <div style={{ fontSize: 13, color: "#B42318", marginBottom: 8 }}>确定删除「{c.name}」？</div>
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                           <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeleteConfirmId(null)} type="button">取消</button>
