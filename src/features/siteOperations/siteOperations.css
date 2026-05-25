@@ -7309,9 +7309,9 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 }
 .so-plan-sop-item input[type="checkbox"] { accent-color: #0052CC; }
 .so-plan-sop-add {
-  margin-top: 6px; font-size: 12px; padding: 4px 8px;
-  border: 1px dashed #CBD5E1; border-radius: 6px; background: #FAFBFC;
-  color: #64748B; cursor: pointer;
+  margin-top: 6px; font-size: 12px; padding: 6px 10px;
+  border: 1px solid #0052CC; border-radius: 6px; background: #EFF6FF;
+  color: #0052CC; cursor: pointer; font-weight: 500;
 }
 
 .so-plan-preview { display: flex; flex-direction: column; gap: 4px; }
@@ -7489,11 +7489,12 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 .so-plan-edit__sop-add {
   margin-top: 6px;
   font-size: 12px;
-  padding: 3px 8px;
-  border: 1px dashed var(--site-line, #CBD5E1);
+  padding: 6px 10px;
+  border: 1px solid #0052CC;
   border-radius: 6px;
-  background: transparent;
-  color: var(--site-muted, #64748B);
+  background: #EFF6FF;
+  color: #0052CC;
+  font-weight: 500;
 }
 .so-plan-edit__warning {
   padding: 8px 12px;

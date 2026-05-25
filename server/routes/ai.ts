@@ -565,12 +565,13 @@ export function aiRoutes() {
 - "今天"就是当前日期本身
 - "明天"是当前日期+1天
 - "每周X"是周期性计划，isRecurring=true
-- "每天"等同于每周一到周五（工作日），isRecurring=true
+- "每天"指每周7天（周一到周日），cadenceRule为WEEKLY:0,1,2,3,4,5,6，isRecurring=true
 - 时间精确解析："下午2点到3点"→14:00-15:00
 - 如果只说"上午"默认9:00-11:00，只说"下午"默认14:00-16:00
 - cadenceRule格式：WEEKLY:1,3,5（数字是星期几，0=周日,1=周一,...6=周六）
 - 非周期性的一次性服务：isRecurring=false，cadenceRule为空字符串
-- startDate：周期计划取第一个匹配日期，一次性取具体日期
+- startDate：如果用户说"今天"就用当前日期，否则取从当前日期起第一个匹配cadenceRule的日期
+- preview中的日期必须从startDate开始，且每个日期都在cadenceRule包含的星期中
 
 服务项目匹配：根据用户描述的服务内容，从以下已有服务项目中匹配：
 ${sopList}

@@ -1772,7 +1772,9 @@ export function CareworkerPage() {
     if (!worker) { setTasksLoading(false); return; }
     setTasksLoading(true);
     const token = localStorage.getItem("gy_careworker_token");
-    fetch(`/api/service-schedule-occurrences?userId=${worker.id}`, {
+    const rangeStart = new Date().toISOString().slice(0, 10);
+    const rangeEnd = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+    fetch(`/api/service-schedule-occurrences?userId=${worker.id}&rangeStart=${rangeStart}&rangeEnd=${rangeEnd}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then(res => res.json())

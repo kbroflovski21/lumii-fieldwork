@@ -131,9 +131,14 @@ export const siteOperationsApi = {
   updateServicePlanException: (id: string, request: UpdateServicePlanExceptionRequest) =>
     sendJson<ServicePlan>(`/api/service-plan-exceptions/${id}`, "PATCH", request),
 
-  getServiceScheduleOccurrences: (siteId?: string) =>
-    getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", siteParams(siteId)),
-  getServiceSchedules: (siteId?: string) => getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", siteParams(siteId)),
+  getServiceScheduleOccurrences: (siteId?: string) => {
+    const params: Record<string, string> = { ...(siteId ? { siteId } : {}), rangeStart: new Date().toISOString().slice(0, 10), rangeEnd: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10) };
+    return getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", params);
+  },
+  getServiceSchedules: (siteId?: string) => {
+    const params: Record<string, string> = { ...(siteId ? { siteId } : {}), rangeStart: new Date().toISOString().slice(0, 10), rangeEnd: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10) };
+    return getJson<ServiceSchedulesResponse>("/api/service-schedule-occurrences", params);
+  },
   createOneTimeServiceSchedule: (request: CreateOneTimeServiceScheduleRequest) =>
     sendJson<OneTimeScheduleResult>("/api/service-schedule-occurrences", "POST", request),
   getServiceScheduleOccurrence: (id: string) =>

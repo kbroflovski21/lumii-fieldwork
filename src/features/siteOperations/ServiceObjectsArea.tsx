@@ -346,7 +346,9 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
       .then(r => r.json())
       .then(data => setSavedPlans(data.servicePlans ?? []))
       .catch(() => {});
-    authFetch("/api/service-schedule-occurrences")
+    const rs = new Date().toISOString().slice(0, 10);
+    const re = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+    authFetch(`/api/service-schedule-occurrences?rangeStart=${rs}&rangeEnd=${re}`)
       .then(r => r.json())
       .then(data => {
         const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id && s.status !== "cancelled");
@@ -805,9 +807,12 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                 <div className="so-schedules-list">
                   {savedSchedules.slice(0, 20).map(s => {
                     const effectiveStatus = (!s.assignedSocialWorkerId && s.status === "scheduled") ? "unassigned" : s.status;
+                    const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+                    const dow = dayNames[new Date(s.serviceDate + "T00:00:00").getDay()];
+                    const timeStr = `${s.timeWindow?.start ?? ""}–${s.timeWindow?.end ?? ""}`;
                     return (
                       <div className="so-schedule-row" key={s.id}>
-                        <span>{s.serviceDate} · {s.timeWindow?.label ?? `${s.timeWindow?.start ?? ""}-${s.timeWindow?.end ?? ""}`}</span>
+                        <span>{s.serviceDate} {dow} {timeStr}</span>
                         <span>{s.assignedSocialWorkerName ?? ""}</span>
                         <span className="sw-status-badge" data-tone={effectiveStatus === "completed" ? "success" : effectiveStatus === "cancelled" ? "muted" : effectiveStatus === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
                           {statusText[effectiveStatus] ?? effectiveStatus}
@@ -1253,7 +1258,7 @@ function PlanEditModal({ plan, workerOptions, allServiceSops, onSave, onClose }:
         </div>
         <div className="so-plan-edit__body">
           <label className="sw-field"><span>服务描述</span>
-            <textarea className="so-plan-edit__textarea" rows={2} value={desc} onChange={e => setDesc(e.target.value)} />
+            <textarea className="so-plan-edit__textarea" rows={3} value={desc} onChange={e => setDesc(e.target.value)} />
           </label>
 
           <div className="so-plan-edit__field-group">
