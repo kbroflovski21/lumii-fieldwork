@@ -6,8 +6,10 @@ function genId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
 
-function isComplete(sop: { sopContent?: string | null; supervisionContent?: string | null; guidanceContent?: string | null; reportContent?: string | null }) {
-  return !!(sop.sopContent && sop.supervisionContent && sop.guidanceContent && sop.reportContent);
+function isComplete(sop: { type?: string; sopContent?: string | null; supervisionContent?: string | null; guidanceContent?: string | null; reportContent?: string | null }) {
+  const base = !!(sop.sopContent && sop.guidanceContent && sop.reportContent);
+  if (sop.type === "service") return base;
+  return base && !!sop.supervisionContent;
 }
 
 export function sopRoutes() {
@@ -193,7 +195,7 @@ export function sopRoutes() {
     if (!isComplete(sop)) {
       const missing: string[] = [];
       if (!sop.sopContent) missing.push("sopContent");
-      if (!sop.supervisionContent) missing.push("supervisionContent");
+      if (sop.type !== "service" && !sop.supervisionContent) missing.push("supervisionContent");
       if (!(sop as any).guidanceContent) missing.push("guidanceContent");
       if (!sop.reportContent) missing.push("reportContent");
       return res.status(400).json({ error: "SOP 不完整，缺少: " + missing.join(", ") });
