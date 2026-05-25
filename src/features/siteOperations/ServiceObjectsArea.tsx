@@ -419,6 +419,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [allServiceSops, setAllServiceSops] = useState<Array<{ id: string; name: string }>>([]);
   const [planWorkerId, setPlanWorkerId] = useState("");
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [deletePlanConfirmId, setDeletePlanConfirmId] = useState<string | null>(null);
+  const [cancelPlanConfirmId, setCancelPlanConfirmId] = useState<string | null>(null);
 
   const color = avatarColor(obj.name);
   const status = compositeStateTone(obj);
@@ -484,8 +486,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   };
 
   const handleCancelPlan = async (planId: string) => {
-    if (!confirm("确定要取消此计划？所有未完成的排期将被取消。")) return;
     await authFetch(`/api/service-plans/${planId}/cancel`, { method: "POST" });
+    setCancelPlanConfirmId(null);
     refreshPlanData();
     onUpdated();
   };
@@ -497,8 +499,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   };
 
   const handleDeletePlan = async (planId: string) => {
-    if (!confirm("确定要删除此计划？相关的所有排期记录将被永久删除。")) return;
     await authFetch(`/api/service-plans/${planId}`, { method: "DELETE" });
+    setDeletePlanConfirmId(null);
     refreshPlanData();
     onUpdated();
   };
@@ -781,11 +783,33 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                       <div className="so-plan-card__row3">
                         <button className="so-plan-card__action" onClick={() => setEditingPlanId(plan.id)} type="button"><Edit3 size={12} /> 编辑</button>
                         {plan.status === "active" ? (
-                          <button className="so-plan-card__action" onClick={() => handleCancelPlan(plan.id)} type="button">停用</button>
+                          <div style={{ position: "relative" }}>
+                            <button className="so-plan-card__action" onClick={() => setCancelPlanConfirmId(cancelPlanConfirmId === plan.id ? null : plan.id)} type="button">停用</button>
+                            {cancelPlanConfirmId === plan.id && (
+                              <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FDE68A", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                                <div style={{ fontSize: 13, color: "#92400E", marginBottom: 8 }}>确定停用此计划？排期将被暂停。</div>
+                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                  <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setCancelPlanConfirmId(null)} type="button">取消</button>
+                                  <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11, padding: "0 10px", background: "#D97706" }} onClick={() => handleCancelPlan(plan.id)} type="button">确认停用</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ) : plan.status === "archived" ? (
                           <button className="so-plan-card__action so-plan-card__action--primary" onClick={() => handleReactivatePlan(plan.id)} type="button">重新启用</button>
                         ) : null}
-                        <button className="so-plan-card__action so-plan-card__action--danger" onClick={() => handleDeletePlan(plan.id)} type="button">删除</button>
+                        <div style={{ position: "relative" }}>
+                          <button className="so-plan-card__action so-plan-card__action--danger" onClick={() => setDeletePlanConfirmId(deletePlanConfirmId === plan.id ? null : plan.id)} type="button">删除</button>
+                          {deletePlanConfirmId === plan.id && (
+                            <div style={{ position: "absolute", bottom: "calc(100% + 6px)", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 10, whiteSpace: "nowrap" }}>
+                              <div style={{ fontSize: 13, color: "#B42318", marginBottom: 8 }}>确定删除此计划？相关排期将被永久删除。</div>
+                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeletePlanConfirmId(null)} type="button">取消</button>
+                                <button className="sw-btn sw-btn--danger" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => handleDeletePlan(plan.id)} type="button">确认删除</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
