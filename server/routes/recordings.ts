@@ -211,13 +211,18 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
     }
   }
 
-  const candidates = await prisma.serviceSchedule.findMany({ where });
+  const candidates = await prisma.serviceSchedule.findMany({
+    where,
+    include: { sopLinks: { select: { sopId: true, sopName: true } } },
+  });
   if (candidates.length === 0) {
     await prisma.recording.update({ where: { id: recordingId }, data: { status: "unmatched" } });
     return { matched: false, reason: "no_candidates" };
   }
 
   const transcript = (rec.transcriptText ?? "").toLowerCase();
+  const sopResults = rec.sopResults as any;
+  const detectedServices = (sopResults?.service_project ?? "").split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean);
 
   let bestScore = 0;
   let bestCandidate: any = null;
@@ -227,7 +232,7 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
     let score = 0;
     const reasons: string[] = [];
 
-    // Time match: same day = +0.3, within 2 hours = +0.4
+    // Time match: same day = +0.3, within 2 hours = +0.1
     if (c.serviceDate === recDate) {
       score += 0.3;
       reasons.push("同日");
@@ -236,7 +241,7 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
         const schedStart = new Date(rec.startedAt);
         schedStart.setHours(h, m, 0, 0);
         const diffMs = Math.abs(rec.startedAt.getTime() - schedStart.getTime());
-        if (diffMs < 7200000) { // within 2 hours
+        if (diffMs < 7200000) {
           score += 0.1;
           reasons.push("时间接近");
         }
@@ -249,10 +254,20 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
       reasons.push(`提到${c.serviceObjectName}`);
     }
 
-    // Service type match: +0.3
+    // Service type match from schedule's service_project field: +0.2
     if (c.serviceProject && transcript.includes(c.serviceProject.toLowerCase())) {
-      score += 0.3;
+      score += 0.2;
       reasons.push(`服务类型${c.serviceProject}`);
+    }
+
+    // SOP link match: compare schedule's linked SOPs with processor's detected services: +0.3
+    const schedSopNames = ((c as any).sopLinks ?? []).map((l: any) => l.sopName.toLowerCase().replace(/sop$/i, "").trim());
+    if (schedSopNames.length > 0 && detectedServices.length > 0) {
+      const intersection = detectedServices.filter((ds: string) => schedSopNames.some((sn: string) => ds.includes(sn) || sn.includes(ds)));
+      if (intersection.length > 0) {
+        score += 0.3;
+        reasons.push(`SOP匹配:${intersection.join(",")}`);
+      }
     }
 
     if (score > bestScore) {
@@ -264,7 +279,8 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
 
   if (bestScore >= 0.3 && bestCandidate) {
     // Create service record from this recording
-    const serviceRecordId = await createOrUpdateServiceRecord(rec, bestCandidate.serviceObjectId, bestCandidate.serviceObjectName, bestCandidate.id);
+    const expectedSops = ((bestCandidate as any).sopLinks ?? []).map((l: any) => ({ sopId: l.sopId, sopName: l.sopName }));
+    const serviceRecordId = await createOrUpdateServiceRecord(rec, bestCandidate.serviceObjectId, bestCandidate.serviceObjectName, bestCandidate.id, expectedSops);
 
     await prisma.recording.update({
       where: { id: recordingId },
@@ -293,7 +309,7 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
 }
 
 // Create or update service record from a recording
-async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | null, serviceObjectName: string | null, scheduleId: string | null): Promise<string> {
+async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | null, serviceObjectName: string | null, scheduleId: string | null, expectedSops: Array<{sopId: string; sopName: string}> = []): Promise<string> {
   // Check if there's already a service record for this schedule (multi-recording aggregation)
   if (scheduleId) {
     const existingSched = await prisma.serviceSchedule.findFirst({ where: { id: scheduleId }, select: { serviceRecordId: true } });
@@ -368,7 +384,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
       transcriptId,
       audioAssetId: audioId,
       generatedSummary: rec.aiSummary,
-      structuredSummary: rec.sopResults ? JSON.stringify(rec.sopResults) : null,
+      structuredSummary: rec.sopResults ? JSON.stringify({ ...rec.sopResults, expectedSops }) : null,
       serviceExceptions: sopResults?.anomalies ?? [],
       serviceItems: sopResults?.service_items ?? [],
     },

@@ -22,12 +22,17 @@ function toApi(row: any) {
   const sp = row.serviceProject ?? "";
   const serviceProjects = sp ? sp.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
   const items = Array.isArray(row.serviceItems) ? row.serviceItems : [];
+  let expectedSops: any[] = [];
+  try {
+    const parsed = typeof row.structuredSummary === "string" ? JSON.parse(row.structuredSummary) : row.structuredSummary;
+    if (parsed?.expectedSops) expectedSops = parsed.expectedSops;
+  } catch {}
   return {
     id: row.id, serviceDate: row.serviceDate, startTime: row.startTime, endTime: row.endTime,
     durationMinutes: row.durationMinutes, socialWorkerId: row.socialWorkerId, socialWorkerName: row.socialWorkerName,
     serviceObjectId: row.serviceObjectId, serviceObjectName: row.serviceObjectName,
     familyContactIds: row.familyContactIds, badgeId: row.badgeId, smartBadgeId: row.smartBadgeId,
-    serviceProject: sp, serviceProjects,
+    serviceProject: sp, serviceProjects, expectedSops,
     assignmentConfidence: row.assignmentConfidence,
     reviewStatus: row.reviewStatus, exportStatus: row.exportStatus,
     locationEvidence: row.locationEvidence, serviceExceptions: row.serviceExceptions,
