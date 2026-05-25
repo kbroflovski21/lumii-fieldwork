@@ -8,7 +8,9 @@ import type {
   ServiceRecord,
   WorkAreaOperationalState,
   ServiceObjectsResponse,
-  FamilyContact
+  FamilyContact,
+  AiScheduleResult,
+  ServicePlan,
 } from "./contracts";
 import { RecordDrawer } from "./RecordsArea";
 import { statusText } from "./contracts";
@@ -59,97 +61,12 @@ const exceptionKindLabel: Record<string, string> = {
   pause: "暂停", time_change: "时间调整", worker_change: "人员替换", skip: "跳过服务"
 };
 
-type GeneratedScheduleItem = {
-  id: string;
-  dayLabel: string;
-  date: string;
-  timeLabel: string;
-  project: string;
-  status: "pending" | "confirmed" | "cancelled" | "postponed";
-  isRecurring?: boolean;
-  recurrenceLabel?: string;
-  recurrenceDays?: number[];
-};
-
 const examplePrompts = [
   "每周一、三、五上午10点到12点助餐",
   "下周二下午2点陪诊",
-  "每天上午9点到11点探访关爱",
+  "每天上午9点到11点探访关爱、测血糖血压",
   "本周五下午助浴",
 ];
-
-function parseNaturalLanguageToSchedules(input: string): GeneratedScheduleItem[] {
-  const today = new Date();
-  const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-
-  let project = "助餐";
-  if (input.includes("助浴")) project = "助浴";
-  else if (input.includes("陪诊")) project = "陪诊";
-  else if (input.includes("探访") || input.includes("关爱")) project = "探访关爱";
-  else if (input.includes("助洁")) project = "助洁";
-
-  let timeLabel = "上午 10:00-12:00";
-  if (input.includes("下午")) timeLabel = "下午 14:00-16:00";
-  else if (input.includes("9点") || input.includes("9:00")) timeLabel = "上午 9:00-11:00";
-  else if (input.includes("10点") || input.includes("10:00")) timeLabel = "上午 10:00-12:00";
-  else if (input.includes("2点") || input.includes("14")) timeLabel = "下午 14:00-16:00";
-
-  const isRecurring = input.includes("每周") || input.includes("每天") || input.includes("每日");
-
-  const targetDays: number[] = [];
-  if (input.includes("每天") || input.includes("每日")) {
-    targetDays.push(1, 2, 3, 4, 5);
-  } else {
-    if (input.includes("一")) targetDays.push(1);
-    if (input.includes("二")) targetDays.push(2);
-    if (input.includes("三")) targetDays.push(3);
-    if (input.includes("四")) targetDays.push(4);
-    if (input.includes("五")) targetDays.push(5);
-    if (input.includes("六")) targetDays.push(6);
-    if (input.includes("日") && !input.includes("每日")) targetDays.push(0);
-  }
-
-  if (targetDays.length === 0) {
-    const dayMatch = input.match(/(一|二|三|四|五|六|日)/);
-    if (dayMatch) {
-      const map: Record<string, number> = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "日": 0 };
-      targetDays.push(map[dayMatch[1]] ?? 1);
-    }
-    if (targetDays.length === 0) targetDays.push((today.getDay() + 1) % 7 || 1);
-  }
-
-  if (isRecurring) {
-    const recurrenceLabel = input.includes("每天") ? "每天" : `每周${targetDays.map(d => dayNames[d]).join("、")}`;
-    const items: GeneratedScheduleItem[] = [];
-    for (let week = 0; week < 4; week++) {
-      for (const dayOfWeek of targetDays) {
-        const d = new Date(today);
-        const diff = (dayOfWeek - d.getDay() + 7) % 7 || 7;
-        d.setDate(d.getDate() + diff + week * 7);
-        items.push({
-          id: `gen-${Date.now()}-w${week}-d${dayOfWeek}`,
-          dayLabel: `周${dayNames[dayOfWeek]}`,
-          date: d.toISOString().slice(0, 10),
-          timeLabel, project, status: "pending",
-          isRecurring: true, recurrenceLabel, recurrenceDays: targetDays,
-        });
-      }
-    }
-    return items;
-  }
-
-  return targetDays.map(dayOfWeek => {
-    const d = new Date(today);
-    const diff = (dayOfWeek - d.getDay() + 7) % 7 || 7;
-    d.setDate(d.getDate() + diff);
-    return {
-      id: `gen-${Date.now()}-${dayOfWeek}`,
-      dayLabel: `周${dayNames[dayOfWeek]}`,
-      date: d.toISOString().slice(0, 10),
-      timeLabel, project, status: "pending" as const,
-    };
-  });
-}
 
 function compositeStateTone(obj: ServiceObject): { label: string; tone: string } {
   if (obj.riskTags.length > 0 || obj.state === "risk_tagged") return { label: "需关注", tone: "warning" };
@@ -481,99 +398,71 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [generatedItems, setGeneratedItems] = useState<GeneratedScheduleItem[]>([]);
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [localPlans, setLocalPlans] = useState<GeneratedScheduleItem[]>([]);
-  const [planCreated, setPlanCreated] = useState(false);
+  const [aiResult, setAiResult] = useState<AiScheduleResult | null>(null);
+  const [selectedSopIds, setSelectedSopIds] = useState<string[]>([]);
+  const [allServiceSops, setAllServiceSops] = useState<Array<{ id: string; name: string }>>([]);
 
   const color = avatarColor(obj.name);
   const status = compositeStateTone(obj);
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    authFetch("/api/sops/service-list").then(r => r.json()).then(data => {
+      setAllServiceSops(data.sops ?? []);
+    }).catch(() => {});
+  }, []);
+
+  const handleGenerate = async () => {
     if (!aiInput.trim()) return;
     setGenerating(true);
-    setTimeout(() => {
-      const items = parseNaturalLanguageToSchedules(aiInput);
-      setGeneratedItems(items);
-      setGenerating(false);
-    }, 600);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const resp = await authFetch("/api/ai/generate-schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiInput, today }),
+      });
+      const data = await resp.json();
+      if (data.error) { setGenerating(false); return; }
+      setAiResult(data);
+      setSelectedSopIds((data.matchedSops ?? []).map((s: any) => s.id));
+    } catch {}
+    setGenerating(false);
   };
 
-  const handleItemAction = (itemId: string, action: "confirmed" | "cancelled" | "postponed") => {
-    setGeneratedItems(prev => prev.map(item => item.id === itemId ? { ...item, status: action } : item));
-    setEditingItemId(null);
-  };
-
-  const handleItemUpdate = (itemId: string, updates: Partial<GeneratedScheduleItem>) => {
-    setGeneratedItems(prev => prev.map(item => item.id === itemId ? { ...item, ...updates } : item));
-    setEditingItemId(null);
-  };
-
-  const handleConfirmAll = () => {
-    setGeneratedItems(prev => prev.map(item => item.status === "pending" ? { ...item, status: "confirmed" } : item));
-  };
-
-  const pendingCount = generatedItems.filter(i => i.status === "pending").length;
-  const confirmedCount = generatedItems.filter(i => i.status === "confirmed").length;
-
-  const persistSchedule = (item: GeneratedScheduleItem) => {
-    const timeMatch = item.timeLabel.match(/(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
-    const tw = { start: timeMatch?.[1] ?? "09:00", end: timeMatch?.[2] ?? "11:00", label: item.timeLabel };
-    siteOperationsApi.createOneTimeServiceSchedule({
-      serviceObjectId: obj.id,
-      serviceProject: item.project,
-      serviceDate: item.date,
-      timeWindow: tw,
-    }).catch(() => {});
-  };
-
-  const persistRecurringPlan = (items: GeneratedScheduleItem[]) => {
-    if (planCreated || items.length === 0) return;
-    const first = items[0];
-    const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-    const cadenceLabel = first.recurrenceLabel ?? `每周${(first.recurrenceDays ?? []).map(d => dayNames[d]).join("、")}`;
-    const timeMatch = first.timeLabel.match(/(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
-    authFetch(`/api/service-objects/${obj.id}/service-plans`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        serviceProject: first.project,
-        cadenceRule: `WEEKLY:${(first.recurrenceDays ?? []).join(",")}`,
-        cadenceLabel,
-        preferredTimeWindow: { start: timeMatch?.[1] ?? "09:00", end: timeMatch?.[2] ?? "11:00", label: first.timeLabel },
-        startDate: first.date,
-      }),
-    }).catch(() => {});
-    items.forEach(persistSchedule);
-    setPlanCreated(true);
-  };
-
-  const handleItemActionWithSync = (itemId: string, action: "confirmed" | "cancelled" | "postponed") => {
-    handleItemAction(itemId, action);
-    if (action === "confirmed") {
-      const item = generatedItems.find(i => i.id === itemId);
-      if (item) {
-        setLocalPlans(prev => [...prev, { ...item, status: "confirmed" }]);
-        persistSchedule(item);
-      }
-    }
-  };
-
-  const handleConfirmAllWithSync = () => {
-    const pendingItems = generatedItems.filter(i => i.status === "pending");
-    handleConfirmAll();
-    setLocalPlans(prev => [...prev, ...pendingItems.map(i => ({ ...i, status: "confirmed" as const }))]);
-    const firstRecurring = pendingItems.find(i => i.isRecurring);
-    if (firstRecurring) {
-      persistRecurringPlan(pendingItems);
+  const handleCreatePlan = async () => {
+    if (!aiResult) return;
+    const p = aiResult.plan;
+    if (p.isRecurring) {
+      await authFetch(`/api/service-objects/${obj.id}/service-plans`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: aiInput,
+          cadenceRule: p.cadenceRule,
+          cadenceLabel: p.cadenceLabel,
+          preferredTimeWindow: p.timeWindow,
+          startDate: p.startDate,
+          serviceProject: "长护险",
+          sopIds: selectedSopIds,
+        }),
+      });
     } else {
-      pendingItems.forEach(persistSchedule);
+      await siteOperationsApi.createOneTimeServiceSchedule({
+        serviceObjectId: obj.id,
+        serviceProject: "长护险",
+        serviceDate: p.startDate,
+        timeWindow: p.timeWindow,
+      });
     }
-    setTimeout(() => {
-      authFetch("/api/service-schedule-occurrences").then(r => r.json()).then(data => {
-        setSavedSchedules((data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id));
-      }).catch(() => {});
-    }, 800);
+    setAiResult(null);
+    setAiInput("");
+    onMutate?.();
+  };
+
+  const handleCancelPlan = async (planId: string) => {
+    if (!confirm("确定要取消此计划？所有未完成的排期将被取消。")) return;
+    await authFetch(`/api/service-plans/${planId}/cancel`, { method: "POST" });
+    onMutate?.();
   };
 
   const hasInsights = (obj.insightSummaries ?? []).length > 0 || !!obj.latestInsightSummary;
@@ -662,7 +551,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                 <div className="so-overview-item"><dt>性别</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
                 <div className="so-overview-item"><dt>服务资格</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
                 <div className="so-overview-item"><dt>服务频次</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editFrequency} onChange={e => setEditFrequency(e.target.value)} placeholder="如：每周三次" /> : (obj.serviceFrequency || "—")}</dd></div>
-                <div className="so-overview-item"><dt>服务项目</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="用顿号分隔" /> : (obj.serviceProjects.join("、") || "—")}</dd></div>
+                <div className="so-overview-item"><dt>服务套餐</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
                 <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : obj.address}</dd></div>
                 {!editingBasic && obj.mapDisplayPoint ? <div className="so-overview-item so-overview-item--full"><dt>地图点</dt><dd>{obj.mapDisplayPoint.label ?? `${obj.mapDisplayPoint.latitude}, ${obj.mapDisplayPoint.longitude}`}</dd></div> : null}
               </dl>
@@ -725,11 +614,11 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                       ))}
                     </div>
                     <div className="so-ai-input-row">
-                      <input
+                      <textarea
                         className="so-ai-input"
+                        rows={3}
                         onChange={(e) => setAiInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleGenerate(); }}
-                        placeholder='输入服务安排，如"每周一三五上午10点助餐"...'
+                        placeholder={"输入服务安排，如：\n每周一三五上午10点到12点助餐、测血糖血压\n今天下午2点到3点上门助浴"}
                         value={aiInput}
                       />
                       <button className="so-ai-send" disabled={generating || !aiInput.trim()} onClick={handleGenerate} type="button">
@@ -738,57 +627,49 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                     </div>
                   </div>
 
-                  {generatedItems.length > 0 && (
-                    <div className="so-generated">
-                      {generatedItems[0]?.isRecurring && (
-                        <div className="so-recurring-banner">
-                          <CalendarPlus size={16} />
-                          <div>
-                            <strong>周期服务计划：{generatedItems[0].recurrenceLabel}</strong>
-                            <span>{generatedItems[0].project} · {generatedItems[0].timeLabel} · 预览未来4周共{generatedItems.length}次</span>
-                          </div>
+                  {aiResult && (
+                    <div className="so-plan-summary-card">
+                      <h4 className="so-plan-summary-card__title">{aiResult.plan.isRecurring ? "周期服务计划" : "一次性服务排期"}</h4>
+                      <dl className="so-overview-grid">
+                        <div className="so-overview-item"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
+                        {aiResult.plan.isRecurring && <div className="so-overview-item"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
+                        <div className="so-overview-item"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
+                        <div className="so-overview-item"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
+                      </dl>
+
+                      <div className="so-plan-sop-section">
+                        <strong>服务项目</strong>
+                        <div className="so-plan-sop-list">
+                          {allServiceSops.filter(s => selectedSopIds.includes(s.id)).map(s => (
+                            <label key={s.id} className="so-plan-sop-item">
+                              <input type="checkbox" checked onChange={() => setSelectedSopIds(prev => prev.filter(id => id !== s.id))} />
+                              {s.name}
+                            </label>
+                          ))}
+                        </div>
+                        <select className="so-plan-sop-add" value="" onChange={(e) => { if (e.target.value) setSelectedSopIds(prev => [...prev, e.target.value]); }}>
+                          <option value="">+ 添加服务项目</option>
+                          {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {aiResult.preview.length > 0 && (
+                        <div className="so-plan-preview">
+                          <strong>近期排期预览</strong>
+                          {aiResult.preview.map((p, i) => (
+                            <div key={i} className="so-plan-preview-item">{p.date} {p.dayLabel} {p.timeLabel}</div>
+                          ))}
+                          {aiResult.plan.isRecurring && <div className="so-plan-preview-note">将自动生成后续排期</div>}
                         </div>
                       )}
-                      <div className="so-generated__header">
-                        <span>{generatedItems[0]?.isRecurring ? `${generatedItems.length} 次服务排期` : `已生成 ${generatedItems.length} 条服务`}</span>
-                        {pendingCount > 0 && (
-                          <button className="sw-btn sw-btn--primary so-generated__confirm-all" onClick={handleConfirmAllWithSync} type="button">
-                            全部确认 ({pendingCount})
-                          </button>
-                        )}
-                        {confirmedCount > 0 && pendingCount === 0 && (
-                          <span className="so-generated__done">全部已确认</span>
-                        )}
-                      </div>
-                      <div className="so-generated__list">
-                        {generatedItems.map(item => (
-                          <div className="so-gen-item" data-status={item.status} key={item.id}>
-                            {editingItemId === item.id ? (
-                              <ScheduleItemEditor item={item} serviceProjects={obj.serviceProjects} onSave={(updates) => handleItemUpdate(item.id, updates)} onCancel={() => setEditingItemId(null)} />
-                            ) : (
-                              <>
-                                <div className="so-gen-item__info" onClick={() => item.status === "pending" ? setEditingItemId(item.id) : undefined} style={item.status === "pending" ? { cursor: "pointer" } : undefined}>
-                                  <strong>{item.project}</strong>
-                                  <span>{item.dayLabel} · {item.date} · {item.timeLabel}</span>
-                                  {item.status === "pending" && <small className="so-gen-item__edit-hint">点击修改</small>}
-                                </div>
-                                <div className="so-gen-item__actions">
-                                  {item.status === "pending" ? (
-                                    <>
-                                      <button className="so-gen-item__btn so-gen-item__btn--confirm" onClick={() => handleItemActionWithSync(item.id, "confirmed")} title="确认" type="button">确认</button>
-                                      <button className="so-gen-item__btn so-gen-item__btn--cancel" onClick={() => handleItemAction(item.id, "cancelled")} title="取消" type="button"><Ban size={13} /></button>
-                                      <button className="so-gen-item__btn so-gen-item__btn--postpone" onClick={() => handleItemAction(item.id, "postponed")} title="延期" type="button"><CalendarClock size={13} /></button>
-                                    </>
-                                  ) : (
-                                    <span className="sw-status-badge" data-tone={item.status === "confirmed" ? "success" : item.status === "cancelled" ? "muted" : "warning"}>
-                                      {item.status === "confirmed" ? "已确认" : item.status === "cancelled" ? "已取消" : "已延期"}
-                                    </span>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        ))}
+
+                      <div className="so-plan-actions">
+                        <button className="sw-btn sw-btn--secondary" onClick={() => setAiResult(null)} type="button">取消</button>
+                        <button className="sw-btn sw-btn--primary" onClick={handleCreatePlan} type="button">
+                          {aiResult.plan.isRecurring ? "创建计划" : "创建排期"}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -810,15 +691,22 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                   {savedPlans.map(plan => (
                     <div className="so-plan-card so-plan-card--recurring" key={plan.id}>
                       <div className="so-plan-card__header">
-                        <strong>{plan.serviceProject}</strong>
+                        <strong>{plan.cadenceLabel} · {plan.preferredTimeWindow?.start ?? ""}-{plan.preferredTimeWindow?.end ?? ""}</strong>
                         <span className="sw-status-badge" data-tone={plan.status === "active" ? "success" : "muted"}>
-                          {plan.status === "active" ? "周期进行中" : statusText[plan.status] ?? plan.status}
+                          {plan.status === "active" ? "进行中" : plan.status === "paused" ? "已暂停" : "已取消"}
                         </span>
                       </div>
+                      {(plan as any).description && <div className="so-plan-card__desc">{(plan as any).description}</div>}
+                      {(plan as any).sopLinks?.length > 0 && (
+                        <div className="so-plan-card__sops">
+                          {(plan as any).sopLinks.map((s: any) => <span key={s.sopId} className="sw-tag">{s.sopName}</span>)}
+                        </div>
+                      )}
                       <div className="so-plan-card__meta">
-                        <span>{plan.cadenceLabel}</span>
-                        <span>{plan.preferredTimeWindow?.label ?? `${plan.preferredTimeWindow?.start ?? ""}-${plan.preferredTimeWindow?.end ?? ""}`}</span>
                         {plan.primarySocialWorkerName && <span>{plan.primarySocialWorkerName}</span>}
+                        {plan.status === "active" && (
+                          <button className="sw-btn sw-btn--ghost sw-btn--sm" style={{ color: "#DC2626" }} onClick={() => handleCancelPlan(plan.id)} type="button">取消计划</button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -843,27 +731,9 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               </div>
             )}
 
-            {/* Locally created plans (not yet in API) */}
-            {localPlans.filter(p => !savedSchedules.some(s => s.serviceDate === p.date && s.serviceProject === p.project)).length > 0 && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">新安排</h4>
-                <div className="so-plans">
-                  {localPlans.filter(p => !savedSchedules.some(s => s.serviceDate === p.date && s.serviceProject === p.project)).map(item => (
-                    <div className="so-plan-card so-plan-card--new" data-status={item.status} key={item.id}>
-                      <div className="so-plan-card__header">
-                        <strong>{item.project}</strong>
-                        <span className="sw-status-badge" data-tone={item.status === "confirmed" ? "success" : item.status === "cancelled" ? "muted" : "warning"}>
-                          {item.status === "confirmed" ? "已安排" : item.status === "cancelled" ? "已取消" : "已延期"}
-                        </span>
-                      </div>
-                      <div className="so-plan-card__meta">
-                        <span>{item.dayLabel} · {item.date}</span>
-                        <span>{item.timeLabel}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Placeholder for future local plans section */}
+            {false && (
+              <div></div>
             )}
           </>
         )}
@@ -1145,7 +1015,7 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
           </label>
           <label className="sw-field"><span>服务频次</span><input onChange={(e) => onFrequencyChange(e.target.value)} placeholder="如：每周三次" value={frequency} /></label>
         </div>
-        <label className="sw-field"><span>服务项目</span><input onChange={(e) => onProjectsChange(e.target.value)} placeholder="用顿号分隔，如：助餐、陪诊" value={projects} /></label>
+        <label className="sw-field"><span>服务套餐</span><input onChange={(e) => onProjectsChange(e.target.value)} placeholder="如：长护险" value={projects || "长护险"} /></label>
       </div>
 
       <div className="so-form-card">
@@ -1170,54 +1040,6 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
 }
 
 /* ── Schedule Item Editor ── */
-
-function ScheduleItemEditor({ item, serviceProjects, onSave, onCancel }: {
-  item: GeneratedScheduleItem;
-  serviceProjects: string[];
-  onSave: (updates: Partial<GeneratedScheduleItem>) => void;
-  onCancel: () => void;
-}) {
-  const [project, setProject] = useState(item.project);
-  const [date, setDate] = useState(item.date);
-  const [time, setTime] = useState(item.timeLabel.includes("14") ? "afternoon" : item.timeLabel.includes("16") ? "evening" : "morning");
-
-  const timeOptions: Record<string, string> = {
-    morning: "上午 9:00-11:00",
-    mid_morning: "上午 10:00-12:00",
-    afternoon: "下午 14:00-16:00",
-    evening: "傍晚 16:00-18:00",
-  };
-
-  return (
-    <div className="so-gen-item__editor">
-      <div className="so-gen-item__editor-row">
-        <label className="sw-field">
-          <span>服务内容</span>
-          <select onChange={(e) => setProject(e.target.value)} value={project}>
-            {serviceProjects.map(p => <option key={p} value={p}>{p}</option>)}
-            <option value="其他">其他</option>
-          </select>
-        </label>
-      </div>
-      <div className="so-gen-item__editor-row">
-        <label className="sw-field">
-          <span>日期</span>
-          <input onChange={(e) => setDate(e.target.value)} type="date" value={date} />
-        </label>
-        <label className="sw-field">
-          <span>时间段</span>
-          <select onChange={(e) => setTime(e.target.value)} value={time}>
-            {Object.entries(timeOptions).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </label>
-      </div>
-      <div className="so-gen-item__editor-actions">
-        <button className="sw-btn sw-btn--secondary" onClick={onCancel} type="button" style={{ height: 28, fontSize: 12, padding: "0 10px" }}>取消</button>
-        <button className="sw-btn sw-btn--primary" onClick={() => onSave({ project, date, timeLabel: timeOptions[time] ?? timeOptions.morning, dayLabel: item.dayLabel })} type="button" style={{ height: 28, fontSize: 12, padding: "0 10px" }}>保存</button>
-      </div>
-    </div>
-  );
-}
 
 /* ── History Records ── */
 

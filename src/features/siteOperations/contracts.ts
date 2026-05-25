@@ -214,6 +214,11 @@ export type ServicePlanException = {
   note?: string;
 };
 
+export type SopLink = {
+  sopId: string;
+  sopName: string;
+};
+
 export type ServicePlan = {
   id: string;
   serviceObjectId: string;
@@ -223,10 +228,25 @@ export type ServicePlan = {
   preferredTimeWindow: { start: string; end: string; label?: string };
   startDate: string;
   endDate?: string;
+  description?: string;
   primarySocialWorkerId?: string;
   status: "active" | "paused" | "archived";
   exceptions: ServicePlanException[];
+  sopLinks?: SopLink[];
   nextScheduleAt?: string;
+};
+
+export type AiScheduleResult = {
+  plan: {
+    cadenceRule: string;
+    cadenceLabel: string;
+    timeWindow: { start: string; end: string };
+    startDate: string;
+    isRecurring: boolean;
+    serviceContent: string;
+  };
+  matchedSops: Array<{ id: string; name: string }>;
+  preview: Array<{ date: string; dayLabel: string; timeLabel: string }>;
 };
 
 export type ServiceObjectState =
