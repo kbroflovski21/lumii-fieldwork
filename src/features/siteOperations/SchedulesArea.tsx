@@ -3,9 +3,10 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2 } from "lucide-react";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
-import { siteOperationsApi } from "./api";
+import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
+import { useSite } from "../../auth/SiteContext";
 
 type ScheduleView = "list" | "calendar" | "map";
 type DateFilter = "" | "today" | "week" | "next_week";
@@ -125,7 +126,7 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
             : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><Calendar size={32} /></div><span>{schedules.length === 0 ? "暂无服务排期" : "没有匹配的排期"}</span></div>
             : view === "calendar" ? <CalendarView schedules={filtered} onSelect={(s) => setDrawer({ kind: "view", schedule: s })} />
             : view === "map" ? <MapView schedules={filtered} onSelect={(s) => setDrawer({ kind: "view", schedule: s })} />
-            : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => setSelectedId(s.id)} onRowDoubleClick={(s) => setDrawer({ kind: "view", schedule: s })} />}
+            : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => setDrawer({ kind: "view", schedule: s })} />}
           </div>
         </div>
 
@@ -157,9 +158,9 @@ function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   return null;
 }
 
-function ListView({ schedules, selectedId, onRowClick, onRowDoubleClick }: {
+function ListView({ schedules, selectedId, onRowClick }: {
   schedules: ServiceScheduleOccurrence[]; selectedId: string | null;
-  onRowClick: (s: ServiceScheduleOccurrence) => void; onRowDoubleClick: (s: ServiceScheduleOccurrence) => void;
+  onRowClick: (s: ServiceScheduleOccurrence) => void;
 }) {
   const sorted = [...schedules].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || (a.startTime ?? a.timeWindow?.start ?? "").localeCompare(b.startTime ?? b.timeWindow?.start ?? ""));
 
@@ -178,7 +179,7 @@ function ListView({ schedules, selectedId, onRowClick, onRowDoubleClick }: {
           const color = avatarColor(s.serviceObjectName);
           return (
             <div className="sw-table__row sch-table__row" data-selected={selectedId === s.id} data-exception={s.planExceptionApplied} data-status={s.status} key={s.id}
-              onClick={() => onRowClick(s)} onDoubleClick={() => onRowDoubleClick(s)} role="row">
+              onClick={() => onRowClick(s)} role="row">
               <div role="cell" className="sch-cell-datetime">
                 <span className="sch-cell-date">{formatDate(s.serviceDate)}</span>
                 <span className="sch-cell-time">{formatWindow(s)}</span>
@@ -201,7 +202,7 @@ function ListView({ schedules, selectedId, onRowClick, onRowDoubleClick }: {
 
       <div className="sw-mobile-list">
         {schedules.map((s) => (
-          <button className="sw-mobile-card" key={s.id} onClick={() => onRowDoubleClick(s)} type="button">
+          <button className="sw-mobile-card" key={s.id} onClick={() => onRowClick(s)} type="button">
             <div className="sw-mobile-card__top">
               <span className="sch-cell-date">{formatDate(s.serviceDate)}</span>
               <span className="sw-status-badge" data-tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</span>
@@ -513,6 +514,16 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   const [adjDate, setAdjDate] = useState(s.serviceDate);
   const [adjTime, setAdjTime] = useState(s.timeWindow?.start?.includes("14") ? "afternoon" : "morning");
   const [adjWorker, setAdjWorker] = useState(s.assignedSocialWorkerId ?? "");
+  const [workerOptions, setWorkerOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const { currentSite } = useSite();
+
+  useEffect(() => {
+    const siteId = currentSite?.id;
+    const url = siteId ? `/api/social-workers?siteId=${siteId}` : "/api/social-workers";
+    authFetch(url).then(r => r.json()).then(data => {
+      setWorkerOptions((data.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })));
+    }).catch(() => {});
+  }, [currentSite?.id]);
 
   const objColor = avatarColor(s.serviceObjectName);
   const workerColor = s.assignedSocialWorkerName ? avatarColor(s.assignedSocialWorkerName) : { bg: "#F1F5F9", text: "#94A3B8" };
@@ -645,9 +656,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
             <label className="sw-field"><span>服务人员</span>
               <select onChange={(e) => setAdjWorker(e.target.value)} value={adjWorker}>
                 <option value="">未分配</option>
-                <option value="worker-001">王丽</option>
-                <option value="worker-002">张敏</option>
-                <option value="worker-003">李芳</option>
+                {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </label>
             <div className="sch-event__inline-form-actions">

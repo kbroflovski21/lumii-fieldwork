@@ -20,7 +20,15 @@ export function smartBadgesRoutes() {
     const siteId = resolveSiteId(req);
     const where = siteId ? { siteId } : {};
     const rows = await prisma.smartBadge.findMany({ where, orderBy: { createdAt: "desc" } });
-    res.json(withOperationalState({ smartBadges: rows.map(toApi) }));
+    const siteIds = [...new Set(rows.map(r => r.siteId).filter(Boolean))];
+    const sites = siteIds.length > 0 ? await prisma.site.findMany({ where: { id: { in: siteIds } }, select: { id: true, name: true } }) : [];
+    const siteMap = Object.fromEntries(sites.map(s => [s.id, s.name]));
+    const mapped = rows.map(r => {
+      const obj = toApi(r);
+      if (siteMap[r.siteId]) obj.siteName = siteMap[r.siteId];
+      return obj;
+    });
+    res.json(withOperationalState({ smartBadges: mapped }));
   });
 
   r.get("/smart-badges/:id", async (req, res) => {

@@ -168,7 +168,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
             {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>服务记录数据加载中...</span></div>
             : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
             : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>{records.length === 0 ? "暂无服务记录" : "没有匹配的记录"}</span></div>
-            : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => setSelectedId(r.id)} onRowDoubleClick={(r) => setDrawer({ kind: "view", record: r })} />}
+            : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => setDrawer({ kind: "view", record: r })} />}
           </div>
           )}
 
@@ -199,7 +199,6 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
                           <div className="sw-table__row rec-table__row" key={rec.id}
                             data-selected={selectedRecording?.id === rec.id}
                             onClick={() => setSelectedRecording(rec)}
-                            onDoubleClick={() => setSelectedRecording(rec)}
                             role="row" style={{ cursor: "pointer" }}>
                             <div role="cell" className="sch-cell-datetime">
                               <span className="sch-cell-date">{formatDate(t.toISOString().slice(0, 10))}</span>
@@ -285,10 +284,9 @@ function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   return null;
 }
 
-function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
+function RecordsList({ records, selectedId, onRowClick }: {
   records: ServiceRecord[]; selectedId: string | null;
   onRowClick: (r: ServiceRecord) => void;
-  onRowDoubleClick: (r: ServiceRecord) => void;
 }) {
   const sorted = [...records].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
 
@@ -309,7 +307,7 @@ function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
           return (
             <div className="sw-table__row rec-table__row" data-selected={selectedId === r.id} key={r.id}
               data-exception={r.exceptionTags.length > 0}
-              onClick={() => onRowClick(r)} onDoubleClick={() => onRowDoubleClick(r)} role="row">
+              onClick={() => onRowClick(r)} role="row">
               <div role="cell" className="sch-cell-datetime">
                 <span className="sch-cell-date">{formatDate(r.serviceDate)}</span>
                 <span className="sch-cell-time">{r.startTime}-{r.endTime} · {r.durationMinutes}分钟</span>
@@ -338,7 +336,7 @@ function RecordsList({ records, selectedId, onRowClick, onRowDoubleClick }: {
 
       <div className="sw-mobile-list">
         {sorted.map((r) => (
-          <button className="sw-mobile-card" key={r.id} onClick={() => onRowDoubleClick(r)} type="button">
+          <button className="sw-mobile-card" key={r.id} onClick={() => onRowClick(r)} type="button">
             <div className="sw-mobile-card__top">
               <span className="sch-cell-date">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime}</span>
               <span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus]}</span>

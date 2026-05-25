@@ -118,17 +118,24 @@ export function siteRoutes() {
       return;
     }
 
-    // GY token (Codex/feishu): siteIds from token payload, no siteUser record
-    if (Array.isArray(user.siteIds) && user.siteIds.length > 0) {
-      const sites = await prisma.site.findMany({ where: { id: { in: user.siteIds }, status: "active" }, orderBy: { name: "asc" } });
-      if (sites.length > 0) { res.json({ sites }); return; }
-    }
-
+    // Web login: use siteUser join table (authoritative for multi-site operators)
     const assignments = await prisma.siteUser.findMany({
       where: { userId: user.id },
       include: { site: true },
     });
-    res.json({ sites: assignments.map(a => a.site).filter(s => s.status === "active") });
+    if (assignments.length > 0) {
+      res.json({ sites: assignments.map(a => a.site).filter(s => s.status === "active") });
+      return;
+    }
+
+    // GY token (Codex/feishu): siteIds from token payload, no siteUser record
+    if (Array.isArray(user.siteIds) && user.siteIds.length > 0) {
+      const sites = await prisma.site.findMany({ where: { id: { in: user.siteIds }, status: "active" }, orderBy: { name: "asc" } });
+      res.json({ sites });
+      return;
+    }
+
+    res.json({ sites: [] });
   });
 
   return r;

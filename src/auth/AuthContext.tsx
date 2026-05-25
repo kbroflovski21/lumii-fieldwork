@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok) return { ok: false, error: data.error ?? "登录失败" };
       localStorage.setItem("gy_auth_token", data.token);
       localStorage.setItem("gy_chat_token", data.token);
+      localStorage.removeItem("gy_current_site");
       setToken(data.token);
       setUser(data.user);
       return { ok: true };
