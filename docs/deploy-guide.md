@@ -94,3 +94,82 @@ ssh ubuntu@124.221.48.52 'ps -p $(cat /tmp/lumii-goldenyears-dashboard/fieldwork
 - `/api/service-objects` 从契约形状的 staging API 示例数据返回 `HTTP/1.1 200 OK`。
 - 页面内容匹配当前已评审构建。
 - Node 进程监听在 `0.0.0.0:3004`。
+
+## GoldenYears Processor 部署
+
+Processor 是智能工牌的 WebSocket 处理服务，负责接收工牌音频流、进行实时 ASR 转写和 SOP 匹配。
+
+### 基本信息
+
+| 项 | 值 |
+| --- | --- |
+| 服务端口 | `40054` |
+| 进程 | Node.js 服务 |
+| Caddy 反向代理路径 | `/processor/*` |
+| WebSocket 端点 | `/processor/ws/badge` |
+
+### Caddy 反向代理配置
+
+Processor 通过 Caddy 反向代理暴露，路径前缀为 `/processor`。在 Caddyfile 中添加：
+
+```caddyfile
+handle_path /processor/* {
+    reverse_proxy localhost:40054
+}
+```
+
+这样前端访问 `wss://stage-gy.lumii-ai.cn/processor/ws/badge` 会被转发到 `ws://localhost:40054/ws/badge`。
+
+### 环境变量配置
+
+Processor 的 `.env` 文件需要包含以下变量：
+
+```env
+# ASR 服务配置
+XFYUN_ASR_APP_ID=<讯飞 ASR 应用 ID>
+XFYUN_ASR_API_KEY=<讯飞 ASR API Key>
+
+# LLM 配置（SOP 匹配用）
+LLM_API_KEY=<DashScope API Key>
+LLM_MODEL=qwen3-max
+
+# 服务认证
+SERVICE_TOKEN=<与 dashboard 共享的 service token>
+
+# Dashboard 回调地址
+DASHBOARD_URL=http://localhost:3001
+```
+
+### 前端连接
+
+前端 badge simulator (`HardwareSimulator.tsx`) 通过以下逻辑构造 Processor WebSocket URL：
+
+```typescript
+const PROCESSOR_URL = import.meta.env.VITE_PROCESSOR_URL || (window.location.origin + "/processor");
+const WS_URL = PROCESSOR_URL.replace(/^http/, "ws") + "/ws/badge";
+```
+
+生产环境通过 Caddy 代理时，不需要设置 `VITE_PROCESSOR_URL`，默认使用 `window.location.origin + "/processor"` 即可正确路由。
+
+开发环境需要在 `.env` 中设置：
+
+```env
+VITE_PROCESSOR_URL=http://localhost:40054
+```
+
+### 启动 Processor
+
+```bash
+cd /path/to/goldenyears-processor
+node dist/index.js
+```
+
+### 验证
+
+```bash
+# 检查 Processor 进程
+ss -ltnp | grep :40054
+
+# 通过 Caddy 验证 WebSocket 端点可达
+curl -I https://stage-gy.lumii-ai.cn/processor/health
+```

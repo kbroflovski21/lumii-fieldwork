@@ -146,10 +146,29 @@ When `description` changes:
 3. Update all future `service_schedule_sops` (schedules where serviceDate >= today and status not "completed"/"cancelled")
 4. If cadenceRule/timeWindow changed: cancel future schedules, regenerate
 
-### 2.4 `POST /api/service-plans/:id/cancel` — New: cancel plan
+### 2.4 `POST /api/service-plans/:id/cancel` — Cancel plan
 
 1. Set plan `status = "archived"`
-2. Set all future schedules (serviceDate >= today, status not "completed") to `status = "cancelled"`
+2. Set all future schedules (serviceDate >= today, status not "completed") to `status = "suspended"`
+
+> **Implementation note:** Final implementation uses `"suspended"` status (not `"cancelled"`) for schedules when a plan is cancelled/archived. This allows reactivation to restore the original schedules.
+
+### 2.4b `POST /api/service-plans/:id/reactivate` — Reactivate plan
+
+1. Set plan `status = "active"`
+2. Restore all future `"suspended"` schedules to their appropriate status (`"scheduled"` if worker assigned, `"unassigned"` otherwise)
+3. Generate any missing schedule occurrences for the next 4 weeks (skipping dates that already have non-cancelled schedules)
+4. Copy plan-level SOPs to any newly generated schedules
+
+### 2.4c `DELETE /api/service-plans/:id` — Delete plan
+
+1. Find all future schedules (serviceDate >= today, status not "completed")
+2. Delete associated `service_schedule_sops` for those schedules
+3. Delete the future schedule records
+4. Delete `service_plan_sops` and `service_plan_exceptions`
+5. Delete the plan itself
+
+> **Note:** Completed and past schedules are preserved as historical records. Only future non-completed schedules are removed.
 
 ### 2.5 `GET /api/service-objects/:id/service-plans` — Enhance
 
@@ -248,12 +267,18 @@ After AI returns, display a summary card instead of individual schedule items:
 Under "服务计划" tab:
 - Each active plan: card with cadenceLabel, timeWindow, SOP list
 - Click to expand: show upcoming schedules from this plan
-- Actions: "暂停计划" / "取消计划"
-- Cancel plan: confirmation dialog, then cancel all future schedules
+- Actions: "暂停计划" / "取消计划" / "删除计划"
+- Cancel plan: inline popover confirmation, then suspend all future schedules
+- Delete plan: inline popover confirmation, deletes plan + future non-completed schedules
+- Reactivate plan: restores suspended schedules and generates missing occurrences
+
+**PlanEditModal:** Inline editing of plan fields (description, worker, cadence, SOPs) with changes propagated to future schedules via `PATCH /api/service-plans/:id`.
 
 ### 4.4 Schedule Views — Dynamic Computation (Server-Side)
 
 Dynamic occurrence computation is done **server-side** in the schedule query API, not in each frontend client. This avoids duplicating cadenceRule parsing logic across site-operations frontend, careworker H5 page, and future clients.
+
+> **Implementation note:** The `computeProjectedOccurrences` function correctly sets status to `"unassigned"` when no worker is assigned (not hardcoded `"scheduled"`). The `suspended` status is excluded from projection (suspended schedules remain as-is in DB).
 
 **API change: `GET /api/service-schedule-occurrences`**
 
@@ -329,3 +354,25 @@ Temperature: 0.1 (deterministic parsing)
 - `src/features/siteOperations/SchedulesArea.tsx` — dynamic occurrence computation
 - `src/features/siteOperations/contracts.ts` — updated types
 - `src/careworker/CareworkerPage.tsx` — careworker calendar passes date range to API, renders projected occurrences identically
+
+## 7. Implementation Notes
+
+### 7.1 Schedule statuses
+
+The full set of schedule statuses in the implementation:
+
+| Status | Meaning |
+|---|---|
+| `unassigned` | No worker assigned yet |
+| `scheduled` | Worker assigned, awaiting execution |
+| `completed` | Service record created |
+| `cancelled` | Manually cancelled or replaced by cadence change |
+| `suspended` | Plan was archived/cancelled; can be reactivated |
+
+### 7.2 `useSiteOperationsData` eager fetching
+
+The frontend data hook (`useSiteOperationsData.ts`) was updated to eagerly fetch data without waiting for idle status checks. The `siteId` change no longer triggers a `resetAll` — instead, the fetch effects depend on `[siteId, refetchKey]` and execute immediately when either changes. This fixes the "首页数据加载中" stuck state for admin users who have no default site selection.
+
+### 7.3 Worker propagation on plan edit
+
+When `PATCH /api/service-plans/:id` receives a `primarySocialWorkerId` change, the handler propagates the new worker to all future schedules (serviceDate >= today, status not completed/cancelled/suspended). Schedule status is updated to `"scheduled"` if a worker is assigned, or `"unassigned"` if the worker is removed.
