@@ -71,7 +71,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
         .catch((error: unknown) => setSmartBadges({ status: "error", error: error instanceof Error ? error.message : "设备数据加载失败" }));
     }
 
-    if (activeArea === "service_schedules" && serviceSchedules.status === "idle") {
+    if ((activeArea === "service_schedules" || activeArea === "service_objects") && serviceSchedules.status === "idle") {
       setServiceSchedules(loading);
       siteOperationsApi
         .getServiceScheduleOccurrences(siteId)
