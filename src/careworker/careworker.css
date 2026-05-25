@@ -1068,12 +1068,20 @@
 /* ── Badge Simulator (integrated) ── */
 .sim-shell--embedded {
   min-height: auto;
-  height: 100%;
+  height: auto;
   padding: 8px;
   background: transparent;
 }
 .sim-shell--embedded .sim-grid {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sim-shell--embedded .sim-transcript {
+  max-height: 240px;
+}
+.sim-shell--embedded .sim-alert-log {
+  max-height: 200px;
 }
 
 .cw-badge-tab {
