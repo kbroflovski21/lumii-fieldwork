@@ -38,7 +38,7 @@ function HealthProfileList({ profiles }: { profiles: ServiceObject[] }) {
   return (
     <div className="site-table" role="table">
       <div className="site-table__head site-table__head--health" role="row">
-        {["长者", "保障类型", "服务频次", "服务项目", "风险标签", "家属订阅"].map((column) => (
+        {["长者", "保障类型", "服务项目", "风险标签", "家属订阅"].map((column) => (
           <span key={column} role="columnheader">
             {column}
           </span>
@@ -53,7 +53,6 @@ function HealthProfileList({ profiles }: { profiles: ServiceObject[] }) {
             </span>
           </div>
           <div role="cell">{profile.eligibilityType}</div>
-          <div role="cell">{profile.serviceFrequency}</div>
           <div role="cell">{profile.serviceProjects.join(" / ")}</div>
           <div role="cell">{profile.riskTags.length > 0 ? profile.riskTags.join(" / ") : "无"}</div>
           <div role="cell">
@@ -89,7 +88,6 @@ function HealthProfileDetail({ profile }: { profile: ServiceObject }) {
         </article>
         <article>
           <h4>服务配置</h4>
-          <p>{profile.serviceFrequency}</p>
           <p>{profile.serviceProjects.join(" / ")}</p>
         </article>
         <article>

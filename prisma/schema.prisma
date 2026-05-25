@@ -208,7 +208,6 @@ model ServiceObject {
   mapDisplayPoint          Json?           @map("map_display_point")
   eligibilityType          EligibilityType @default(government) @map("eligibility_type")
   serviceProjects          Json            @default("[]") @map("service_projects")
-  serviceFrequency         String?         @map("service_frequency") @db.VarChar(255)
   careNotes                Json            @default("[]") @map("care_notes")
   riskTags                 Json            @default("[]") @map("risk_tags")
   familySubscriptionSummary String         @default("none") @map("family_subscription_summary") @db.VarChar(64)

@@ -17,6 +17,7 @@ import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
+import { useSite } from "../../auth/SiteContext";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -338,6 +339,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [savedSchedules, setSavedSchedules] = useState<Array<{ id: string; serviceDate: string; serviceProject: string; status: string; timeWindow?: any; assignedSocialWorkerName?: string; assignedSocialWorkerId?: string; source?: string; servicePlanId?: string }>>([]);
   const [savedPlans, setSavedPlans] = useState<any[]>([]);
   const [workerOptions, setWorkerOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const { currentSite } = useSite();
 
   const refreshPlanData = useCallback(() => {
     authFetch(`/api/service-objects/${obj.id}/service-plans`)
@@ -355,10 +357,12 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
 
   useEffect(() => {
     refreshPlanData();
-    authFetch("/api/social-workers").then(r => r.json()).then(data => {
+    const siteId = currentSite?.id;
+    const workerUrl = siteId ? `/api/social-workers?siteId=${siteId}` : "/api/social-workers";
+    authFetch(workerUrl).then(r => r.json()).then(data => {
       setWorkerOptions((data.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })));
     }).catch(() => {});
-  }, [obj.id, refreshPlanData]);
+  }, [obj.id, refreshPlanData, currentSite?.id]);
 
   // Inline editing state
   const [editingBasic, setEditingBasic] = useState(false);
@@ -370,7 +374,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [editAddress, setEditAddress] = useState(obj.address);
   const [editEligibility, setEditEligibility] = useState(obj.eligibilityType);
   const [editProjects, setEditProjects] = useState(obj.serviceProjects.join("、"));
-  const [editFrequency, setEditFrequency] = useState(obj.serviceFrequency ?? "");
   const [savingBasic, setSavingBasic] = useState(false);
 
   const [editingCare, setEditingCare] = useState(false);
@@ -550,7 +553,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
 
         <div className="so-modal__summary-tags">
           <span className="so-modal__chip">{eligibilityLabel[obj.eligibilityType]}</span>
-          {obj.serviceFrequency ? <span className="so-modal__chip">{obj.serviceFrequency}</span> : null}
           {savedPlans.length > 0 ? <span className="so-modal__chip">{savedPlans.length}个计划</span> : null}
           {obj.serviceProjects.length > 0 ? <span className="so-modal__chip">{obj.serviceProjects.join(" / ")}</span> : null}
           {obj.riskTags.length > 0 ? (
@@ -585,7 +587,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
             <div className="so-tab-section">
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
-                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(obj.name); setEditPhone(obj.phone ?? ""); setEditIdNumber(obj.idNumber ?? ""); setEditAge(obj.age?.toString() ?? ""); setEditGender(obj.gender ?? "unknown"); setEditAddress(obj.address); setEditEligibility(obj.eligibilityType); setEditProjects(obj.serviceProjects.join("、")); setEditFrequency(obj.serviceFrequency ?? ""); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(obj.name); setEditPhone(obj.phone ?? ""); setEditIdNumber(obj.idNumber ?? ""); setEditAge(obj.age?.toString() ?? ""); setEditGender(obj.gender ?? "unknown"); setEditAddress(obj.address); setEditEligibility(obj.eligibilityType); setEditProjects(obj.serviceProjects.join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
               <dl className="so-overview-grid" style={{ marginTop: 10 }}>
                 <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : obj.name}</dd></div>
@@ -594,7 +596,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                 <div className="so-overview-item"><dt>年龄</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAge} onChange={e => setEditAge(e.target.value)} type="number" style={{ width: 60 }} /> : (obj.age ? `${obj.age}岁` : "—")}</dd></div>
                 <div className="so-overview-item"><dt>性别</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
                 <div className="so-overview-item"><dt>服务资格</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
-                <div className="so-overview-item"><dt>服务频次</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editFrequency} onChange={e => setEditFrequency(e.target.value)} placeholder="如：每周三次" /> : (obj.serviceFrequency || "—")}</dd></div>
                 <div className="so-overview-item"><dt>服务套餐</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
                 <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : obj.address}</dd></div>
                 {!editingBasic && obj.mapDisplayPoint ? <div className="so-overview-item so-overview-item--full"><dt>地图点</dt><dd>{obj.mapDisplayPoint.label ?? `${obj.mapDisplayPoint.latitude}, ${obj.mapDisplayPoint.longitude}`}</dd></div> : null}
@@ -1002,7 +1003,6 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [address, setAddress] = useState("");
   const [eligibility, setEligibility] = useState("government");
   const [projects, setProjects] = useState("");
-  const [frequency, setFrequency] = useState("");
   const [riskTags, setRiskTags] = useState("");
   const [careNotes, setCareNotes] = useState("");
   const [familyName, setFamilyName] = useState("");
@@ -1039,7 +1039,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
       <div className="so-modal__content">
         <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
-          projects={projects} onProjectsChange={setProjects} frequency={frequency} onFrequencyChange={setFrequency}
+          projects={projects} onProjectsChange={setProjects}
           riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
           familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
           familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
@@ -1060,7 +1060,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
 /* ── Form Fields (card-grouped layout) ── */
 
 function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNumberChange, age, onAgeChange, gender, onGenderChange, address, onAddressChange,
-  eligibility, onEligibilityChange, projects, onProjectsChange, frequency, onFrequencyChange,
+  eligibility, onEligibilityChange, projects, onProjectsChange,
   riskTags, onRiskTagsChange, careNotes, onCareNotesChange,
   familyName, onFamilyNameChange, familyRelation, onFamilyRelationChange, familyPhone, onFamilyPhoneChange,
   familyWechat, onFamilyWechatChange }: {
@@ -1069,7 +1069,6 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
   age: string; onAgeChange: (v: string) => void;
   gender: string; onGenderChange: (v: string) => void; address: string; onAddressChange: (v: string) => void;
   eligibility: string; onEligibilityChange: (v: string) => void; projects: string; onProjectsChange: (v: string) => void;
-  frequency: string; onFrequencyChange: (v: string) => void;
   riskTags: string; onRiskTagsChange: (v: string) => void; careNotes: string; onCareNotesChange: (v: string) => void;
   familyName: string; onFamilyNameChange: (v: string) => void; familyRelation: string; onFamilyRelationChange: (v: string) => void;
   familyPhone: string; onFamilyPhoneChange: (v: string) => void;
@@ -1100,7 +1099,6 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
               <option value="institution">机构服务</option><option value="self_paid">自费</option>
             </select>
           </label>
-          <label className="sw-field"><span>服务频次</span><input onChange={(e) => onFrequencyChange(e.target.value)} placeholder="如：每周三次" value={frequency} /></label>
         </div>
         <label className="sw-field"><span>服务套餐</span><input onChange={(e) => onProjectsChange(e.target.value)} placeholder="如：长护险" value={projects || "长护险"} /></label>
       </div>
@@ -1247,37 +1245,35 @@ function PlanEditModal({ plan, workerOptions, allServiceSops, onSave, onClose }:
   };
 
   return (
-    <div className="quality-user-modal__overlay" onClick={onClose}>
-      <div className="quality-user-modal" role="dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
-        <div className="quality-user-modal__header">
-          <div className="quality-user-modal__title">编辑服务计划</div>
-          <button className="quality-user-modal__close" onClick={onClose} type="button"><X size={18} /></button>
+    <div className="so-plan-edit__overlay" onClick={onClose}>
+      <div className="so-plan-edit__modal" role="dialog" onClick={e => e.stopPropagation()}>
+        <div className="so-plan-edit__header">
+          <div className="so-plan-edit__title">编辑服务计划</div>
+          <button className="so-plan-edit__close" onClick={onClose} type="button"><X size={18} /></button>
         </div>
-        <div className="quality-user-modal__body" style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="so-plan-edit__body">
           <label className="sw-field"><span>服务描述</span>
-            <textarea rows={2} value={desc} onChange={e => setDesc(e.target.value)} style={{ fontFamily: "inherit", resize: "vertical" }} />
+            <textarea className="so-plan-edit__textarea" rows={2} value={desc} onChange={e => setDesc(e.target.value)} />
           </label>
 
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#334155", display: "block", marginBottom: 6 }}>服务频率</span>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <div className="so-plan-edit__field-group">
+            <span className="so-plan-edit__label">服务频率</span>
+            <div className="so-plan-edit__day-chips">
               {["1","2","3","4","5","6","0"].map(d => (
                 <button key={d} type="button" onClick={() => toggleDay(d)}
-                  style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid", fontSize: 12, cursor: "pointer",
-                    borderColor: days.includes(d) ? "#0052CC" : "#CBD5E1",
-                    background: days.includes(d) ? "#EFF6FF" : "#fff",
-                    color: days.includes(d) ? "#0052CC" : "#64748B" }}>
+                  className="so-plan-edit__day-chip"
+                  data-selected={days.includes(d)}>
                   周{dayLabels[d]}
                 </button>
               ))}
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <label className="sw-field" style={{ flex: 1 }}><span>开始时间</span>
+          <div className="so-plan-edit__time-row">
+            <label className="sw-field so-plan-edit__time-field"><span>开始时间</span>
               <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
             </label>
-            <label className="sw-field" style={{ flex: 1 }}><span>结束时间</span>
+            <label className="sw-field so-plan-edit__time-field"><span>结束时间</span>
               <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </label>
           </div>
@@ -1289,18 +1285,18 @@ function PlanEditModal({ plan, workerOptions, allServiceSops, onSave, onClose }:
             </select>
           </label>
 
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#334155", display: "block", marginBottom: 6 }}>服务项目</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div className="so-plan-edit__field-group">
+            <span className="so-plan-edit__label">服务项目</span>
+            <div className="so-plan-edit__sop-list">
               {allServiceSops.filter(s => sopIds.includes(s.id)).map(s => (
-                <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <label key={s.id} className="so-plan-edit__sop-item">
                   <input type="checkbox" checked onChange={() => setSopIds(prev => prev.filter(id => id !== s.id))} />
                   {s.name}
                 </label>
               ))}
             </div>
             {allServiceSops.filter(s => !sopIds.includes(s.id)).length > 0 && (
-              <select style={{ marginTop: 6, fontSize: 12, padding: "3px 6px", border: "1px dashed #CBD5E1", borderRadius: 6 }} value="" onChange={e => { if (e.target.value) setSopIds(prev => [...prev, e.target.value]); }}>
+              <select className="so-plan-edit__sop-add" value="" onChange={e => { if (e.target.value) setSopIds(prev => [...prev, e.target.value]); }}>
                 <option value="">+ 添加服务项目</option>
                 {allServiceSops.filter(s => !sopIds.includes(s.id)).map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -1310,12 +1306,12 @@ function PlanEditModal({ plan, workerOptions, allServiceSops, onSave, onClose }:
           </div>
 
           {needsRegenerate && (
-            <div style={{ padding: "8px 10px", background: "#FFF7ED", borderRadius: 6, fontSize: 12, color: "#9A3412" }}>
+            <div className="so-plan-edit__warning">
               频率或时间已修改，保存后将取消现有排期并重新生成。
             </div>
           )}
         </div>
-        <div className="quality-user-modal__footer">
+        <div className="so-plan-edit__footer">
           <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
           <button className="sw-btn sw-btn--primary" onClick={handleSave} disabled={saving || days.length === 0} type="button">
             {saving ? "保存中..." : "保存"}

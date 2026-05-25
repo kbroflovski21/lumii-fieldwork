@@ -270,7 +270,6 @@ export type ServiceObject = {
   mapDisplayPoint?: MapDisplayPoint;
   eligibilityType: ServiceEligibilityType | string;
   serviceProjects: string[];
-  serviceFrequency?: string;
   careNotes: string[];
   riskTags: string[];
   familySubscriptionSummary: "none" | "daily" | "weekly" | "monthly";

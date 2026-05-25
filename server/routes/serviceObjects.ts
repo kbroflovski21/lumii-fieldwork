@@ -12,7 +12,7 @@ function toApi(row: any, familyContacts: any[] = [], planSummaries: any[] = []) 
     id: row.id, name: row.name, phone: row.phone, idNumber: row.idNumber, age: row.age, gender: row.gender,
     address: row.address, mapDisplayPoint: row.mapDisplayPoint,
     eligibilityType: row.eligibilityType, serviceProjects: row.serviceProjects,
-    serviceFrequency: row.serviceFrequency, careNotes: row.careNotes,
+    careNotes: row.careNotes,
     riskTags: row.riskTags, familySubscriptionSummary: row.familySubscriptionSummary,
     latestInsightSummary: row.latestInsightSummary, insightSummaries: row.insightSummaries,
     servicePlanSummaries: planSummaries, familyContacts, state: row.state,
@@ -92,7 +92,6 @@ export function serviceObjectsRoutes() {
         mapDisplayPoint: b.mapDisplayPoint ?? undefined,
         eligibilityType: b.eligibilityType ?? "government",
         serviceProjects: b.serviceProjects ?? [],
-        serviceFrequency: b.serviceFrequency ?? null,
         careNotes: b.careNotes ?? [],
         riskTags: b.riskTags ?? [],
         state: "normal",
@@ -106,7 +105,7 @@ export function serviceObjectsRoutes() {
     const b = req.body;
     const data: any = {};
     if (b.idNumber !== undefined && b.idNumber && !isValidIdNumber(b.idNumber)) { res.status(400).json({ error: "身份证号格式不正确" }); return; }
-    const fields: Record<string, string> = { name: "name", phone: "phone", idNumber: "idNumber", age: "age", gender: "gender", address: "address", eligibilityType: "eligibilityType", serviceFrequency: "serviceFrequency" };
+    const fields: Record<string, string> = { name: "name", phone: "phone", idNumber: "idNumber", age: "age", gender: "gender", address: "address", eligibilityType: "eligibilityType" };
     for (const [api, col] of Object.entries(fields)) {
       if (b[api] !== undefined) data[col] = b[api];
     }
@@ -365,6 +364,23 @@ export function serviceObjectsRoutes() {
     if (primarySocialWorkerName !== undefined) updateData.primarySocialWorkerName = primarySocialWorkerName;
     if (Object.keys(updateData).length > 0) {
       await prisma.servicePlan.update({ where: { id: planId }, data: updateData });
+    }
+
+    // 1b. Propagate worker changes to future schedules
+    if (primarySocialWorkerId !== undefined) {
+      const workerName = primarySocialWorkerName ?? null;
+      await prisma.serviceSchedule.updateMany({
+        where: {
+          servicePlanId: planId,
+          serviceDate: { gte: today },
+          status: { notIn: ["completed", "cancelled"] },
+        },
+        data: {
+          assignedSocialWorkerId: primarySocialWorkerId || null,
+          assignedSocialWorkerName: workerName,
+          status: primarySocialWorkerId ? "scheduled" : "unassigned",
+        },
+      });
     }
 
     // 2. Update plan-level SOPs if provided
