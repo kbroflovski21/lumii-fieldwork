@@ -29,7 +29,7 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   const [serviceObjects, setServiceObjects] = useState<Resource<ServiceObjectsResponse>>(idle);
   const [refetchKey, setRefetchKey] = useState(0);
 
-  const resetAll = useCallback(() => {
+  const refetch = useCallback(() => {
     setHome(idle);
     setSocialWorkers(idle);
     setSmartBadges(idle);
@@ -38,10 +38,6 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
     setServiceObjects(idle);
     setRefetchKey(k => k + 1);
   }, []);
-
-  const refetch = useCallback(() => {
-    resetAll();
-  }, [resetAll]);
 
   useEffect(() => {
     // siteId may be undefined for org_admin viewing all sites
@@ -55,47 +51,37 @@ export function useSiteOperationsData(activeArea: WorkAreaId, siteId?: string) {
   }, [siteId, refetchKey]);
 
   useEffect(() => {
-    if (activeArea === "social_workers" && socialWorkers.status === "idle") {
+    if (socialWorkers.status === "idle") {
       setSocialWorkers(loading);
-      siteOperationsApi
-        .getSocialWorkers(siteId)
+      siteOperationsApi.getSocialWorkers(siteId)
         .then((data) => setSocialWorkers({ status: "success", data }))
         .catch((error: unknown) => setSocialWorkers({ status: "error", error: error instanceof Error ? error.message : "服务人员数据加载失败" }));
     }
-
-    if (activeArea === "smart_badges" && smartBadges.status === "idle") {
+    if (smartBadges.status === "idle") {
       setSmartBadges(loading);
-      siteOperationsApi
-        .getSmartBadges(siteId)
+      siteOperationsApi.getSmartBadges(siteId)
         .then((data) => setSmartBadges({ status: "success", data }))
         .catch((error: unknown) => setSmartBadges({ status: "error", error: error instanceof Error ? error.message : "设备数据加载失败" }));
     }
-
-    if ((activeArea === "service_schedules" || activeArea === "service_objects") && serviceSchedules.status === "idle") {
+    if (serviceSchedules.status === "idle") {
       setServiceSchedules(loading);
-      siteOperationsApi
-        .getServiceScheduleOccurrences(siteId)
+      siteOperationsApi.getServiceScheduleOccurrences(siteId)
         .then((data) => setServiceSchedules({ status: "success", data }))
         .catch((error: unknown) => setServiceSchedules({ status: "error", error: error instanceof Error ? error.message : "排期数据加载失败" }));
     }
-
-    if (activeArea === "service_records" && serviceRecords.status === "idle") {
+    if (serviceRecords.status === "idle") {
       setServiceRecords(loading);
-      siteOperationsApi
-        .getServiceRecords(siteId)
+      siteOperationsApi.getServiceRecords(siteId)
         .then((data) => setServiceRecords({ status: "success", data }))
         .catch((error: unknown) => setServiceRecords({ status: "error", error: error instanceof Error ? error.message : "记录数据加载失败" }));
     }
-
-    if (activeArea === "service_objects" && serviceObjects.status === "idle") {
+    if (serviceObjects.status === "idle") {
       setServiceObjects(loading);
-      siteOperationsApi
-        .getServiceObjects(siteId)
+      siteOperationsApi.getServiceObjects(siteId)
         .then((data) => setServiceObjects({ status: "success", data }))
         .catch((error: unknown) => setServiceObjects({ status: "error", error: error instanceof Error ? error.message : "对象数据加载失败" }));
     }
   }, [
-    activeArea,
     serviceObjects.status,
     serviceRecords.status,
     serviceSchedules.status,

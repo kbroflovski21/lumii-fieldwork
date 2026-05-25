@@ -54,7 +54,7 @@ function computeProjectedOccurrences(
         timeWindow: tw,
         assignedSocialWorkerId: plan.primarySocialWorkerId,
         assignedSocialWorkerName: plan.primarySocialWorkerName,
-        status: "scheduled",
+        status: plan.primarySocialWorkerId ? "scheduled" : "unassigned",
         riskTags: plan.serviceObject?.riskTags ?? [],
         siteId: plan.serviceObject?.siteId ?? "site-001",
         sopLinks: planSops,
