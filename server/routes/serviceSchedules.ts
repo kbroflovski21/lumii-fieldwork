@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { genId, withOperationalState, resolveSiteId } from "./helpers";
+import { generateDates } from "../lib/cadenceRule";
 
 function toApi(row: any) {
   if (!row) return row;
@@ -15,6 +16,52 @@ function toApi(row: any) {
     planExceptionApplied: !!row.planExceptionApplied, riskTags: row.riskTags,
     adjustmentHistory: row.adjustmentHistory,
   };
+}
+
+function computeProjectedOccurrences(
+  plans: any[],
+  rangeStart: string,
+  rangeEnd: string,
+  existingDates: Set<string>
+) {
+  const projected: any[] = [];
+  for (const plan of plans) {
+    if (plan.status !== "active" || !plan.cadenceRule) continue;
+    const effectiveStart = rangeStart > plan.startDate ? rangeStart : plan.startDate;
+    const dates = generateDates(
+      plan.cadenceRule,
+      effectiveStart,
+      Math.ceil((new Date(rangeEnd).getTime() - new Date(effectiveStart).getTime()) / 86400000)
+    );
+    const tw = plan.preferredTimeWindow ?? {};
+    const planSops = (plan.sopLinks ?? []).map((s: any) => ({ sopId: s.sopId, sopName: s.sopName }));
+    for (const date of dates) {
+      const key = `${plan.id}:${date}`;
+      if (existingDates.has(key)) continue;
+      projected.push({
+        id: `projected-${plan.id}-${date}`,
+        source: "projected",
+        servicePlanId: plan.id,
+        serviceObjectId: plan.serviceObjectId,
+        serviceObjectName: plan.serviceObject?.name ?? "",
+        serviceProject: plan.serviceProject,
+        addressSnapshot: plan.serviceObject?.address ?? "",
+        address: plan.serviceObject?.address ?? null,
+        mapDisplayPoint: plan.serviceObject?.mapDisplayPoint ?? null,
+        serviceDate: date,
+        startTime: tw.start ?? null,
+        endTime: tw.end ?? null,
+        timeWindow: tw,
+        assignedSocialWorkerId: plan.primarySocialWorkerId,
+        assignedSocialWorkerName: plan.primarySocialWorkerName,
+        status: "scheduled",
+        riskTags: plan.serviceObject?.riskTags ?? [],
+        siteId: plan.serviceObject?.siteId ?? "site-001",
+        sopLinks: planSops,
+      });
+    }
+  }
+  return projected;
 }
 
 export function serviceSchedulesRoutes() {
@@ -35,7 +82,11 @@ export function serviceSchedulesRoutes() {
       if (sw) where.assignedSocialWorkerId = sw.id;
     }
 
-    const rows = await prisma.serviceSchedule.findMany({ where, orderBy: { serviceDate: "asc" } });
+    const rows = await prisma.serviceSchedule.findMany({
+      where,
+      orderBy: { serviceDate: "asc" },
+      include: { sopLinks: { select: { sopId: true, sopName: true } } },
+    });
 
     const serviceObjectIds = [...new Set(rows.map((r: any) => r.serviceObjectId).filter(Boolean))];
     const objects = serviceObjectIds.length > 0
@@ -45,10 +96,29 @@ export function serviceSchedulesRoutes() {
 
     const enriched = rows.map((r: any) => ({
       ...toApi(r),
+      sopLinks: r.sopLinks ?? [],
       serviceObjectContext: objMap[r.serviceObjectId] ?? null,
     }));
 
-    res.json(withOperationalState({ serviceSchedules: enriched }));
+    // Dynamic occurrence computation for date ranges beyond DB window
+    const rangeStart = req.query.rangeStart as string | undefined;
+    const rangeEnd = req.query.rangeEnd as string | undefined;
+    let projected: any[] = [];
+    if (rangeStart && rangeEnd) {
+      const plans = await prisma.servicePlan.findMany({
+        where: { status: "active", ...(siteId ? { serviceObject: { siteId } } : {}) },
+        include: {
+          sopLinks: { select: { sopId: true, sopName: true } },
+          serviceObject: { select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } },
+        },
+      });
+      const existingKeys = new Set(rows.map((r: any) => `${r.servicePlanId}:${r.serviceDate}`));
+      projected = computeProjectedOccurrences(plans, rangeStart, rangeEnd, existingKeys);
+    }
+
+    const allSchedules = [...enriched, ...projected].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate));
+
+    res.json(withOperationalState({ serviceSchedules: allSchedules }));
   });
 
   r.get("/service-schedule-occurrences/:id", async (req, res) => {
