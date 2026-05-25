@@ -250,6 +250,7 @@ model ServicePlan {
   preferredTimeWindow     Json       @default("{}") @map("preferred_time_window")
   startDate               String     @map("start_date") @db.VarChar(64)
   endDate                 String?    @map("end_date") @db.VarChar(64)
+  description             String?    @map("description") @db.Text
   primarySocialWorkerId   String?    @map("primary_social_worker_id") @db.VarChar(64)
   primarySocialWorkerName String?    @map("primary_social_worker_name") @db.VarChar(255)
   status                  PlanStatus @default(active)
@@ -259,6 +260,7 @@ model ServicePlan {
 
   serviceObject ServiceObject          @relation(fields: [serviceObjectId], references: [id])
   exceptions    ServicePlanException[]
+  sopLinks      ServicePlanSop[]
 
   @@map("service_plans")
 }
@@ -305,7 +307,8 @@ model ServiceSchedule {
   createdAt                DateTime       @default(now()) @map("created_at")
   updatedAt                DateTime       @default(now()) @updatedAt @map("updated_at")
 
-  serviceObject ServiceObject @relation(fields: [serviceObjectId], references: [id])
+  serviceObject ServiceObject    @relation(fields: [serviceObjectId], references: [id])
+  sopLinks      ServiceScheduleSop[]
 
   @@map("service_schedules")
 }
@@ -438,7 +441,9 @@ model Sop {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
-  steps SopStep[]
+  steps         SopStep[]
+  planLinks     ServicePlanSop[]
+  scheduleLinks ServiceScheduleSop[]
 
   @@map("sops")
 }
@@ -503,4 +508,32 @@ model FeishuUser {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("feishu_users")
+}
+
+model ServicePlanSop {
+  id        String   @id @default(uuid()) @db.VarChar(64)
+  planId    String   @map("plan_id") @db.VarChar(64)
+  sopId     String   @map("sop_id") @db.VarChar(64)
+  sopName   String   @map("sop_name") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  plan ServicePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sop  Sop         @relation(fields: [sopId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, sopId])
+  @@map("service_plan_sops")
+}
+
+model ServiceScheduleSop {
+  id         String   @id @default(uuid()) @db.VarChar(64)
+  scheduleId String   @map("schedule_id") @db.VarChar(64)
+  sopId      String   @map("sop_id") @db.VarChar(64)
+  sopName    String   @map("sop_name") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  schedule ServiceSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  sop      Sop              @relation(fields: [sopId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, sopId])
+  @@map("service_schedule_sops")
 }
