@@ -221,11 +221,14 @@ function makeTimestamp(): string {
 
 function getFolderStatus(f: StdFolder): "complete" | "partial" | "empty" {
   const hasSop = f.sop && f.sop.status === "complete";
-  const hasSv = f.supervision && f.supervision.status === "complete";
   const hasRp = f.report && f.report.status === "complete";
-  if (hasSop && hasSv && hasRp) return "complete";
-  if (hasSop) return "partial";
-  return "empty";
+  if (!hasSop) return hasSop === null && !f.report ? "empty" : "partial";
+  if (f.type === "service") {
+    const hasGd = f.guidance && f.guidance.status === "complete";
+    return hasSop && hasGd && hasRp ? "complete" : "partial";
+  }
+  const hasSv = f.supervision && f.supervision.status === "complete";
+  return hasSop && hasSv && hasRp ? "complete" : "partial";
 }
 
 const STATUS_LABELS: Record<string, string> = {
