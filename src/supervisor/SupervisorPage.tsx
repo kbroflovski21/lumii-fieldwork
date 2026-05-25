@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bot } from "lucide-react";
+import { Bot, X } from "lucide-react";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { authFetch } from "../features/siteOperations/api";
 import "./supervisor.css";
@@ -308,7 +308,8 @@ function SOPContent() {
         } : null,
       }));
       setFolders(mapped);
-      if (mapped.length > 0 && !selectedFolder) setSelectedFolder(mapped[0].id);
+      const isMobile = window.innerWidth < 768;
+      if (mapped.length > 0 && !selectedFolder && !isMobile) setSelectedFolder(mapped[0].id);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -692,11 +693,17 @@ function SOPContent() {
         {/* Drag handle left */}
         <div className="sv-drag-handle" onMouseDown={handleMouseDown("left")} />
 
+        {/* Mobile scrim when doc drawer is open */}
+        {folder && <div className="sv-doc-scrim" onClick={() => setSelectedFolder("")} />}
+
         {/* CONTENT AREA */}
-        <div className="sv-doc">
+        <div className={`sv-doc${folder ? " sv-doc--open" : ""}`}>
           {/* Layer toggle bar */}
           {folder && (
             <div className="sv-layer-bar">
+              <button className="sv-doc__mobile-close" onClick={() => setSelectedFolder("")} type="button" aria-label="关闭">
+                <X size={16} />
+              </button>
               <span className="sv-layer-bar__breadcrumb">{breadcrumb}</span>
               <div className="sv-layer-toggle">
                 <button

@@ -1625,9 +1625,9 @@
 
   .sv-dir {
     width: 100% !important;
-    max-height: 200px;
+    max-height: none;
     border-right: none;
-    border-bottom: 1px solid var(--quality-line);
+    border-bottom: none;
   }
 
   .sv-dir--collapsed {
