@@ -480,27 +480,27 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     setShowScheduleForm(false);
     setPlanWorkerId("");
     refreshPlanData();
-    onMutate?.();
+    onUpdated();
   };
 
   const handleCancelPlan = async (planId: string) => {
     if (!confirm("确定要取消此计划？所有未完成的排期将被取消。")) return;
     await authFetch(`/api/service-plans/${planId}/cancel`, { method: "POST" });
     refreshPlanData();
-    onMutate?.();
+    onUpdated();
   };
 
   const handleReactivatePlan = async (planId: string) => {
     await authFetch(`/api/service-plans/${planId}/reactivate`, { method: "POST" });
     refreshPlanData();
-    onMutate?.();
+    onUpdated();
   };
 
   const handleDeletePlan = async (planId: string) => {
     if (!confirm("确定要删除此计划？相关的所有排期记录将被永久删除。")) return;
     await authFetch(`/api/service-plans/${planId}`, { method: "DELETE" });
     refreshPlanData();
-    onMutate?.();
+    onUpdated();
   };
 
   const handleSavePlanEdit = async (planId: string, updates: Record<string, any>) => {
@@ -511,7 +511,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     });
     setEditingPlanId(null);
     refreshPlanData();
-    onMutate?.();
+    onUpdated();
   };
 
   const hasInsights = (obj.insightSummaries ?? []).length > 0 || !!obj.latestInsightSummary;
