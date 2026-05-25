@@ -239,7 +239,7 @@ export function serviceObjectsRoutes() {
         timeWindow: tw,
         assignedSocialWorkerId: b.primarySocialWorkerId ?? null,
         assignedSocialWorkerName: b.primarySocialWorkerName ?? null,
-        status: "scheduled" as const,
+        status: (b.primarySocialWorkerId ? "scheduled" : "unassigned") as any,
         riskTags: obj?.riskTags ?? [],
       }));
       await prisma.serviceSchedule.createMany({ data: scheduleData });
@@ -282,9 +282,19 @@ export function serviceObjectsRoutes() {
     res.json({ ok: true });
   });
 
+  r.delete("/service-plans/:id", async (req, res) => {
+    const planId = req.params.id;
+    await prisma.serviceScheduleSop.deleteMany({ where: { schedule: { servicePlanId: planId } } });
+    await prisma.serviceSchedule.deleteMany({ where: { servicePlanId: planId } });
+    await prisma.servicePlanSop.deleteMany({ where: { planId } });
+    await prisma.servicePlanException.deleteMany({ where: { servicePlanId: planId } });
+    await prisma.servicePlan.delete({ where: { id: planId } });
+    res.json({ ok: true });
+  });
+
   r.patch("/service-plans/:id", async (req, res) => {
     const planId = req.params.id;
-    const { description, sopIds, cadenceRule, cadenceLabel, preferredTimeWindow } = req.body;
+    const { description, sopIds, cadenceRule, cadenceLabel, preferredTimeWindow, primarySocialWorkerId, primarySocialWorkerName } = req.body;
     const today = new Date().toISOString().slice(0, 10);
 
     const plan = await prisma.servicePlan.findFirst({ where: { id: planId } });
@@ -296,6 +306,8 @@ export function serviceObjectsRoutes() {
     if (cadenceRule !== undefined) updateData.cadenceRule = cadenceRule;
     if (cadenceLabel !== undefined) updateData.cadenceLabel = cadenceLabel;
     if (preferredTimeWindow !== undefined) updateData.preferredTimeWindow = preferredTimeWindow;
+    if (primarySocialWorkerId !== undefined) updateData.primarySocialWorkerId = primarySocialWorkerId;
+    if (primarySocialWorkerName !== undefined) updateData.primarySocialWorkerName = primarySocialWorkerName;
     if (Object.keys(updateData).length > 0) {
       await prisma.servicePlan.update({ where: { id: planId }, data: updateData });
     }
@@ -357,7 +369,7 @@ export function serviceObjectsRoutes() {
           timeWindow: tw ?? {},
           assignedSocialWorkerId: plan.primarySocialWorkerId,
           assignedSocialWorkerName: plan.primarySocialWorkerName,
-          status: "scheduled" as const,
+          status: (b.primarySocialWorkerId ? "scheduled" : "unassigned") as any,
           riskTags: obj?.riskTags ?? [],
         }));
         await prisma.serviceSchedule.createMany({ data: scheduleData });

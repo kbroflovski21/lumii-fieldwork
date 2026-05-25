@@ -335,19 +335,30 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [viewingRecord, setViewingRecord] = useState<ServiceRecord | null>(null);
-  const [savedSchedules, setSavedSchedules] = useState<Array<{ id: string; serviceDate: string; serviceProject: string; status: string; timeWindow?: any; assignedSocialWorkerName?: string; source?: string }>>([]);
-  const [savedPlans, setSavedPlans] = useState<Array<{ id: string; serviceProject: string; cadenceLabel: string; preferredTimeWindow: any; primarySocialWorkerName?: string; status: string }>>([]);
+  const [savedSchedules, setSavedSchedules] = useState<Array<{ id: string; serviceDate: string; serviceProject: string; status: string; timeWindow?: any; assignedSocialWorkerName?: string; assignedSocialWorkerId?: string; source?: string; servicePlanId?: string }>>([]);
+  const [savedPlans, setSavedPlans] = useState<any[]>([]);
+  const [workerOptions, setWorkerOptions] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
+  const refreshPlanData = useCallback(() => {
+    authFetch(`/api/service-objects/${obj.id}/service-plans`)
+      .then(r => r.json())
+      .then(data => setSavedPlans((data.servicePlans ?? []).filter((p: any) => p.status !== "archived")))
+      .catch(() => {});
     authFetch("/api/service-schedule-occurrences")
       .then(r => r.json())
       .then(data => {
-        const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id);
+        const mine = (data.serviceSchedules ?? []).filter((s: any) => s.serviceObjectId === obj.id && s.status !== "cancelled");
         setSavedSchedules(mine);
       })
       .catch(() => {});
-    setSavedPlans(obj.servicePlanSummaries ?? []);
   }, [obj.id]);
+
+  useEffect(() => {
+    refreshPlanData();
+    authFetch("/api/social-workers").then(r => r.json()).then(data => {
+      setWorkerOptions((data.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })));
+    }).catch(() => {});
+  }, [obj.id, refreshPlanData]);
 
   // Inline editing state
   const [editingBasic, setEditingBasic] = useState(false);
@@ -401,6 +412,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [aiResult, setAiResult] = useState<AiScheduleResult | null>(null);
   const [selectedSopIds, setSelectedSopIds] = useState<string[]>([]);
   const [allServiceSops, setAllServiceSops] = useState<Array<{ id: string; name: string }>>([]);
+  const [planWorkerId, setPlanWorkerId] = useState("");
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
 
   const color = avatarColor(obj.name);
   const status = compositeStateTone(obj);
@@ -432,6 +445,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const handleCreatePlan = async () => {
     if (!aiResult) return;
     const p = aiResult.plan;
+    const worker = workerOptions.find(w => w.id === planWorkerId);
     if (p.isRecurring) {
       await authFetch(`/api/service-objects/${obj.id}/service-plans`, {
         method: "POST",
@@ -444,6 +458,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
           startDate: p.startDate,
           serviceProject: "长护险",
           sopIds: selectedSopIds,
+          primarySocialWorkerId: planWorkerId || null,
+          primarySocialWorkerName: worker?.name ?? null,
         }),
       });
     } else {
@@ -456,13 +472,33 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     }
     setAiResult(null);
     setAiInput("");
+    setShowScheduleForm(false);
+    setPlanWorkerId("");
+    refreshPlanData();
     onMutate?.();
   };
 
   const handleCancelPlan = async (planId: string) => {
     if (!confirm("确定要取消此计划？所有未完成的排期将被取消。")) return;
     await authFetch(`/api/service-plans/${planId}/cancel`, { method: "POST" });
+    refreshPlanData();
     onMutate?.();
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!confirm("确定要删除此计划？相关的所有排期记录将被永久删除。")) return;
+    await authFetch(`/api/service-plans/${planId}`, { method: "DELETE" });
+    refreshPlanData();
+    onMutate?.();
+  };
+
+  const handleUpdatePlan = async (planId: string, updates: Record<string, any>) => {
+    await authFetch(`/api/service-plans/${planId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    });
+    refreshPlanData();
   };
 
   const hasInsights = (obj.insightSummaries ?? []).length > 0 || !!obj.latestInsightSummary;
@@ -622,50 +658,78 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                         value={aiInput}
                       />
                       <button className="so-ai-send" disabled={generating || !aiInput.trim()} onClick={handleGenerate} type="button">
-                        {generating ? <Clock size={16} /> : <Send size={16} />}
+                        {generating ? <Clock size={16} className="so-ai-spin" /> : <Send size={16} />}
                       </button>
                     </div>
+                    {generating && (
+                      <div className="so-ai-loading">
+                        <Sparkles size={16} className="so-ai-spin" />
+                        <span>AI 正在分析服务安排...</span>
+                      </div>
+                    )}
                   </div>
 
                   {aiResult && (
                     <div className="so-plan-summary-card">
-                      <h4 className="so-plan-summary-card__title">{aiResult.plan.isRecurring ? "周期服务计划" : "一次性服务排期"}</h4>
-                      <dl className="so-overview-grid">
-                        <div className="so-overview-item"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
-                        {aiResult.plan.isRecurring && <div className="so-overview-item"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
-                        <div className="so-overview-item"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
-                        <div className="so-overview-item"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
-                      </dl>
+                      <div className="so-plan-summary-card__header">
+                        <CalendarPlus size={18} />
+                        <h4>{aiResult.plan.isRecurring ? "周期服务计划" : "一次性服务排期"}</h4>
+                      </div>
+                      <div className="so-plan-summary-card__body">
+                        <dl className="so-overview-grid">
+                          <div className="so-overview-item"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
+                          {aiResult.plan.isRecurring && <div className="so-overview-item"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
+                          <div className="so-overview-item"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
+                          <div className="so-overview-item"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
+                        </dl>
 
-                      <div className="so-plan-sop-section">
-                        <strong>服务项目</strong>
-                        <div className="so-plan-sop-list">
-                          {allServiceSops.filter(s => selectedSopIds.includes(s.id)).map(s => (
-                            <label key={s.id} className="so-plan-sop-item">
-                              <input type="checkbox" checked onChange={() => setSelectedSopIds(prev => prev.filter(id => id !== s.id))} />
-                              {s.name}
-                            </label>
-                          ))}
+                        <div className="so-plan-field">
+                          <label className="sw-field"><span>服务人员</span>
+                            <select value={planWorkerId} onChange={e => setPlanWorkerId(e.target.value)}>
+                              <option value="">不指定（待分配）</option>
+                              {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                            </select>
+                          </label>
                         </div>
-                        <select className="so-plan-sop-add" value="" onChange={(e) => { if (e.target.value) setSelectedSopIds(prev => [...prev, e.target.value]); }}>
-                          <option value="">+ 添加服务项目</option>
-                          {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
+
+                        <div className="so-plan-field">
+                          <strong className="so-plan-field__label">服务项目</strong>
+                          <div className="so-plan-sop-list">
+                            {allServiceSops.filter(s => selectedSopIds.includes(s.id)).map(s => (
+                              <label key={s.id} className="so-plan-sop-item">
+                                <input type="checkbox" checked onChange={() => setSelectedSopIds(prev => prev.filter(id => id !== s.id))} />
+                                <span>{s.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                          {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).length > 0 && (
+                            <select className="so-plan-sop-add" value="" onChange={(e) => { if (e.target.value) setSelectedSopIds(prev => [...prev, e.target.value]); }}>
+                              <option value="">+ 添加服务项目</option>
+                              {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        {aiResult.preview.length > 0 && (
+                          <div className="so-plan-field">
+                            <strong className="so-plan-field__label">近期排期预览</strong>
+                            <div className="so-plan-preview">
+                              {aiResult.preview.map((p, i) => (
+                                <div key={i} className="so-plan-preview-item">
+                                  <span className="so-plan-preview-date">{p.date}</span>
+                                  <span className="so-plan-preview-day">{p.dayLabel}</span>
+                                  <span className="so-plan-preview-time">{p.timeLabel}</span>
+                                </div>
+                              ))}
+                              {aiResult.plan.isRecurring && <div className="so-plan-preview-note">将自动生成后续排期</div>}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {aiResult.preview.length > 0 && (
-                        <div className="so-plan-preview">
-                          <strong>近期排期预览</strong>
-                          {aiResult.preview.map((p, i) => (
-                            <div key={i} className="so-plan-preview-item">{p.date} {p.dayLabel} {p.timeLabel}</div>
-                          ))}
-                          {aiResult.plan.isRecurring && <div className="so-plan-preview-note">将自动生成后续排期</div>}
-                        </div>
-                      )}
-
-                      <div className="so-plan-actions">
+                      <div className="so-plan-summary-card__footer">
                         <button className="sw-btn sw-btn--secondary" onClick={() => setAiResult(null)} type="button">取消</button>
                         <button className="sw-btn sw-btn--primary" onClick={handleCreatePlan} type="button">
                           {aiResult.plan.isRecurring ? "创建计划" : "创建排期"}
@@ -689,24 +753,49 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               {savedPlans.length > 0 ? (
                 <div className="so-plans">
                   {savedPlans.map(plan => (
-                    <div className="so-plan-card so-plan-card--recurring" key={plan.id}>
+                    <div className="so-plan-card" key={plan.id}>
                       <div className="so-plan-card__header">
-                        <strong>{plan.cadenceLabel} · {plan.preferredTimeWindow?.start ?? ""}-{plan.preferredTimeWindow?.end ?? ""}</strong>
+                        <div className="so-plan-card__title">
+                          <CalendarPlus size={14} />
+                          <strong>{plan.cadenceLabel} · {plan.preferredTimeWindow?.start ?? ""}-{plan.preferredTimeWindow?.end ?? ""}</strong>
+                        </div>
                         <span className="sw-status-badge" data-tone={plan.status === "active" ? "success" : "muted"}>
                           {plan.status === "active" ? "进行中" : plan.status === "paused" ? "已暂停" : "已取消"}
                         </span>
                       </div>
-                      {(plan as any).description && <div className="so-plan-card__desc">{(plan as any).description}</div>}
-                      {(plan as any).sopLinks?.length > 0 && (
+                      {plan.description && <div className="so-plan-card__desc">{plan.description}</div>}
+                      {plan.sopLinks?.length > 0 && (
                         <div className="so-plan-card__sops">
-                          {(plan as any).sopLinks.map((s: any) => <span key={s.sopId} className="sw-tag">{s.sopName}</span>)}
+                          {plan.sopLinks.map((s: any) => <span key={s.sopId} className="sw-tag">{s.sopName}</span>)}
                         </div>
                       )}
-                      <div className="so-plan-card__meta">
-                        {plan.primarySocialWorkerName && <span>{plan.primarySocialWorkerName}</span>}
-                        {plan.status === "active" && (
-                          <button className="sw-btn sw-btn--ghost sw-btn--sm" style={{ color: "#DC2626" }} onClick={() => handleCancelPlan(plan.id)} type="button">取消计划</button>
+                      <div className="so-plan-card__worker">
+                        <UserRound size={13} />
+                        {editingPlanId === plan.id ? (
+                          <select
+                            value={plan.primarySocialWorkerId ?? ""}
+                            onChange={async (e) => {
+                              const w = workerOptions.find(w => w.id === e.target.value);
+                              await handleUpdatePlan(plan.id, { primarySocialWorkerId: e.target.value || null, primarySocialWorkerName: w?.name ?? null });
+                              setEditingPlanId(null);
+                            }}
+                            onBlur={() => setEditingPlanId(null)}
+                            autoFocus
+                          >
+                            <option value="">待分配</option>
+                            {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                          </select>
+                        ) : (
+                          <span className="so-plan-card__worker-name" onClick={() => setEditingPlanId(plan.id)} style={{ cursor: "pointer" }}>
+                            {plan.primarySocialWorkerName ?? "待分配"} <Edit3 size={11} />
+                          </span>
                         )}
+                      </div>
+                      <div className="so-plan-card__actions">
+                        {plan.status === "active" && (
+                          <button className="sw-btn sw-btn--ghost sw-btn--sm" onClick={() => handleCancelPlan(plan.id)} type="button">取消</button>
+                        )}
+                        <button className="sw-btn sw-btn--ghost sw-btn--sm" style={{ color: "#DC2626" }} onClick={() => handleDeletePlan(plan.id)} type="button">删除</button>
                       </div>
                     </div>
                   ))}
@@ -719,14 +808,18 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               <div className="so-tab-section">
                 <h4 className="so-tab-section-title">近期排期 ({savedSchedules.length}条)</h4>
                 <div className="so-schedules-list">
-                  {savedSchedules.slice(0, 20).map(s => (
-                    <div className="so-schedule-row" key={s.id}>
-                      <span>{s.serviceDate} · {s.timeWindow?.label ?? `${s.timeWindow?.start ?? ""}-${s.timeWindow?.end ?? ""}`}</span>
-                      <span className="sw-status-badge" data-tone={s.status === "completed" ? "success" : s.status === "cancelled" ? "muted" : s.status === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
-                        {statusText[s.status] ?? s.status}
-                      </span>
-                    </div>
-                  ))}
+                  {savedSchedules.slice(0, 20).map(s => {
+                    const effectiveStatus = (!s.assignedSocialWorkerId && s.status === "scheduled") ? "unassigned" : s.status;
+                    return (
+                      <div className="so-schedule-row" key={s.id}>
+                        <span>{s.serviceDate} · {s.timeWindow?.label ?? `${s.timeWindow?.start ?? ""}-${s.timeWindow?.end ?? ""}`}</span>
+                        <span>{s.assignedSocialWorkerName ?? ""}</span>
+                        <span className="sw-status-badge" data-tone={effectiveStatus === "completed" ? "success" : effectiveStatus === "cancelled" ? "muted" : effectiveStatus === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
+                          {statusText[effectiveStatus] ?? effectiveStatus}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
