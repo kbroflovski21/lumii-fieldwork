@@ -7326,27 +7326,40 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   font-size: 11px; color: #94A3B8; padding-top: 4px; font-style: italic;
 }
 
-/* ── Plan Card (existing plans) ── */
+/* ── Plan Card (compact 3-row) ── */
 
 .so-plan-card {
-  border: 1px solid #E2E8F0; border-radius: 10px;
-  padding: 12px 14px; background: #fff; margin-bottom: 8px;
+  border: 1px solid #E2E8F0; border-radius: 8px;
+  padding: 10px 12px; background: #fff; margin-bottom: 6px;
 }
-.so-plan-card__header {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+.so-plan-card[data-status="archived"] { opacity: 0.65; }
+.so-plan-card__row1 {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; font-weight: 600; color: #0F172A;
 }
-.so-plan-card__title { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #0F172A; }
-.so-plan-card__desc { font-size: 12px; color: #64748B; margin-top: 6px; }
-.so-plan-card__sops { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.so-plan-card__worker {
-  display: flex; align-items: center; gap: 6px; margin-top: 8px;
-  font-size: 12px; color: #475569;
+.so-plan-card__rule { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.so-plan-card__row2 {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 4px; font-size: 12px;
 }
-.so-plan-card__worker select { font-size: 12px; padding: 2px 6px; border-radius: 4px; border: 1px solid #CBD5E1; }
-.so-plan-card__worker-name { display: flex; align-items: center; gap: 3px; }
-.so-plan-card__actions {
-  display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #F1F5F9;
+.so-plan-card__worker-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: #475569;
 }
+.sw-tag--sm { font-size: 10px; padding: 1px 5px; }
+.so-plan-card__row3 {
+  display: flex; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #F1F5F9;
+}
+.so-plan-card__action {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; color: #64748B; padding: 0;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.so-plan-card__action:hover { color: #0F172A; }
+.so-plan-card__action--primary { color: #0052CC; }
+.so-plan-card__action--primary:hover { color: #003D99; }
+.so-plan-card__action--danger { color: #DC2626; }
+.so-plan-card__action--danger:hover { color: #B91C1C; }
 
 /* textarea AI input */
 .so-ai-input-row textarea.so-ai-input {
