@@ -111,3 +111,69 @@
 - **Description:** When updating the primary worker on a service plan, existing future schedules retained the old worker assignment.
 - **Root cause:** The `PATCH /api/service-plans/:id` endpoint updated the plan's `primarySocialWorkerId` but did not propagate the change to future `ServiceSchedule` records.
 - **Fix:** Added worker propagation logic in the PATCH handler: when `primarySocialWorkerId` changes, all future schedules (where `serviceDate >= today` and status is not completed/cancelled/suspended) are updated with the new worker assignment and appropriate status.
+
+## Bug 19: AI schedule past dates (UTC vs CST timezone mismatch)
+
+- **Description:** AI-generated schedules included dates in the past because the LLM received the server's UTC time (e.g., 02:11 UTC) while users operate in CST (10:11 CST). The LLM interpreted "today" relative to the wrong timezone.
+- **Root cause:** The system prompt injected `new Date().toISOString()` (UTC) without converting to the user's local timezone (Asia/Shanghai, UTC+8).
+- **Fix:** Updated the LLM prompt to include the current time in CST, so date/time resolution is correct for Chinese users.
+
+## Bug 20: Schedule list not sorting by time within same date
+
+- **Description:** Schedules on the same date were displayed in random order instead of sorted by start time.
+- **Root cause:** The schedule query ordered by `serviceDate` only, without a secondary sort on `startTime`.
+- **Fix:** Added `startTime` as a secondary sort key in the schedule list query.
+
+## Bug 21: SchedulesArea white screen (missing ChevronDown import)
+
+- **Description:** The schedules area component caused a white screen crash.
+- **Root cause:** The `ChevronDown` icon was used in JSX but not imported from the icon library.
+- **Fix:** Added the missing `ChevronDown` import statement.
+
+## Bug 22: Map showing Shanghai instead of Hangzhou
+
+- **Description:** The service object map view showed Shanghai as the default location instead of Hangzhou, even for Hangzhou-based elders.
+- **Root cause:** The `mapDisplayPoint` field on `ServiceObject` was hardcoded with Shanghai coordinates. The static coordinate approach was fragile.
+- **Fix:** Removed `mapDisplayPoint` from `ServiceObject` and switched to address-based geocoding for map centering.
+
+## Bug 23: Status dropdown clipped by parent container
+
+- **Description:** The status filter dropdown was clipped by its parent container's `overflow` property, making options invisible.
+- **Root cause:** The dropdown was positioned with `position: absolute` inside a container with `overflow: hidden` or `overflow: auto`.
+- **Fix:** Changed the dropdown to `position: fixed` using `getBoundingClientRect()` to calculate screen-relative coordinates.
+
+## Bug 24: Status dropdown missing chevron arrow
+
+- **Description:** The status filter dropdown button had no visual indicator (chevron) to signal it was a dropdown.
+- **Root cause:** No arrow/chevron was included in the dropdown trigger button markup.
+- **Fix:** Added an SVG chevron as a CSS `background-image` on the dropdown trigger.
+
+## Bug 25: RecordsArea JSX syntax errors
+
+- **Description:** The service records area had JSX compilation errors causing build failures.
+- **Root cause:** Extra closing braces (`}`) in the JSX template, likely from a merge or manual edit.
+- **Fix:** Removed the extra closing braces to fix the JSX syntax.
+
+## Bug 26: Service record — new "基本信息" tab, GPS tab removed
+
+- **Description:** The service record detail modal lacked a clear information hierarchy. GPS data was in a separate tab that added complexity without clear value.
+- **Root cause:** Original design used multiple tabs including a GPS-specific tab, which fragmented the basic information view.
+- **Fix:** Added a "基本信息" (basic info) tab consolidating key fields (worker, elder, address, date, time), and removed the standalone GPS tab.
+
+## Bug 27: Service record — elder confirmation flow
+
+- **Description:** Service records needed a way to confirm or assign the elder (service object) associated with a record, including both `elderName` and `serviceObjectId`.
+- **Root cause:** The original record edit only supported worker reassignment; elder/service-object assignment was missing.
+- **Fix:** Added elder confirmation fields (`elderName`, `serviceObjectId`) to the `PATCH /api/service-records/:id` endpoint. When `serviceObjectId` is set, the server auto-resolves `serviceAddress` from the service object's address.
+
+## Bug 28: Service record — floating picker for worker/elder
+
+- **Description:** Worker and elder selection was rendered inline in the record detail, taking up too much vertical space and disrupting layout.
+- **Root cause:** Selection dropdowns were rendered as inline elements within the form layout.
+- **Fix:** Changed worker and elder selection to floating picker components (positioned overlay) that appear on interaction without pushing other content.
+
+## Bug 29: Service record — reuse CreateModal for new elder creation
+
+- **Description:** When a service record referenced an unknown elder, operators had to navigate away to create the elder first, then come back to link it.
+- **Root cause:** No in-context elder creation flow existed within the service record edit view.
+- **Fix:** Reused the existing `CreateModal` component for service objects, allowing operators to create a new elder directly from the service record edit flow and automatically link the new elder to the record.

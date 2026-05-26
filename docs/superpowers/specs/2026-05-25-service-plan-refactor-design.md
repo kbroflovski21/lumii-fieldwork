@@ -376,3 +376,29 @@ The frontend data hook (`useSiteOperationsData.ts`) was updated to eagerly fetch
 ### 7.3 Worker propagation on plan edit
 
 When `PATCH /api/service-plans/:id` receives a `primarySocialWorkerId` change, the handler propagates the new worker to all future schedules (serviceDate >= today, status not completed/cancelled/suspended). Schedule status is updated to `"scheduled"` if a worker is assigned, or `"unassigned"` if the worker is removed.
+
+## 8. Post-Implementation Updates (2026-05-26)
+
+### 8.1 Date filter: simple button group
+
+The schedule/record list views use a simple button group for date filtering: **全部 / 今天 / 本周 / 本月**. This matches the `RecordsArea` pattern. `react-datepicker` was evaluated and briefly integrated, but removed in favor of the simpler button group approach — it introduced unnecessary dependency weight and UX complexity for the common filtering use case.
+
+### 8.2 Status filter: multi-select checkbox dropdown with position:fixed
+
+The status filter uses a multi-select checkbox dropdown allowing operators to filter by multiple statuses simultaneously (e.g., show both "待分配" and "已排期"). The dropdown uses `position: fixed` with `getBoundingClientRect()` to avoid clipping by parent containers with `overflow` constraints. A chevron SVG `background-image` provides the visual dropdown indicator.
+
+### 8.3 AI worker matching from description
+
+When the AI generates a schedule from a natural language description, it now attempts to match an appropriate worker based on the description content (service type, location, skills). This is a best-effort matching step — operators can always override the assignment.
+
+### 8.4 react-datepicker removal
+
+`react-datepicker` was tried for the date filter but removed because:
+- The button group (全部/今天/本周/本月) covers the dominant use cases
+- It added ~40KB gzipped to the bundle
+- The calendar picker UX was overkill for simple range presets
+- Consistency with `RecordsArea` which already uses the button group pattern
+
+### 8.5 mapDisplayPoint removed from ServiceObject
+
+The `mapDisplayPoint` field (storing static lat/lng coordinates) was removed from the `ServiceObject` model. It was unreliable — hardcoded Shanghai coordinates were used as defaults, causing incorrect map centering for Hangzhou-based elders. The map now uses address-based geocoding to resolve coordinates dynamically, which is more accurate and does not require manual coordinate entry.
