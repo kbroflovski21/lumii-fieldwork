@@ -637,13 +637,20 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               return (
                 <div className="so-tab-section">
                   <h4 className="so-tab-section-title">服务排期差异</h4>
-                  {allDiffItems.map((d) => (
-                    <div key={`diff-${d.sopName}`} className="rec-diff-row" style={{ marginBottom: 6 }}>
-                      <span className="rec-diff-name">{d.sopName}</span>
-                      <span className={`rec-sop-tag ${d.scheduled ? "rec-sop-tag--scheduled" : "rec-sop-tag--extra"}`}>{d.scheduled ? "已排班" : "未排班"}</span>
-                      <span className={`rec-sop-tag ${d.done ? "rec-sop-tag--done" : "rec-sop-tag--undone"}`}>{d.done ? "已做" : "未做"}</span>
+                  <div className="rec-diff-table">
+                    <div className="rec-diff-table__head">
+                      <span>服务项目</span>
+                      <span>排班状态</span>
+                      <span>执行状态</span>
                     </div>
-                  ))}
+                    {allDiffItems.map((d) => (
+                      <div key={`diff-${d.sopName}`} className="rec-diff-table__row">
+                        <span className="rec-diff-table__name">{d.sopName}</span>
+                        <span><span className={`rec-sop-tag ${d.scheduled ? "rec-sop-tag--scheduled" : "rec-sop-tag--extra"}`}>{d.scheduled ? "已排班" : "未排班"}</span></span>
+                        <span><span className={`rec-sop-tag ${d.done ? "rec-sop-tag--done" : "rec-sop-tag--undone"}`}>{d.done ? "已做" : "未做"}</span></span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}
