@@ -53,6 +53,39 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   const [dateFrom, setDateFrom] = useState(today);
   const [dateTo, setDateTo] = useState(today);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [statusDropOpen, setStatusDropOpen] = useState(false);
+
+  const datePresets: Array<{ label: string; from: string; to: string }> = (() => {
+    const d = (offset: number) => { const t = new Date(); t.setDate(t.getDate() + offset); return t.toISOString().slice(0, 10); };
+    const weekStart = (() => { const t = new Date(); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return t.toISOString().slice(0, 10); })();
+    const weekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 6); return t.toISOString().slice(0, 10); })();
+    const lastWeekStart = (() => { const t = new Date(weekStart); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })();
+    const lastWeekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() - 1); return t.toISOString().slice(0, 10); })();
+    const nextWeekStart = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 7); return t.toISOString().slice(0, 10); })();
+    const nextWeekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 13); return t.toISOString().slice(0, 10); })();
+    return [
+      { label: "今天", from: today, to: today },
+      { label: "近3天", from: d(-2), to: today },
+      { label: "未来3天", from: today, to: d(2) },
+      { label: "本周", from: weekStart, to: weekEnd },
+      { label: "上周", from: lastWeekStart, to: lastWeekEnd },
+      { label: "下周", from: nextWeekStart, to: nextWeekEnd },
+      { label: "近30天", from: d(-29), to: today },
+      { label: "全部", from: "", to: "" },
+    ];
+  })();
+
+  const activePresetLabel = datePresets.find(p => p.from === dateFrom && p.to === dateTo)?.label;
+
+  const statusOptions = [
+    { value: "unassigned", label: "待分配" },
+    { value: "scheduled", label: "待执行" },
+    { value: "in_progress", label: "进行中" },
+    { value: "completed", label: "已完成" },
+    { value: "cancelled", label: "已取消" },
+  ];
+  const toggleStatus = (v: string) => setStatusFilters(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+  const statusLabel = statusFilters.length === 0 ? "排期状态" : statusFilters.length === 1 ? statusOptions.find(o => o.value === statusFilters[0])?.label ?? "排期状态" : `${statusFilters.length}项已选`;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;
   const mutationsDisabled = isMutationDisabled(operationalState);
@@ -101,28 +134,40 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
                 <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或地址..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
-                <label className="sw-field sw-field--inline"><span>从</span>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-                </label>
-                <label className="sw-field sw-field--inline"><span>至</span>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-                </label>
-              </div>
-            </div>
-            <div className="sw-toolbar" style={{ paddingTop: 0 }}>
-              <div className="sw-status-chips">
-                {[
-                  { value: "unassigned", label: "待分配" },
-                  { value: "scheduled", label: "待执行" },
-                  { value: "in_progress", label: "进行中" },
-                  { value: "completed", label: "已完成" },
-                  { value: "cancelled", label: "已取消" },
-                ].map(opt => (
-                  <button key={opt.value} type="button"
-                    className={`sw-status-chip${statusFilters.includes(opt.value) ? " sw-status-chip--active" : ""}`}
-                    onClick={() => setStatusFilters(prev => prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value])}
-                  >{opt.label}</button>
-                ))}
+                {view !== "calendar" && (
+                  <div className="sch-date-bar">
+                    <div className="sch-date-presets">
+                      {datePresets.map(p => (
+                        <button key={p.label} type="button" className={`sch-date-preset${(dateFrom === p.from && dateTo === p.to) ? " sch-date-preset--active" : ""}`}
+                          onClick={() => { setDateFrom(p.from); setDateTo(p.to); }}>{p.label}</button>
+                      ))}
+                    </div>
+                    <div className="sch-date-inputs">
+                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+                      <span>–</span>
+                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                <div className="sw-filter" style={{ position: "relative" }}>
+                  <button type="button" className={`sw-filter__trigger${statusFilters.length > 0 ? " sw-filter--active" : ""}`}
+                    onClick={() => setStatusDropOpen(!statusDropOpen)}>
+                    {statusLabel} <ChevronDown size={13} />
+                  </button>
+                  {statusDropOpen && (
+                    <div className="sw-filter__dropdown">
+                      {statusOptions.map(opt => (
+                        <label key={opt.value} className="sw-filter__option">
+                          <input type="checkbox" checked={statusFilters.includes(opt.value)} onChange={() => toggleStatus(opt.value)} />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                      {statusFilters.length > 0 && (
+                        <button className="sw-filter__clear" type="button" onClick={() => { setStatusFilters([]); setStatusDropOpen(false); }}>清除筛选</button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

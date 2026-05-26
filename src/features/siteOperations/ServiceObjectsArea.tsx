@@ -1,5 +1,5 @@
 import { useEscClose } from "./useEscClose";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
 import type {
   ServiceObject,
@@ -623,14 +623,10 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                   <div className="so-overview-item so-overview-item--full" style={{ gridColumn: "1 / -1" }}>
                     <div className="so-map-popup">
                       <div className="so-map-popup__header">
-                        <span>地图位置</span>
+                        <span>地图位置 · {obj.address}</span>
                         <button onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
                       </div>
-                      <iframe
-                        className="so-map-popup__frame"
-                        src={`https://uri.amap.com/search?keyword=${encodeURIComponent(obj.address)}&src=goldenyears`}
-                        title="地图"
-                      />
+                      <AddressMap address={obj.address} point={obj.mapDisplayPoint} />
                     </div>
                   </div>
                 )}
@@ -1251,6 +1247,37 @@ function HistoryRecords({ serviceObjectName, serviceProjects, onViewRecord }: {
       })}
     </div>
   );
+}
+
+function AddressMap({ address, point }: { address: string; point?: { latitude: number; longitude: number } }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css"; link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    let map: any;
+    setTimeout(() => {
+      import("leaflet").then((L) => {
+        if (!mapRef.current) return;
+        const center: [number, number] = point ? [point.latitude, point.longitude] : [30.29, 120.16];
+        map = L.map(mapRef.current, { zoomControl: true }).setView(center, 15);
+        L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", {
+          subdomains: ["1", "2", "3", "4"], attribution: "&copy; 高德地图"
+        }).addTo(map);
+        const icon = L.divIcon({
+          html: '<div style="background:#0052CC;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3)">📍</div>',
+          className: "", iconSize: [28, 28], iconAnchor: [14, 28],
+        });
+        L.marker(center, { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
+      });
+    }, 100);
+    return () => { if (map) map.remove(); };
+  }, [address, point]);
+  return <div ref={mapRef} className="so-map-popup__frame" />;
 }
 
 function PlanEditModal({ plan, workerOptions, allServiceSops, onSave, onClose }: {
