@@ -311,8 +311,35 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
     return { matched: true, scheduleId: bestCandidate.id, confidence: bestScore, reason: bestReason };
   }
 
-  await prisma.recording.update({ where: { id: recordingId }, data: { status: "unmatched" } });
-  return { matched: false, confidence: bestScore, reason: "score_too_low" };
+  // No schedule match — still create service record by matching elder from transcript
+  let serviceObjectId: string | null = null;
+  let serviceObjectName: string | null = null;
+
+  // Try to match service object by name in transcript
+  const allObjects = await prisma.serviceObject.findMany({ select: { id: true, name: true } });
+  for (const obj of allObjects) {
+    if (obj.name && transcript.includes(obj.name.toLowerCase())) {
+      serviceObjectId = obj.id;
+      serviceObjectName = obj.name;
+      break;
+    }
+  }
+
+  const serviceRecordId = await createOrUpdateServiceRecord(rec, serviceObjectId, serviceObjectName, null);
+
+  await prisma.recording.update({
+    where: { id: recordingId },
+    data: {
+      status: "matched",
+      matchConfidence: bestScore,
+      matchedServiceObjectId: serviceObjectId,
+      matchedServiceObjectName: serviceObjectName,
+      matchedServiceRecordId: serviceRecordId,
+      matchReason: serviceObjectName ? `未匹配排班，识别到长者${serviceObjectName}` : "未匹配排班，自动创建服务记录",
+    },
+  });
+
+  return { matched: true, scheduleId: undefined, confidence: bestScore, reason: serviceObjectName ? `识别到${serviceObjectName}` : "无排班自动创建" };
 }
 
 // Create or update service record from a recording
