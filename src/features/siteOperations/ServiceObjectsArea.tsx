@@ -626,7 +626,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                         <span>地图位置 · {obj.address}</span>
                         <button onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
                       </div>
-                      <AddressMap address={obj.address} point={obj.mapDisplayPoint} />
+                      <AddressMap address={obj.address} />
                     </div>
                   </div>
                 )}
@@ -1249,7 +1249,7 @@ function HistoryRecords({ serviceObjectName, serviceProjects, onViewRecord }: {
   );
 }
 
-function AddressMap({ address, point }: { address: string; point?: { latitude: number; longitude: number } }) {
+function AddressMap({ address }: { address: string }) {
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!mapRef.current) return;
@@ -1260,11 +1260,11 @@ function AddressMap({ address, point }: { address: string; point?: { latitude: n
       document.head.appendChild(link);
     }
     let map: any;
+    const defaultCenter: [number, number] = [30.27, 120.13];
     setTimeout(() => {
-      import("leaflet").then((L) => {
+      import("leaflet").then(async (L) => {
         if (!mapRef.current) return;
-        const center: [number, number] = point ? [point.latitude, point.longitude] : [30.29, 120.16];
-        map = L.map(mapRef.current, { zoomControl: true }).setView(center, 15);
+        map = L.map(mapRef.current, { zoomControl: true }).setView(defaultCenter, 14);
         L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", {
           subdomains: ["1", "2", "3", "4"], attribution: "&copy; 高德地图"
         }).addTo(map);
@@ -1272,11 +1272,21 @@ function AddressMap({ address, point }: { address: string; point?: { latitude: n
           html: '<div style="background:#0052CC;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3)">📍</div>',
           className: "", iconSize: [28, 28], iconAnchor: [14, 28],
         });
-        L.marker(center, { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
+        try {
+          const res = await fetch(`https://restapi.amap.com/v3/geocode/geo?key=d8d4c4762c1646338864da06e3e2e574&address=${encodeURIComponent(address)}`);
+          const data = await res.json();
+          if (data.geocodes?.[0]?.location) {
+            const [lng, lat] = data.geocodes[0].location.split(",").map(Number);
+            map.setView([lat, lng], 16);
+            L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
+            return;
+          }
+        } catch {}
+        L.marker(defaultCenter, { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
       });
     }, 100);
     return () => { if (map) map.remove(); };
-  }, [address, point]);
+  }, [address]);
   return <div ref={mapRef} className="so-map-popup__frame" />;
 }
 
