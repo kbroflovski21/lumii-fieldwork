@@ -1,6 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, Download, Shield, AlertTriangle, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { Search, X, ChevronDown, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { authFetch } from "./api";
@@ -374,13 +374,13 @@ function RecordsList({ records, selectedId, onRowClick }: {
   );
 }
 
-type RecTab = "sop" | "audio" | "gps";
+type RecTab = "basic" | "sop" | "audio";
 
 export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUpdated }: {
   record: ServiceRecord; data?: ServiceRecordsResponse; mutationsDisabled: boolean;
   onClose: () => void; onUpdated: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<RecTab>("sop");
+  const [activeTab, setActiveTab] = useState<RecTab>("basic");
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [showReviewConfirm, setShowReviewConfirm] = useState(false);
@@ -424,9 +424,9 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   };
 
   const tabs: Array<{ id: RecTab; label: string }> = [
+    { id: "basic", label: "基本信息" },
     { id: "sop", label: "服务详情" },
     { id: "audio", label: "录音 · 对话" },
-    { id: "gps", label: "GPS 定位" },
   ];
 
   // Build SOP comparison sections from expectedSops vs actual sopGroups
@@ -715,8 +715,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
           </>
         )}
 
-        {activeTab === "gps" && (
-          <GpsSection locationEvidence={r.locationEvidence} />
+        {activeTab === "basic" && (
+          <BasicInfoSection record={r} mutationsDisabled={mutationsDisabled} onUpdated={onUpdated} />
         )}
       </div>
     </div>
@@ -805,51 +805,137 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
   );
 }
 
-function GpsSection({ locationEvidence }: { locationEvidence?: ServiceRecord["locationEvidence"] }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const leafletRef = useRef<any>(null);
+function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record: ServiceRecord; mutationsDisabled: boolean; onUpdated: () => void }) {
+  const [editingWorker, setEditingWorker] = useState(false);
+  const [editingElder, setEditingElder] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [workers, setWorkers] = useState<Array<{ id: string; name: string }>>([]);
+  const [elders, setElders] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
-    if (!mapRef.current || leafletRef.current) return;
-    if (!locationEvidence?.startPoint) return;
-
-    import("leaflet").then((L) => {
-      document.getElementById("leaflet-css") ?? (() => {
-        const link = document.createElement("link");
-        link.id = "leaflet-css"; link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link); return link;
-      })();
-
-      const { latitude: lat, longitude: lng } = locationEvidence.startPoint!;
-      const map = L.map(mapRef.current!, { zoomControl: true }).setView([lat, lng], 16);
-      L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", { subdomains: ["1", "2", "3", "4"], attribution: "&copy; 高德地图" }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup("签到位置").openPopup();
-      if (locationEvidence.endPoint) {
-        L.marker([locationEvidence.endPoint.latitude, locationEvidence.endPoint.longitude]).addTo(map).bindPopup("签退位置");
-      }
-      leafletRef.current = map;
-      setTimeout(() => map.invalidateSize(), 200);
-    });
-
-    return () => { if (leafletRef.current) { leafletRef.current.remove(); leafletRef.current = null; } };
+    authFetch("/api/social-workers").then(r => r.json()).then(d => setWorkers((d.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })))).catch(() => {});
+    authFetch("/api/service-objects").then(r => r.json()).then(d => setElders((d.serviceObjects ?? []).map((o: any) => ({ id: o.id, name: o.name })))).catch(() => {});
   }, []);
+
+  const updateField = async (updates: Record<string, any>) => {
+    await authFetch(`/api/service-records/${r.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
+    onUpdated();
+  };
+
+  const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const dow = dayNames[new Date(r.serviceDate + "T00:00:00").getDay()];
+  const elderConfirmed = !!r.serviceObjectId;
+  const elderDisplay = r.serviceObjectName ?? r.elderName ?? "";
 
   return (
     <div className="so-tab-section">
-      <h4 className="so-tab-section-title">GPS 定位</h4>
-      {locationEvidence?.startPoint ? (
-        <>
-          <div className="rec-gps-info">
-            <div className="rec-gps-info__item"><dt>签到</dt><dd>{locationEvidence.startPoint.latitude}, {locationEvidence.startPoint.longitude}{locationEvidence.startPoint.accuracyMeters ? ` (±${locationEvidence.startPoint.accuracyMeters}m)` : ""}</dd></div>
-            {locationEvidence.endPoint ? <div className="rec-gps-info__item"><dt>签退</dt><dd>{locationEvidence.endPoint.latitude}, {locationEvidence.endPoint.longitude}</dd></div> : null}
-            <div className="rec-gps-info__item"><dt>地址匹配</dt><dd><span className="sw-status-badge" data-tone={locationEvidence.addressMatched ? "success" : "warning"}>{locationEvidence.addressMatched ? "已匹配" : "需核实"}</span></dd></div>
+      <h4 className="so-tab-section-title">基本信息</h4>
+      <dl className="so-overview-grid">
+        <div className="so-overview-item"><dt>服务日期</dt><dd>{r.serviceDate} {dow}</dd></div>
+        <div className="so-overview-item"><dt>服务时间</dt><dd>{r.startTime} – {r.endTime} ({r.durationMinutes}分钟)</dd></div>
+
+        <div className="so-overview-item"><dt>服务人员</dt><dd>
+          {editingWorker ? (
+            <select autoFocus value={r.socialWorkerId ?? ""} onBlur={() => setEditingWorker(false)} onChange={async (e) => {
+              const w = workers.find(w => w.id === e.target.value);
+              await updateField({ socialWorkerId: e.target.value || null, socialWorkerName: w?.name ?? null });
+              setEditingWorker(false);
+            }}>
+              <option value="">未分配</option>
+              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+          ) : (
+            <span>{r.socialWorkerName ?? "未分配"} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingWorker(true)}><Edit3 size={12} /></button>}</span>
+          )}
+        </dd></div>
+
+        <div className="so-overview-item"><dt>长者</dt><dd>
+          {editingElder ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <select autoFocus value={r.serviceObjectId ?? ""} onChange={async (e) => {
+                const el = elders.find(o => o.id === e.target.value);
+                await updateField({ serviceObjectId: e.target.value || null, serviceObjectName: el?.name ?? null });
+                setEditingElder(false);
+              }}>
+                <option value="">请选择长者</option>
+                {elders.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </div>
+          ) : elderConfirmed ? (
+            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingElder(true)}><Edit3 size={12} /></button>}</span>
+          ) : (
+            <div>
+              {elderDisplay && <span style={{ marginRight: 6 }}>{elderDisplay}（语音识别）</span>}
+              <div className="rec-elder-alert">
+                <AlertTriangle size={14} />
+                <span>服务长者需核对确认</span>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                <select style={{ flex: 1, fontSize: 13 }} defaultValue="" onChange={async (e) => {
+                  const el = elders.find(o => o.id === e.target.value);
+                  if (el) { await updateField({ serviceObjectId: el.id, serviceObjectName: el.name }); }
+                }}>
+                  <option value="">选择已有长者...</option>
+                  {elders.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+        </dd></div>
+
+        <div className="so-overview-item"><dt>服务地址</dt><dd className="so-address-cell">
+          <span>{r.serviceAddress || "—"}</span>
+          {r.serviceAddress && <button className="so-map-btn" type="button" onClick={() => setShowMap(!showMap)} title="查看地图"><MapPin size={14} /></button>}
+        </dd></div>
+      </dl>
+
+      {showMap && r.serviceAddress && (
+        <div className="so-map-popup" style={{ marginTop: 8 }}>
+          <div className="so-map-popup__header">
+            <span>地图位置 · {r.serviceAddress}</span>
+            <button onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
           </div>
-          <div className="rec-gps-map rec-gps-map--always" ref={mapRef} />
-        </>
-      ) : <p className="sw-text-muted">暂无定位数据</p>}
+          <RecordAddressMap address={r.serviceAddress} />
+        </div>
+      )}
     </div>
   );
+}
+
+function RecordAddressMap({ address }: { address: string }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css"; link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    let map: any;
+    setTimeout(() => {
+      import("leaflet").then(async (L) => {
+        if (!mapRef.current) return;
+        const defaultCenter: [number, number] = [30.27, 120.13];
+        map = L.map(mapRef.current, { zoomControl: true }).setView(defaultCenter, 14);
+        L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", { subdomains: ["1", "2", "3", "4"], attribution: "&copy; 高德地图" }).addTo(map);
+        const icon = L.divIcon({ html: '<div style="background:#0052CC;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3)">📍</div>', className: "", iconSize: [28, 28], iconAnchor: [14, 28] });
+        try {
+          const res = await fetch(`https://restapi.amap.com/v3/geocode/geo?key=d8d4c4762c1646338864da06e3e2e574&address=${encodeURIComponent(address)}`);
+          const data = await res.json();
+          if (data.geocodes?.[0]?.location) {
+            const [lng, lat] = data.geocodes[0].location.split(",").map(Number);
+            map.setView([lat, lng], 16);
+            L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
+            return;
+          }
+        } catch {}
+        L.marker(defaultCenter, { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
+      });
+    }, 100);
+    return () => { if (map) map.remove(); };
+  }, [address]);
+  return <div ref={mapRef} className="so-map-popup__frame" />;
 }
 
 function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose: () => void }) {

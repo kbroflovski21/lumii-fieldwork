@@ -31,6 +31,7 @@ function toApi(row: any) {
     id: row.id, serviceDate: row.serviceDate, startTime: row.startTime, endTime: row.endTime,
     durationMinutes: row.durationMinutes, socialWorkerId: row.socialWorkerId, socialWorkerName: row.socialWorkerName,
     serviceObjectId: row.serviceObjectId, serviceObjectName: row.serviceObjectName,
+    elderName: row.elderName, serviceAddress: row.serviceAddress,
     familyContactIds: row.familyContactIds, badgeId: row.badgeId, smartBadgeId: row.smartBadgeId,
     serviceProject: sp, serviceProjects, expectedSops,
     assignmentConfidence: row.assignmentConfidence,
@@ -120,6 +121,30 @@ export function serviceRecordsRoutes() {
     }
     const row = await prisma.serviceRecord.findFirst({ where: { id: req.params.id } });
     res.json({ ok: true, id: req.params.id, message: "reviewed", serviceRecord: toApi(row) });
+  });
+
+  r.patch("/service-records/:id", async (req, res) => {
+    const b = req.body;
+    const data: any = {};
+    if (b.socialWorkerId !== undefined) {
+      data.socialWorkerId = b.socialWorkerId || null;
+      data.socialWorkerName = b.socialWorkerName ?? null;
+    }
+    if (b.serviceObjectId !== undefined) {
+      data.serviceObjectId = b.serviceObjectId || null;
+      data.serviceObjectName = b.serviceObjectName ?? null;
+      if (b.serviceObjectId) {
+        const obj = await prisma.serviceObject.findFirst({ where: { id: b.serviceObjectId }, select: { address: true } });
+        if (obj?.address) data.serviceAddress = obj.address;
+      }
+    }
+    if (b.elderName !== undefined) data.elderName = b.elderName;
+    if (b.serviceAddress !== undefined) data.serviceAddress = b.serviceAddress;
+    if (Object.keys(data).length > 0) {
+      await prisma.serviceRecord.update({ where: { id: req.params.id }, data });
+    }
+    const row = await prisma.serviceRecord.findFirst({ where: { id: req.params.id } });
+    res.json(toApi(row));
   });
 
   r.post("/service-records/export", async (req, res) => {

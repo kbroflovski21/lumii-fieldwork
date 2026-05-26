@@ -323,6 +323,8 @@ model ServiceRecord {
   socialWorkerName     String?      @map("social_worker_name") @db.VarChar(255)
   serviceObjectId      String?      @map("service_object_id") @db.VarChar(64)
   serviceObjectName    String?      @map("service_object_name") @db.VarChar(255)
+  elderName            String?      @map("elder_name") @db.VarChar(255)
+  serviceAddress       String?      @map("service_address") @db.VarChar(500)
   familyContactIds     Json         @default("[]") @map("family_contact_ids")
   badgeId              String       @map("badge_id") @db.VarChar(64)
   smartBadgeId         String?      @map("smart_badge_id") @db.VarChar(64)

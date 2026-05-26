@@ -458,6 +458,8 @@ export type ServiceRecord = {
   socialWorkerName?: string;
   serviceObjectId?: string;
   serviceObjectName?: string;
+  elderName?: string;
+  serviceAddress?: string;
   familyContactIds: string[];
   badgeId: string;
   smartBadgeId?: string;
