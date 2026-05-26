@@ -367,17 +367,6 @@ export function HardwareSimulator({ worker, task, embedded }: { worker?: Simulat
         <div className="sim-col">
           <div className="sim-card">
             <h3 className="sim-section-title">AI 实时督导</h3>
-            <div className="sim-compliance-bar">
-              <span className="sim-compliance-label">SOP</span>
-              <div className="sim-compliance-track"><div className="sim-compliance-fill" style={{ width: `${compPct}%`, background: compColor }} /></div>
-              <span className="sim-compliance-pct">{compPct > 0 ? `${compPct}%` : "-"}</span>
-            </div>
-            {(sopCheck.completed.length > 0 || sopCheck.missing.length > 0) && (
-              <div className="sim-sop-chips">
-                {sopCheck.completed.map((s, i) => <span key={`d-${i}`} className="sim-sop-chip done">{"✓ "}{s}</span>)}
-                {sopCheck.missing.map((s, i) => <span key={`m-${i}`} className="sim-sop-chip missing">{"○ "}{s}</span>)}
-              </div>
-            )}
             <div className="sim-alert-log">
               {alerts.length === 0 ? (
                 <div className="sim-alert-empty">等待服务开始...</div>

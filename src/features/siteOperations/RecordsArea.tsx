@@ -1,6 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, Download, Shield, AlertTriangle, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, MapPin } from "lucide-react";
+import { Search, X, ChevronDown, Download, Shield, AlertTriangle, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { authFetch } from "./api";
@@ -9,15 +9,35 @@ import type { Resource } from "./useSiteOperationsData";
 
 let _clipPlayer: HTMLAudioElement | null = null;
 let _clipTimer: ReturnType<typeof setTimeout> | null = null;
-function playClip(url: string, startSec: number, endSec: number) {
-  if (_clipTimer) clearTimeout(_clipTimer);
-  if (_clipPlayer) { _clipPlayer.pause(); _clipPlayer.src = ""; }
+let _clipId: string | null = null;
+let _clipListeners: Array<() => void> = [];
+
+function onClipChange(fn: () => void) { _clipListeners.push(fn); return () => { _clipListeners = _clipListeners.filter(f => f !== fn); }; }
+function notifyClip() { _clipListeners.forEach(f => f()); }
+
+function stopClip() {
+  if (_clipTimer) { clearTimeout(_clipTimer); _clipTimer = null; }
+  if (_clipPlayer) { _clipPlayer.pause(); _clipPlayer.src = ""; _clipPlayer = null; }
+  _clipId = null;
+  notifyClip();
+}
+
+function playClip(id: string, url: string, startSec: number, endSec: number) {
+  if (_clipId === id && _clipPlayer) { stopClip(); return; }
+  stopClip();
   const a = new Audio(url);
   a.currentTime = startSec;
   a.play();
   _clipPlayer = a;
-  if (endSec > startSec) _clipTimer = setTimeout(() => a.pause(), (endSec - startSec) * 1000);
+  _clipId = id;
+  notifyClip();
+  const onEnd = () => { _clipId = null; _clipPlayer = null; notifyClip(); };
+  a.addEventListener("ended", onEnd);
+  a.addEventListener("pause", onEnd);
+  if (endSec > startSec) _clipTimer = setTimeout(() => { a.pause(); }, (endSec - startSec) * 1000);
 }
+
+function isClipPlaying(id: string) { return _clipId === id && _clipPlayer !== null; }
 
 type DrawerMode = { kind: "closed" } | { kind: "view"; record: ServiceRecord };
 type DateFilter = "" | "today" | "week" | "month";
@@ -258,7 +278,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
         {drawer.kind !== "closed" ? (
           <>
             <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => setDrawer({ kind: "closed" })} type="button" />
-            <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => setDrawer({ kind: "closed" })} onUpdated={handleUpdated} />
+            <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); setDrawer({ kind: "closed" }); }} onUpdated={handleUpdated} />
           </>
         ) : null}
 
@@ -416,23 +436,21 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   const generalGroups = (r.sopGroups ?? []).filter((g: any) => g.sopType === "general");
   const serviceGroups = (r.sopGroups ?? []).filter((g: any) => g.sopType !== "general");
 
+  // 已完成: groups with at least 1 completed item (tagged 已排班 or 未排班)
   let completedGroups: any[] = [];
-  let incompleteGroups: any[] = [];
-  let extraGroups: any[] = [];
+  // 差异对照: groups with any undone items + fully missing scheduled groups
+  let diffGroups: any[] = [];
 
   if (hasExpected) {
     for (const g of serviceGroups) {
       const gName = g.sopName?.toLowerCase().replace(/sop$/i, "").trim() ?? "";
       const isExpected = expectedSopNames.some((en: string) => en.includes(gName) || gName.includes(en));
-      const allDone = (g.items ?? []).every((i: any) => i.status === "completed");
-      if (isExpected) {
-        if (allDone) completedGroups.push(g);
-        else incompleteGroups.push(g);
-      } else {
-        extraGroups.push(g);
-      }
+      const gItems = g.items ?? [];
+      const hasCompleted = gItems.some((i: any) => i.status === "completed");
+      const hasUndone = gItems.some((i: any) => i.status !== "completed");
+      if (hasCompleted) completedGroups.push({ ...g, _scheduled: isExpected });
+      if (hasUndone) diffGroups.push({ ...g, _scheduled: isExpected });
     }
-    // expectedSops that have no matching sopGroup at all → fully incomplete
     for (const e of (r.expectedSops ?? [])) {
       const eName = e.sopName?.toLowerCase().replace(/sop$/i, "").trim() ?? "";
       const found = serviceGroups.some((g: any) => {
@@ -440,11 +458,11 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
         return gn.includes(eName) || eName.includes(gn);
       });
       if (!found) {
-        incompleteGroups.push({ sopName: e.sopName, sopType: "service", items: [], _missing: true });
+        diffGroups.push({ sopName: e.sopName, sopType: "service", items: [], _missing: true, _scheduled: true });
       }
     }
   } else {
-    completedGroups = serviceGroups;
+    completedGroups = serviceGroups.map((g: any) => ({ ...g, _scheduled: false }));
   }
 
   const sopTabs = [
@@ -561,7 +579,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               );
             })}
 
-            {/* 已完成 — 排班要求且全部完成的服务 */}
+            {/* 已完成 — 至少有1个子项完成的服务 */}
             {completedGroups.length > 0 && (
               <div className="rec-section-divider">
                 <span className="rec-section-label" style={{ color: "#16A34A" }}>已完成</span>
@@ -570,18 +588,19 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
             {completedGroups.map((group: any) => {
               const gItems = group.items ?? [];
               const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
-              const isExpanded = collapsedGroups[group.sopName] === true;
+              const isExpanded = collapsedGroups[`done-${group.sopName}`] === true;
+              const isScheduled = group._scheduled;
               return (
-                <div className="so-tab-section" key={group.sopName}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                <div className="so-tab-section" key={`done-${group.sopName}`}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [`done-${group.sopName}`]: !prev[`done-${group.sopName}`] }))}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
-                    {hasExpected && <span className="rec-sop-tag rec-sop-tag--scheduled">已排班</span>}
+                    {hasExpected && <span className={`rec-sop-tag ${isScheduled ? "rec-sop-tag--scheduled" : "rec-sop-tag--extra"}`}>{isScheduled ? "已排班" : "未排班"}</span>}
                   </h4>
                   {isExpanded && gItems.length > 0 && (
                     <div className="rec-si-list">
-                      {gItems.map((item: any) => (
+                      {gItems.filter((i: any) => i.status === "completed").map((item: any) => (
                         <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
                       ))}
                     </div>
@@ -590,29 +609,30 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               );
             })}
 
-            {/* 未完成 — 排班要求但有未完成步骤的服务 */}
-            {incompleteGroups.length > 0 && (
+            {/* 差异对照 — 有未完成项目的服务（含已做和未做） */}
+            {diffGroups.length > 0 && (
               <div className="rec-section-divider">
-                <span className="rec-section-label" style={{ color: "#DC2626" }}>未完成</span>
+                <span className="rec-section-label" style={{ color: "#EA580C" }}>差异对照</span>
               </div>
             )}
-            {incompleteGroups.map((group: any) => {
+            {diffGroups.map((group: any) => {
               const gItems = group.items ?? [];
               const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
+              const gUndone = gItems.filter((i: any) => i.status !== "completed").length;
               const isMissing = (group as any)._missing;
-              const isExpanded = collapsedGroups[group.sopName] === true;
+              const isExpanded = collapsedGroups[`diff-${group.sopName}`] === true;
               return (
-                <div className="so-tab-section" key={group.sopName} style={{ borderLeft: "3px solid #FCA5A5", paddingLeft: 12 }}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                <div className="so-tab-section" key={`diff-${group.sopName}`} style={{ borderLeft: "3px solid #FDBA74", paddingLeft: 12 }}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [`diff-${group.sopName}`]: !prev[`diff-${group.sopName}`] }))}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
                       {isMissing
                         ? <span className="rec-si-stats__abnormal">未执行</span>
-                        : <><span className="rec-si-stats__done">{gCompleted}完成</span><span className="rec-si-stats__total">共{gItems.length}项</span></>
+                        : <><span className="rec-si-stats__done">{gCompleted}完成</span><span className="rec-si-stats__abnormal">{gUndone}未完成</span></>
                       }
                     </span>
-                    <span className="rec-sop-tag rec-sop-tag--scheduled">已排班</span>
+                    {group._scheduled && <span className="rec-sop-tag rec-sop-tag--scheduled">已排班</span>}
                   </h4>
                   {isExpanded && gItems.length > 0 && (
                     <div className="rec-si-list">
@@ -622,35 +642,6 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                     </div>
                   )}
                   {isMissing && <p style={{ fontSize: 12, color: "#DC2626", margin: "4px 0 0" }}>排班要求此服务但录音中未检测到执行</p>}
-                </div>
-              );
-            })}
-
-            {/* 额外完成 — 排班未要求但录音中做了的服务 */}
-            {extraGroups.length > 0 && (
-              <div className="rec-section-divider">
-                <span className="rec-section-label" style={{ color: "#2563EB" }}>额外完成</span>
-              </div>
-            )}
-            {extraGroups.map((group: any) => {
-              const gItems = group.items ?? [];
-              const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
-              const isExpanded = collapsedGroups[group.sopName] === true;
-              return (
-                <div className="so-tab-section" key={group.sopName}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
-                    <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
-                    {group.sopName}
-                    <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
-                    <span className="rec-sop-tag rec-sop-tag--extra">额外</span>
-                  </h4>
-                  {isExpanded && (
-                    <div className="rec-si-list">
-                      {gItems.map((item: any) => (
-                        <ServiceItemRow key={item.id ?? item.seq} item={item} expanded={expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`)} onToggle={() => setExpandedItemId(expandedItemId === (item.id ?? `${group.sopName}-${item.seq}`) ? null : (item.id ?? `${group.sopName}-${item.seq}`))} itemStatusIcon={itemStatusIcon} audioUrl={audio?.playbackUrl} />
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -737,6 +728,8 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
   itemStatusIcon: (s: string) => React.ReactNode;
   audioUrl?: string;
 }) {
+  const [, forceUpdate] = useState(0);
+  useEffect(() => onClipChange(() => forceUpdate(n => n + 1)), []);
   const excerpts = item.transcriptExcerpts ?? [];
   const hasExcerpts = excerpts.length > 0;
   const hasLegacyTranscript = !hasExcerpts && !!item.transcript;
@@ -775,10 +768,16 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
                     <div>
                       {ex.startTime ? <span className="rec-si__excerpt-time">{ex.startTime}{ex.endTime ? ` - ${ex.endTime}` : ""}</span> : null}
                       {audioUrl && ex.startTime ? (
-                        <button className="rec-si__play-btn" type="button" title="播放此片段" onClick={(e) => {
-                          e.stopPropagation();
-                          playClip(audioUrl!, startSec, endSec);
-                        }}><Play size={12} /></button>
+                        {(() => {
+                          const clipId = `${item.id ?? item.seq}-${i}`;
+                          const playing = isClipPlaying(clipId);
+                          return (
+                            <button className={`rec-si__play-btn ${playing ? "rec-si__play-btn--playing" : ""}`} type="button" title={playing ? "停止" : "播放此片段"} onClick={(e) => {
+                              e.stopPropagation();
+                              playClip(clipId, audioUrl!, startSec, endSec);
+                            }}>{playing ? <Square size={10} /> : <Play size={12} />}</button>
+                          );
+                        })()}
                       ) : null}
                       <p>{ex.text}</p>
                     </div>
