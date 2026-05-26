@@ -7,8 +7,6 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
 type ScheduleView = "list" | "calendar" | "map";
 
@@ -51,10 +49,8 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
-  const [startDate, setStartDate] = useState<Date | null>(todayDate);
-  const [endDate, setEndDate] = useState<Date | null>(todayDate);
+  type DatePreset = "" | "today" | "week" | "month";
+  const [dateFilter, setDateFilter] = useState<DatePreset>("today");
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const statusRef = useRef<HTMLDivElement>(null);
   const [statusDropOpen, setStatusDropOpen] = useState(false);
@@ -66,13 +62,10 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
     return () => document.removeEventListener("mousedown", handler);
   }, [statusDropOpen]);
 
-  const dateFrom = startDate ? startDate.toISOString().slice(0, 10) : "";
-  const dateTo = endDate ? endDate.toISOString().slice(0, 10) : "";
-
-  const applyPreset = (from: Date | null, to: Date | null) => { setStartDate(from); setEndDate(to); };
-  const d = (offset: number) => { const t = new Date(); t.setDate(t.getDate() + offset); t.setHours(0,0,0,0); return t; };
-  const weekStart = (() => { const t = new Date(); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); t.setHours(0,0,0,0); return t; })();
-  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+  const dateFilterOptions: Array<{ label: string; value: DatePreset }> = [
+    { label: "全部", value: "" }, { label: "今天", value: "today" },
+    { label: "本周", value: "week" }, { label: "本月", value: "month" },
+  ];
 
   const statusOptions = [
     { value: "unassigned", label: "待分配" },
@@ -95,8 +88,20 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   }, [onMutate]);
 
   const filtered = schedules.filter((s) => {
-    if (dateFrom && s.serviceDate < dateFrom) return false;
-    if (dateTo && s.serviceDate > dateTo) return false;
+    if (dateFilter) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (dateFilter === "today" && s.serviceDate !== today) return false;
+      if (dateFilter === "week") {
+        const now = new Date();
+        const ws = new Date(now); ws.setDate(ws.getDate() - ((ws.getDay() + 6) % 7));
+        const we = new Date(ws); we.setDate(we.getDate() + 6);
+        if (s.serviceDate < ws.toISOString().slice(0, 10) || s.serviceDate > we.toISOString().slice(0, 10)) return false;
+      }
+      if (dateFilter === "month") {
+        const ym = new Date().toISOString().slice(0, 7);
+        if (!s.serviceDate.startsWith(ym)) return false;
+      }
+    }
     if (statusFilters.length > 0 && !statusFilters.includes(s.status)) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -132,27 +137,10 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
               </label>
               <div className="sw-toolbar__filters">
                 {view !== "calendar" && (
-                  <div className="sch-date-picker-wrap">
-                    <DatePicker
-                      selectsRange
-                      startDate={startDate}
-                      endDate={endDate}
-                      onChange={([s, e]: [Date | null, Date | null]) => { setStartDate(s); setEndDate(e); }}
-                      dateFormat="yyyy/MM/dd"
-                      placeholderText="选择日期范围"
-                      className="sch-date-picker-input"
-                      isClearable
-                    >
-                      <div className="sch-date-picker-presets">
-                        <button type="button" onClick={() => applyPreset(todayDate, todayDate)}>今天</button>
-                        <button type="button" onClick={() => applyPreset(d(-2), todayDate)}>近3天</button>
-                        <button type="button" onClick={() => applyPreset(todayDate, d(2))}>未来3天</button>
-                        <button type="button" onClick={() => applyPreset(weekStart, weekEnd)}>本周</button>
-                        <button type="button" onClick={() => applyPreset(d(-6), todayDate)}>近7天</button>
-                        <button type="button" onClick={() => applyPreset(d(-29), todayDate)}>近30天</button>
-                        <button type="button" onClick={() => applyPreset(null, null)}>全部</button>
-                      </div>
-                    </DatePicker>
+                  <div className="sch-date-btns">
+                    {dateFilterOptions.map(o => (
+                      <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
+                    ))}
                   </div>
                 )}
                 <div className="sw-filter" ref={statusRef} style={{ position: "relative" }}>
