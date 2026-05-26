@@ -1080,8 +1080,26 @@ function TaskDetailDrawer({
 
 /** SOP reference list */
 function ReferenceList({ onSelectSop }: { onSelectSop: (sop: SopFolder) => void }) {
-  const general = MOCK_SOPS.filter(s => s.type === "general");
-  const service = MOCK_SOPS.filter(s => s.type === "service");
+  const [sops, setSops] = useState<SopFolder[]>([]);
+  useEffect(() => {
+    const token = localStorage.getItem("gy_auth_token");
+    fetch("/api/sops", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.json())
+      .then(data => {
+        const list = (data.sops ?? []).filter((s: any) => s.published && s.sopContent).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          type: s.type as "general" | "service",
+          version: s.sopVersion ?? 1,
+          updatedAt: s.updatedAt ? new Date(s.updatedAt).toLocaleDateString("zh-CN") : "",
+          content: s.sopContent ?? "",
+        }));
+        setSops(list);
+      })
+      .catch(() => {});
+  }, []);
+  const general = sops.filter(s => s.type === "general");
+  const service = sops.filter(s => s.type === "service");
 
   return (
     <div className="cw-ref-list">
