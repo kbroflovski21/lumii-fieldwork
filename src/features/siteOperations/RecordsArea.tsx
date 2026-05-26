@@ -309,7 +309,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
   records: ServiceRecord[]; selectedId: string | null;
   onRowClick: (r: ServiceRecord) => void;
 }) {
-  const sorted = [...records].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
+  const sorted = [...records].sort((a, b) => b.serviceDate.localeCompare(a.serviceDate) || b.startTime.localeCompare(a.startTime));
 
   return (
     <>
@@ -810,25 +810,23 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
   const { currentSite } = useSite();
   const [editingWorker, setEditingWorker] = useState(false);
   const [workerSearch, setWorkerSearch] = useState("");
+  const [selectedWorkerId, setSelectedWorkerId] = useState(r.socialWorkerId ?? "");
   const [editingElder, setEditingElder] = useState(false);
+  const [elderSearch, setElderSearch] = useState("");
+  const [selectedElderId, setSelectedElderId] = useState(r.serviceObjectId ?? "");
   const [showMap, setShowMap] = useState(false);
   const [workers, setWorkers] = useState<Array<{ id: string; name: string }>>([]);
   const [elders, setElders] = useState<Array<{ id: string; name: string }>>([]);
   const workerDropRef = useRef<HTMLDivElement>(null);
+  const elderDropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const siteId = currentSite?.id;
     const wUrl = siteId ? `/api/social-workers?siteId=${siteId}` : "/api/social-workers";
     authFetch(wUrl).then(r => r.json()).then(d => setWorkers((d.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })))).catch(() => {});
-    authFetch("/api/service-objects").then(r => r.json()).then(d => setElders((d.serviceObjects ?? []).map((o: any) => ({ id: o.id, name: o.name })))).catch(() => {});
+    const oUrl = siteId ? `/api/service-objects?siteId=${siteId}` : "/api/service-objects";
+    authFetch(oUrl).then(r => r.json()).then(d => setElders((d.serviceObjects ?? []).map((o: any) => ({ id: o.id, name: o.name })))).catch(() => {});
   }, [currentSite?.id]);
-
-  useEffect(() => {
-    if (!editingWorker) return;
-    const handler = (e: MouseEvent) => { if (workerDropRef.current && !workerDropRef.current.contains(e.target as Node)) setEditingWorker(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [editingWorker]);
 
   const updateField = async (updates: Record<string, any>) => {
     await authFetch(`/api/service-records/${r.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
@@ -849,39 +847,55 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
 
         <div className="so-overview-item"><dt>服务人员</dt><dd>
           {editingWorker ? (
-            <div className="rec-worker-picker" ref={workerDropRef}>
-              <input className="rec-worker-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
-              <div className="rec-worker-picker__list">
-                <div className="rec-worker-picker__item" onClick={async () => { await updateField({ socialWorkerId: null, socialWorkerName: null }); setEditingWorker(false); setWorkerSearch(""); }}>
+            <div className="rec-picker" ref={workerDropRef}>
+              <input className="rec-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
+              <div className="rec-picker__list">
+                <div className={`rec-picker__item${!selectedWorkerId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId("")}>
                   <span style={{ color: "#94A3B8" }}>未分配</span>
                 </div>
                 {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
-                  <div key={w.id} className={`rec-worker-picker__item${w.id === r.socialWorkerId ? " rec-worker-picker__item--active" : ""}`}
-                    onClick={async () => { await updateField({ socialWorkerId: w.id, socialWorkerName: w.name }); setEditingWorker(false); setWorkerSearch(""); }}>
+                  <div key={w.id} className={`rec-picker__item${w.id === selectedWorkerId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId(w.id)}>
                     {w.name}
                   </div>
                 ))}
               </div>
+              <div className="rec-picker__actions">
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
+                  const w = workers.find(w => w.id === selectedWorkerId);
+                  await updateField({ socialWorkerId: selectedWorkerId || null, socialWorkerName: w?.name ?? null });
+                  setEditingWorker(false); setWorkerSearch("");
+                }}>确定</button>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingWorker(false); setWorkerSearch(""); setSelectedWorkerId(r.socialWorkerId ?? ""); }}>取消</button>
+              </div>
             </div>
           ) : (
-            <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingWorker(true)}><Edit3 size={12} /></button>}</span>
+            <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); }}><Edit3 size={12} /></button>}</span>
           )}
         </dd></div>
 
         <div className="so-overview-item"><dt>长者</dt><dd>
           {editingElder ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <select autoFocus value={r.serviceObjectId ?? ""} onChange={async (e) => {
-                const el = elders.find(o => o.id === e.target.value);
-                await updateField({ serviceObjectId: e.target.value || null, serviceObjectName: el?.name ?? null });
-                setEditingElder(false);
-              }}>
-                <option value="">请选择长者</option>
-                {elders.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
+            <div className="rec-picker" ref={elderDropRef}>
+              <input className="rec-picker__input" autoFocus placeholder="搜索长者..." value={elderSearch} onChange={e => setElderSearch(e.target.value)} />
+              <div className="rec-picker__list">
+                {elders.filter(o => !elderSearch || o.name.includes(elderSearch)).map(o => (
+                  <div key={o.id} className={`rec-picker__item${o.id === selectedElderId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedElderId(o.id)}>
+                    {o.name}
+                  </div>
+                ))}
+              </div>
+              <div className="rec-picker__actions">
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
+                  const el = elders.find(o => o.id === selectedElderId);
+                  if (el) await updateField({ serviceObjectId: el.id, serviceObjectName: el.name });
+                  setEditingElder(false); setElderSearch("");
+                }}>确定</button>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingElder(false); setElderSearch(""); setSelectedElderId(r.serviceObjectId ?? ""); }}>取消</button>
+                <button className="sw-btn sw-btn--ghost" style={{ height: 28, fontSize: 11, padding: "0 10px", marginLeft: "auto" }} onClick={() => { setEditingElder(false); window.open("/site-operations?area=service_objects&action=create", "_blank"); }}>+ 新建长者</button>
+              </div>
             </div>
           ) : elderConfirmed ? (
-            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingElder(true)}><Edit3 size={12} /></button>}</span>
+            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); }}><Edit3 size={12} /></button>}</span>
           ) : (
             <div>
               {elderDisplay && <span style={{ marginRight: 6 }}>{elderDisplay}（语音识别）</span>}
@@ -889,14 +903,8 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
                 <AlertTriangle size={14} />
                 <span>服务长者需核对确认</span>
               </div>
-              <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                <select style={{ flex: 1, fontSize: 13 }} defaultValue="" onChange={async (e) => {
-                  const el = elders.find(o => o.id === e.target.value);
-                  if (el) { await updateField({ serviceObjectId: el.id, serviceObjectName: el.name }); }
-                }}>
-                  <option value="">选择已有长者...</option>
-                  {elders.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
+              <div style={{ marginTop: 8 }}>
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12, padding: "0 12px" }} onClick={() => { setSelectedElderId(""); setEditingElder(true); }}>选择长者</button>
               </div>
             </div>
           )}
