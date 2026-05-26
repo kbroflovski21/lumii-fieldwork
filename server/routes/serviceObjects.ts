@@ -10,7 +10,7 @@ function toApi(row: any, familyContacts: any[] = [], planSummaries: any[] = []) 
   if (!row) return row;
   return {
     id: row.id, name: row.name, phone: row.phone, idNumber: row.idNumber, age: row.age, gender: row.gender,
-    address: row.address, mapDisplayPoint: row.mapDisplayPoint,
+    address: row.address,
     eligibilityType: row.eligibilityType, serviceProjects: row.serviceProjects,
     careNotes: row.careNotes,
     riskTags: row.riskTags, familySubscriptionSummary: row.familySubscriptionSummary,
@@ -89,7 +89,6 @@ export function serviceObjectsRoutes() {
         age: b.age ?? null,
         gender: b.gender ?? "unknown",
         address: b.address ?? "",
-        mapDisplayPoint: b.mapDisplayPoint ?? undefined,
         eligibilityType: b.eligibilityType ?? "government",
         serviceProjects: b.serviceProjects ?? [],
         careNotes: b.careNotes ?? [],
@@ -113,7 +112,6 @@ export function serviceObjectsRoutes() {
     for (const [api, col] of Object.entries(jsonFields)) {
       if (b[api] !== undefined) data[col] = b[api];
     }
-    if (b.mapDisplayPoint !== undefined) data.mapDisplayPoint = b.mapDisplayPoint;
     if (Object.keys(data).length > 0) {
       await prisma.serviceObject.update({ where: { id: req.params.id }, data });
     }
@@ -218,7 +216,7 @@ export function serviceObjectsRoutes() {
     // 3. Batch-generate 4 weeks of ServiceSchedule
     if (b.cadenceRule) {
       const { generateDates } = await import("../lib/cadenceRule");
-      const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } });
+      const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true, address: true, siteId: true, riskTags: true } });
       const today = new Date().toISOString().slice(0, 10);
       const effectiveStart = (b.startDate && b.startDate >= today) ? b.startDate : today;
       const dates = generateDates(b.cadenceRule, effectiveStart, 28);
@@ -233,7 +231,6 @@ export function serviceObjectsRoutes() {
         serviceProject: b.serviceProject ?? "长护险",
         addressSnapshot: obj?.address ?? "",
         address: obj?.address ?? null,
-        mapDisplayPoint: obj?.mapDisplayPoint ?? undefined,
         serviceDate: date,
         startTime: tw.start ?? null,
         endTime: tw.end ?? null,
@@ -300,7 +297,7 @@ export function serviceObjectsRoutes() {
     const { generateDates } = await import("../lib/cadenceRule");
     const obj = await prisma.serviceObject.findFirst({
       where: { id: plan.serviceObjectId },
-      select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true },
+      select: { name: true, address: true, siteId: true, riskTags: true },
     });
     const tw = plan.preferredTimeWindow as any;
     const dates = generateDates(plan.cadenceRule, today, 28);
@@ -322,7 +319,6 @@ export function serviceObjectsRoutes() {
         serviceProject: plan.serviceProject,
         addressSnapshot: obj?.address ?? "",
         address: obj?.address ?? null,
-        mapDisplayPoint: obj?.mapDisplayPoint ?? null,
         serviceDate: date,
         startTime: tw?.start ?? null,
         endTime: tw?.end ?? null,
@@ -435,7 +431,7 @@ export function serviceObjectsRoutes() {
         const { generateDates } = await import("../lib/cadenceRule");
         const obj = await prisma.serviceObject.findFirst({
           where: { id: plan.serviceObjectId },
-          select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true },
+          select: { name: true, address: true, siteId: true, riskTags: true },
         });
         const tw = preferredTimeWindow ?? plan.preferredTimeWindow as any;
         const dates = generateDates(cadenceRule, today, 28);
@@ -449,8 +445,7 @@ export function serviceObjectsRoutes() {
           serviceProject: plan.serviceProject,
           addressSnapshot: obj?.address ?? "",
           address: obj?.address ?? null,
-          mapDisplayPoint: obj?.mapDisplayPoint ?? undefined,
-          serviceDate: date,
+            serviceDate: date,
           startTime: tw?.start ?? null,
           endTime: tw?.end ?? null,
           timeWindow: tw ?? {},

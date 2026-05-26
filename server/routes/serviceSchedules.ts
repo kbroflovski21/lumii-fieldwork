@@ -9,7 +9,7 @@ function toApi(row: any) {
     id: row.id, source: row.source, servicePlanId: row.servicePlanId,
     serviceObjectId: row.serviceObjectId, serviceObjectName: row.serviceObjectName,
     serviceProject: row.serviceProject, addressSnapshot: row.addressSnapshot, address: row.address,
-    mapDisplayPoint: row.mapDisplayPoint, serviceDate: row.serviceDate,
+    serviceDate: row.serviceDate,
     startTime: row.startTime, endTime: row.endTime, timeWindow: row.timeWindow,
     assignedSocialWorkerId: row.assignedSocialWorkerId, assignedSocialWorkerName: row.assignedSocialWorkerName,
     status: row.status, notes: row.notes, serviceRecordId: row.serviceRecordId,
@@ -47,7 +47,6 @@ function computeProjectedOccurrences(
         serviceProject: plan.serviceProject,
         addressSnapshot: plan.serviceObject?.address ?? "",
         address: plan.serviceObject?.address ?? null,
-        mapDisplayPoint: plan.serviceObject?.mapDisplayPoint ?? null,
         serviceDate: date,
         startTime: tw.start ?? null,
         endTime: tw.end ?? null,
@@ -109,7 +108,7 @@ export function serviceSchedulesRoutes() {
         where: { status: "active", ...(siteId ? { serviceObject: { siteId } } : {}) },
         include: {
           sopLinks: { select: { sopId: true, sopName: true } },
-          serviceObject: { select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } },
+          serviceObject: { select: { name: true, address: true, siteId: true, riskTags: true } },
         },
       });
       const existingKeys = new Set(rows.map((r: any) => `${r.servicePlanId}:${r.serviceDate}`));
@@ -133,13 +132,12 @@ export function serviceSchedulesRoutes() {
     // Look up service object name
     let objName = "";
     let addr = "";
-    let mapPoint: any = null;
     if (b.serviceObjectId) {
       const obj = await prisma.serviceObject.findFirst({
         where: { id: b.serviceObjectId },
-        select: { name: true, address: true, mapDisplayPoint: true },
+        select: { name: true, address: true },
       });
-      if (obj) { objName = obj.name; addr = obj.address; mapPoint = obj.mapDisplayPoint; }
+      if (obj) { objName = obj.name; addr = obj.address; }
     }
     let workerName: string | null = null;
     if (b.assignedSocialWorkerId) {
@@ -157,7 +155,6 @@ export function serviceSchedulesRoutes() {
         serviceProject: b.serviceProject ?? "",
         addressSnapshot: addr,
         address: addr,
-        mapDisplayPoint: mapPoint ?? undefined,
         serviceDate: b.serviceDate ?? "",
         startTime: b.timeWindow?.start ?? "",
         endTime: b.timeWindow?.end ?? "",

@@ -267,7 +267,7 @@ export type ServiceObject = {
   age?: number;
   gender?: "female" | "male" | "unknown";
   address: string;
-  mapDisplayPoint?: MapDisplayPoint;
+
   eligibilityType: ServiceEligibilityType | string;
   serviceProjects: string[];
   careNotes: string[];
@@ -286,7 +286,7 @@ export type CreateServiceObjectRequest = {
   idNumber: string;
   age?: number;
   address: string;
-  mapDisplayPoint?: MapDisplayPoint;
+
   eligibilityType: ServiceEligibilityType;
   serviceProjects: string[];
   careNotes?: string[];
@@ -319,7 +319,7 @@ export type ServiceScheduleOccurrence = {
   serviceObjectName: string;
   serviceProject: string;
   addressSnapshot: string;
-  mapDisplayPoint?: MapDisplayPoint;
+
   serviceDate: string;
   timeWindow: { start: string; end: string; label?: string };
   assignedSocialWorkerId?: string;
@@ -341,7 +341,7 @@ export type ServiceSchedule = ServiceScheduleOccurrence;
 
 export type CreateOneTimeServiceScheduleRequest = {
   serviceObjectId?: string;
-  minimalProfile?: Pick<CreateServiceObjectRequest, "name" | "age" | "address" | "mapDisplayPoint">;
+  minimalProfile?: Pick<CreateServiceObjectRequest, "name" | "age" | "address">;
   serviceProject: string;
   serviceDate: string;
   timeWindow: { start: string; end: string; label?: string };

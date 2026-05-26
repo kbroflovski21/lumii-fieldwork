@@ -206,7 +206,6 @@ model ServiceObject {
   age                      Int?
   gender                   Gender          @default(unknown)
   address                  String          @default("") @db.VarChar(500)
-  mapDisplayPoint          Json?           @map("map_display_point")
   eligibilityType          EligibilityType @default(government) @map("eligibility_type")
   serviceProjects          Json            @default("[]") @map("service_projects")
   careNotes                Json            @default("[]") @map("care_notes")
