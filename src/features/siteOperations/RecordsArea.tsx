@@ -4,6 +4,7 @@ import { Search, X, ChevronDown, Download, Shield, AlertTriangle, Edit3, FileTex
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { authFetch } from "./api";
+import { CreateModal as CreateElderModal } from "./ServiceObjectsArea";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
@@ -852,7 +853,6 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
             <div className="rec-float-picker" ref={workerDropRef}>
               <input className="rec-float-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
               <div className="rec-float-picker__list">
-                <div className={`rec-float-picker__item${!selectedWorkerId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId("")}>未分配</div>
                 {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
                   <div key={w.id} className={`rec-float-picker__item${w.id === selectedWorkerId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId(w.id)}>{w.name}</div>
                 ))}
@@ -922,65 +922,26 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
       )}
 
       {showCreateElder && (
-        <CreateElderModal onClose={() => setShowCreateElder(false)} onCreated={async (id, name) => {
-          await updateField({ serviceObjectId: id, serviceObjectName: name });
-          setShowCreateElder(false);
-          setElders(prev => [...prev, { id, name }]);
-        }} />
+        <>
+          <button className="sw-scrim" onClick={() => setShowCreateElder(false)} type="button" style={{ position: "fixed", inset: 0, zIndex: 40, background: "rgba(0,0,0,0.4)", border: "none" }} />
+          <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 41, pointerEvents: "none" }}>
+            <div style={{ pointerEvents: "auto" }}>
+              <CreateElderModal onClose={() => setShowCreateElder(false)} onCreated={async (id, name) => {
+                if (id && name) {
+                  await updateField({ serviceObjectId: id, serviceObjectName: name });
+                  setElders(prev => [...prev, { id, name }]);
+                }
+                setShowCreateElder(false);
+              }} />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-function CreateElderModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string, name: string) => void }) {
-  const { currentSite } = useSite();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  const [age, setAge] = useState("");
-  const [address, setAddress] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!name.trim()) { setError("姓名为必填"); return; }
-    if (!idNumber.trim()) { setError("身份证号为必填"); return; }
-    setSaving(true);
-    try {
-      const resp = await authFetch("/api/service-objects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), phone, idNumber: idNumber.trim(), age: age ? Number(age) : undefined, address, siteId: currentSite?.id }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) { setError(data.error ?? "创建失败"); setSaving(false); return; }
-      onCreated(data.id, name.trim());
-    } catch { setError("网络错误"); setSaving(false); }
-  };
-
-  return (
-    <div className="quality-user-modal__overlay" onClick={onClose}>
-      <div className="quality-user-modal" role="dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
-        <div className="quality-user-modal__header">
-          <div className="quality-user-modal__title">新增长者</div>
-          <button className="quality-user-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-        </div>
-        <div className="quality-user-modal__body" style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {error && <div style={{ fontSize: 12, color: "#DC2626", padding: "6px 10px", background: "#FEF2F2", borderRadius: 6 }}>{error}</div>}
-          <label className="sw-field"><span>姓名 *</span><input value={name} onChange={e => setName(e.target.value)} placeholder="长者姓名" /></label>
-          <label className="sw-field"><span>身份证号 *</span><input value={idNumber} onChange={e => setIdNumber(e.target.value)} placeholder="18位身份证号" /></label>
-          <label className="sw-field"><span>手机号</span><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /></label>
-          <label className="sw-field"><span>年龄</span><input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="选填" /></label>
-          <label className="sw-field"><span>地址</span><input value={address} onChange={e => setAddress(e.target.value)} placeholder="选填" /></label>
-        </div>
-        <div className="quality-user-modal__footer">
-          <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-          <button className="sw-btn sw-btn--primary" onClick={handleSubmit} disabled={saving} type="button">{saving ? "创建中..." : "创建"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function RecordAddressMap({ address }: { address: string }) {
   const mapRef = useRef<HTMLDivElement>(null);

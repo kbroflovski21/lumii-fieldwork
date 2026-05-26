@@ -1050,7 +1050,7 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
 
 /* ── Create Modal ── */
 
-function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+export function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id?: string, name?: string) => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [idNumber, setIdNumber] = useState("");
@@ -1075,14 +1075,14 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     if (!/^\d{17}[\dXx]$/.test(idNumber.trim())) { setError("身份证号格式不正确"); return; }
     setCreating(true);
     try {
-      await siteOperationsApi.createServiceObject({
+      const result = await siteOperationsApi.createServiceObject({
         name: name.trim(), idNumber: idNumber.trim(), age: age ? Number(age) : undefined, address: address.trim(),
         eligibilityType: eligibility as ServiceEligibilityType,
         serviceProjects: projects.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         riskTags: riskTags.split(/[、,，]/).map(s => s.trim()).filter(Boolean),
         careNotes: careNotes.split("\n").map(s => s.trim()).filter(Boolean),
       });
-      onCreated();
+      onCreated(result?.id, name.trim());
     } catch { setCreating(false); }
   };
 
