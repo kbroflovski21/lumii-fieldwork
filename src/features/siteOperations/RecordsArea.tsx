@@ -815,6 +815,7 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
   const [elderSearch, setElderSearch] = useState("");
   const [selectedElderId, setSelectedElderId] = useState(r.serviceObjectId ?? "");
   const [showMap, setShowMap] = useState(false);
+  const [showCreateElder, setShowCreateElder] = useState(false);
   const [workers, setWorkers] = useState<Array<{ id: string; name: string }>>([]);
   const [elders, setElders] = useState<Array<{ id: string; name: string }>>([]);
   const workerDropRef = useRef<HTMLDivElement>(null);
@@ -845,57 +846,32 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
         <div className="so-overview-item"><dt>服务日期</dt><dd>{r.serviceDate} {dow}</dd></div>
         <div className="so-overview-item"><dt>服务时间</dt><dd>{r.startTime} – {r.endTime} ({r.durationMinutes}分钟)</dd></div>
 
-        <div className="so-overview-item"><dt>服务人员</dt><dd>
-          {editingWorker ? (
-            <div className="rec-picker" ref={workerDropRef}>
-              <input className="rec-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
-              <div className="rec-picker__list">
-                <div className={`rec-picker__item${!selectedWorkerId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId("")}>
-                  <span style={{ color: "#94A3B8" }}>未分配</span>
-                </div>
+        <div className="so-overview-item"><dt>服务人员</dt><dd style={{ position: "relative" }}>
+          <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); setWorkerSearch(""); }}><Edit3 size={12} /></button>}</span>
+          {editingWorker && (
+            <div className="rec-float-picker" ref={workerDropRef}>
+              <input className="rec-float-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
+              <div className="rec-float-picker__list">
+                <div className={`rec-float-picker__item${!selectedWorkerId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId("")}>未分配</div>
                 {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
-                  <div key={w.id} className={`rec-picker__item${w.id === selectedWorkerId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId(w.id)}>
-                    {w.name}
-                  </div>
+                  <div key={w.id} className={`rec-float-picker__item${w.id === selectedWorkerId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId(w.id)}>{w.name}</div>
                 ))}
               </div>
-              <div className="rec-picker__actions">
+              <div className="rec-float-picker__actions">
                 <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
                   const w = workers.find(w => w.id === selectedWorkerId);
                   await updateField({ socialWorkerId: selectedWorkerId || null, socialWorkerName: w?.name ?? null });
-                  setEditingWorker(false); setWorkerSearch("");
-                }}>确定</button>
-                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingWorker(false); setWorkerSearch(""); setSelectedWorkerId(r.socialWorkerId ?? ""); }}>取消</button>
+                  setEditingWorker(false);
+                }}>确认</button>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingWorker(false); }}>取消</button>
               </div>
             </div>
-          ) : (
-            <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); }}><Edit3 size={12} /></button>}</span>
           )}
         </dd></div>
 
-        <div className="so-overview-item"><dt>长者</dt><dd>
-          {editingElder ? (
-            <div className="rec-picker" ref={elderDropRef}>
-              <input className="rec-picker__input" autoFocus placeholder="搜索长者..." value={elderSearch} onChange={e => setElderSearch(e.target.value)} />
-              <div className="rec-picker__list">
-                {elders.filter(o => !elderSearch || o.name.includes(elderSearch)).map(o => (
-                  <div key={o.id} className={`rec-picker__item${o.id === selectedElderId ? " rec-picker__item--active" : ""}`} onClick={() => setSelectedElderId(o.id)}>
-                    {o.name}
-                  </div>
-                ))}
-              </div>
-              <div className="rec-picker__actions">
-                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
-                  const el = elders.find(o => o.id === selectedElderId);
-                  if (el) await updateField({ serviceObjectId: el.id, serviceObjectName: el.name });
-                  setEditingElder(false); setElderSearch("");
-                }}>确定</button>
-                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingElder(false); setElderSearch(""); setSelectedElderId(r.serviceObjectId ?? ""); }}>取消</button>
-                <button className="sw-btn sw-btn--ghost" style={{ height: 28, fontSize: 11, padding: "0 10px", marginLeft: "auto" }} onClick={() => { setEditingElder(false); window.open("/site-operations?area=service_objects&action=create", "_blank"); }}>+ 新建长者</button>
-              </div>
-            </div>
-          ) : elderConfirmed ? (
-            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); }}><Edit3 size={12} /></button>}</span>
+        <div className="so-overview-item"><dt>长者</dt><dd style={{ position: "relative" }}>
+          {elderConfirmed ? (
+            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); setElderSearch(""); }}><Edit3 size={12} /></button>}</span>
           ) : (
             <div>
               {elderDisplay && <span style={{ marginRight: 6 }}>{elderDisplay}（语音识别）</span>}
@@ -904,7 +880,26 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
                 <span>服务长者需核对确认</span>
               </div>
               <div style={{ marginTop: 8 }}>
-                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12, padding: "0 12px" }} onClick={() => { setSelectedElderId(""); setEditingElder(true); }}>选择长者</button>
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12, padding: "0 12px" }} onClick={() => { setSelectedElderId(""); setEditingElder(true); setElderSearch(""); }}>选择长者</button>
+              </div>
+            </div>
+          )}
+          {editingElder && (
+            <div className="rec-float-picker" ref={elderDropRef}>
+              <input className="rec-float-picker__input" autoFocus placeholder="搜索长者..." value={elderSearch} onChange={e => setElderSearch(e.target.value)} />
+              <div className="rec-float-picker__list">
+                {elders.filter(o => !elderSearch || o.name.includes(elderSearch)).map(o => (
+                  <div key={o.id} className={`rec-float-picker__item${o.id === selectedElderId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedElderId(o.id)}>{o.name}</div>
+                ))}
+              </div>
+              <div className="rec-float-picker__actions">
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
+                  const el = elders.find(o => o.id === selectedElderId);
+                  if (el) await updateField({ serviceObjectId: el.id, serviceObjectName: el.name });
+                  setEditingElder(false);
+                }}>确认</button>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingElder(false); }}>取消</button>
+                <button className="sw-btn sw-btn--ghost" style={{ height: 28, fontSize: 11, padding: "0 10px", marginLeft: "auto" }} onClick={() => { setEditingElder(false); setShowCreateElder(true); }}>+ 新建长者</button>
               </div>
             </div>
           )}
@@ -925,6 +920,64 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
           <RecordAddressMap address={r.serviceAddress} />
         </div>
       )}
+
+      {showCreateElder && (
+        <CreateElderModal onClose={() => setShowCreateElder(false)} onCreated={async (id, name) => {
+          await updateField({ serviceObjectId: id, serviceObjectName: name });
+          setShowCreateElder(false);
+          setElders(prev => [...prev, { id, name }]);
+        }} />
+      )}
+    </div>
+  );
+}
+
+function CreateElderModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string, name: string) => void }) {
+  const { currentSite } = useSite();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [age, setAge] = useState("");
+  const [address, setAddress] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { setError("姓名为必填"); return; }
+    if (!idNumber.trim()) { setError("身份证号为必填"); return; }
+    setSaving(true);
+    try {
+      const resp = await authFetch("/api/service-objects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), phone, idNumber: idNumber.trim(), age: age ? Number(age) : undefined, address, siteId: currentSite?.id }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { setError(data.error ?? "创建失败"); setSaving(false); return; }
+      onCreated(data.id, name.trim());
+    } catch { setError("网络错误"); setSaving(false); }
+  };
+
+  return (
+    <div className="quality-user-modal__overlay" onClick={onClose}>
+      <div className="quality-user-modal" role="dialog" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+        <div className="quality-user-modal__header">
+          <div className="quality-user-modal__title">新增长者</div>
+          <button className="quality-user-modal__close" onClick={onClose} type="button"><X size={18} /></button>
+        </div>
+        <div className="quality-user-modal__body" style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {error && <div style={{ fontSize: 12, color: "#DC2626", padding: "6px 10px", background: "#FEF2F2", borderRadius: 6 }}>{error}</div>}
+          <label className="sw-field"><span>姓名 *</span><input value={name} onChange={e => setName(e.target.value)} placeholder="长者姓名" /></label>
+          <label className="sw-field"><span>身份证号 *</span><input value={idNumber} onChange={e => setIdNumber(e.target.value)} placeholder="18位身份证号" /></label>
+          <label className="sw-field"><span>手机号</span><input value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /></label>
+          <label className="sw-field"><span>年龄</span><input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="选填" /></label>
+          <label className="sw-field"><span>地址</span><input value={address} onChange={e => setAddress(e.target.value)} placeholder="选填" /></label>
+        </div>
+        <div className="quality-user-modal__footer">
+          <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+          <button className="sw-btn sw-btn--primary" onClick={handleSubmit} disabled={saving} type="button">{saving ? "创建中..." : "创建"}</button>
+        </div>
+      </div>
     </div>
   );
 }
