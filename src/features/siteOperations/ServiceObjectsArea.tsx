@@ -856,7 +856,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               <div className="so-tab-section">
                 <h4 className="so-tab-section-title">近期排期 ({savedSchedules.length}条)</h4>
                 <div className="so-schedules-list">
-                  {savedSchedules.slice(0, 20).map(s => {
+                  {[...savedSchedules].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || (a.timeWindow?.start ?? "").localeCompare(b.timeWindow?.start ?? "")).slice(0, 20).map(s => {
                     const effectiveStatus = (!s.assignedSocialWorkerId && s.status === "scheduled") ? "unassigned" : s.status;
                     const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
                     const dow = dayNames[new Date(s.serviceDate + "T00:00:00").getDay()];

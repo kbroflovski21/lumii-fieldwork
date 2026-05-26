@@ -136,13 +136,11 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
                 <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或地址..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
-                {view !== "calendar" && (
-                  <div className="sch-date-btns">
-                    {dateFilterOptions.map(o => (
-                      <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
-                    ))}
-                  </div>
-                )}
+                <div className="sch-date-btns">
+                  {dateFilterOptions.map(o => (
+                    <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
+                  ))}
+                </div>
                 <div className="sw-filter" ref={statusRef}>
                   <select className={statusFilters.length > 0 ? "sw-filter--active" : ""} onMouseDown={(e) => { e.preventDefault(); setStatusDropOpen(!statusDropOpen); }} value="" readOnly>
                     <option>{statusLabel}</option>
