@@ -7559,9 +7559,8 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 /* ── Date range inline fields ── */
 /* ── Status multi-select dropdown ── */
 .sw-filter__dropdown {
-  position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 100;
   background: #fff; border: 1px solid #E2E8F0; border-radius: 10px;
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.1); padding: 6px 0; min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 6px 0; min-width: 140px;
 }
 .sw-filter__option {
   display: flex; align-items: center; gap: 6px;

@@ -143,23 +143,11 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
                     ))}
                   </div>
                 )}
-                <div className="sw-filter" ref={statusRef} style={{ position: "relative" }}>
+                <div className="sw-filter" ref={statusRef}>
                   <select className={statusFilters.length > 0 ? "sw-filter--active" : ""} onMouseDown={(e) => { e.preventDefault(); setStatusDropOpen(!statusDropOpen); }} value="" readOnly>
                     <option>{statusLabel}</option>
                   </select>
-                  {statusDropOpen && (
-                    <div className="sw-filter__dropdown">
-                      {statusOptions.map(opt => (
-                        <label key={opt.value} className="sw-filter__option">
-                          <input type="checkbox" checked={statusFilters.includes(opt.value)} onChange={() => toggleStatus(opt.value)} />
-                          <span>{opt.label}</span>
-                        </label>
-                      ))}
-                      {statusFilters.length > 0 && (
-                        <button className="sw-filter__clear" type="button" onClick={() => { setStatusFilters([]); setStatusDropOpen(false); }}>清除筛选</button>
-                      )}
-                    </div>
-                  )}
+                  {statusDropOpen && <StatusDropdown anchorRef={statusRef} options={statusOptions} selected={statusFilters} onToggle={toggleStatus} onClear={() => { setStatusFilters([]); setStatusDropOpen(false); }} />}
                 </div>
               </div>
             </div>
@@ -749,6 +737,33 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
         </div>
         <div className="so-modal__footer-right" />
       </div>
+    </div>
+  );
+}
+
+function StatusDropdown({ anchorRef, options, selected, onToggle, onClear }: {
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+  options: Array<{ value: string; label: string }>;
+  selected: string[];
+  onToggle: (v: string) => void;
+  onClear: () => void;
+}) {
+  const rect = anchorRef.current?.getBoundingClientRect();
+  const style: React.CSSProperties = rect
+    ? { position: "fixed", top: rect.bottom + 4, left: rect.left, zIndex: 9999 }
+    : { position: "absolute", top: "100%", left: 0, zIndex: 9999 };
+
+  return (
+    <div className="sw-filter__dropdown" style={style}>
+      {options.map(opt => (
+        <label key={opt.value} className="sw-filter__option">
+          <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => onToggle(opt.value)} />
+          <span>{opt.label}</span>
+        </label>
+      ))}
+      {selected.length > 0 && (
+        <button className="sw-filter__clear" type="button" onClick={onClear}>清除筛选</button>
+      )}
     </div>
   );
 }
