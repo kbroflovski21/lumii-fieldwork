@@ -2,6 +2,13 @@ import { Router } from "express";
 import { randomUUID } from "crypto";
 import { prisma } from "../db/prisma";
 
+function toBeijingDate(d: Date): string {
+  return new Date(d.getTime() + 8 * 3600000).toISOString().slice(0, 10);
+}
+function toBeijingTime(d: Date): string {
+  return new Date(d.getTime() + 8 * 3600000).toISOString().slice(11, 16);
+}
+
 function genId(prefix: string) {
   return `${prefix}-${randomUUID().slice(0, 8)}`;
 }
@@ -186,14 +193,14 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
   if (!rec) return { matched: false };
 
   // Find candidate schedules for this worker today (± 1 day)
-  const recDate = rec.startedAt.toISOString().slice(0, 10);
+  const recDate = toBeijingDate(rec.startedAt);
   const yesterday = new Date(rec.startedAt);
   yesterday.setDate(yesterday.getDate() - 1);
   const tomorrow = new Date(rec.startedAt);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   const where: any = {
-    serviceDate: { in: [yesterday.toISOString().slice(0, 10), recDate, tomorrow.toISOString().slice(0, 10)] },
+    serviceDate: { in: [toBeijingDate(yesterday), recDate, toBeijingDate(tomorrow)] },
     status: { in: ["scheduled", "assigned", "in_progress"] },
   };
 
@@ -337,7 +344,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
           where: { id: existingRec.id },
           data: {
             durationMinutes: newDuration,
-            endTime: rec.endedAt?.toISOString().slice(11, 16) ?? existingRec.endTime,
+            endTime: rec.endedAt ? toBeijingTime(rec.endedAt) : existingRec.endTime,
             generatedSummary: rec.aiSummary ?? existingRec.generatedSummary,
             structuredSummary: sopResults,
           },
@@ -369,9 +376,9 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
   await prisma.serviceRecord.create({
     data: {
       id: recordId,
-      serviceDate: rec.startedAt.toISOString().slice(0, 10),
-      startTime: rec.startedAt.toISOString().slice(11, 16),
-      endTime: rec.endedAt?.toISOString().slice(11, 16) ?? "",
+      serviceDate: toBeijingDate(rec.startedAt),
+      startTime: toBeijingTime(rec.startedAt),
+      endTime: rec.endedAt ? toBeijingTime(rec.endedAt) : "",
       durationMinutes: Math.round((rec.durationSeconds ?? 0) / 60),
       badgeId: rec.badgeId,
       socialWorkerId: rec.workerId,
