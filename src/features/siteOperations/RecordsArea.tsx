@@ -768,7 +768,7 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
                     <div>
                       {ex.startTime ? <span className="rec-si__excerpt-time">{ex.startTime}{ex.endTime ? ` - ${ex.endTime}` : ""}</span> : null}
                       {audioUrl && ex.startTime ? (
-                        {(() => {
+                        (() => {
                           const clipId = `${item.id ?? item.seq}-${i}`;
                           const playing = isClipPlaying(clipId);
                           return (
@@ -777,7 +777,7 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
                               playClip(clipId, audioUrl!, startSec, endSec);
                             }}>{playing ? <Square size={10} /> : <Play size={12} />}</button>
                           );
-                        })()}
+                        })()
                       ) : null}
                       <p>{ex.text}</p>
                     </div>
