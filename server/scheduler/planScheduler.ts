@@ -15,7 +15,7 @@ export async function rollForwardSchedules() {
     where: { status: "active", cadenceRule: { not: "" } },
     include: {
       sopLinks: true,
-      serviceObject: { select: { name: true, address: true, siteId: true, mapDisplayPoint: true, riskTags: true } },
+      serviceObject: { select: { name: true, address: true, siteId: true, riskTags: true } },
     },
   });
 
@@ -57,7 +57,7 @@ export async function rollForwardSchedules() {
       serviceProject: plan.serviceProject,
       addressSnapshot: obj?.address ?? "",
       address: obj?.address ?? null,
-      mapDisplayPoint: obj?.mapDisplayPoint ?? undefined,
+      mapDisplayPoint: undefined,
       serviceDate: date,
       startTime: tw?.start ?? null,
       endTime: tw?.end ?? null,

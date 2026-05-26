@@ -80,7 +80,16 @@ function formatTime(iso?: string) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function toBjStr(d: Date) {
+  const bj = new Date(d.getTime() + 8 * 3600000);
+  return {
+    date: `${bj.getUTCMonth()+1}/${bj.getUTCDate()}`,
+    time: `${bj.getUTCHours().toString().padStart(2,"0")}:${bj.getUTCMinutes().toString().padStart(2,"0")}`,
+    full: bj.toISOString().replace("T"," ").slice(0,16),
+  };
 }
 
 function getInitials(name: string) { return name.slice(0, 1); }
@@ -221,7 +230,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
                       .map((rec: any) => {
                         const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
                         const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
-                        const t = new Date(rec.startedAt);
+                        const bj = toBjStr(new Date(rec.startedAt));
                         const dur = rec.durationSeconds ?? 0;
                         const workerColor = avatarColor(rec.workerName ?? "?");
                         return (
@@ -230,8 +239,8 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
                             onClick={() => setSelectedRecording(rec)}
                             role="row" style={{ cursor: "pointer" }}>
                             <div role="cell" className="sch-cell-datetime">
-                              <span className="sch-cell-date">{formatDate(t.toISOString().slice(0, 10))}</span>
-                              <span className="sch-cell-time">{t.getHours().toString().padStart(2,"0")}:{t.getMinutes().toString().padStart(2,"0")} · {Math.floor(dur/60)}分{dur%60}秒</span>
+                              <span className="sch-cell-date">{bj.date}</span>
+                              <span className="sch-cell-time">{bj.time} · {Math.floor(dur/60)}分{dur%60}秒</span>
                             </div>
                             <div role="cell" className="sw-table__cell-name">
                               <div className="sw-avatar" style={{ background: workerColor.bg, color: workerColor.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(rec.workerName ?? "?")}</div>
@@ -252,12 +261,12 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
                       .map((rec: any) => {
                         const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
                         const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
-                        const t = new Date(rec.startedAt);
+                        const bj = toBjStr(new Date(rec.startedAt));
                         const dur = rec.durationSeconds ?? 0;
                         return (
                           <button className="sw-mobile-card" key={rec.id} onClick={() => setSelectedRecording(rec)} type="button">
                             <div className="sw-mobile-card__top">
-                              <span className="sch-cell-date">{formatDate(t.toISOString().slice(0, 10))} {t.getHours().toString().padStart(2,"0")}:{t.getMinutes().toString().padStart(2,"0")}</span>
+                              <span className="sch-cell-date">{bj.date} {bj.time}</span>
                               <span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span>
                             </div>
                             <div className="sw-mobile-card__info"><span>{rec.workerName ?? "未知"}</span></div>
@@ -1009,7 +1018,7 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
           </div>
           <div className="so-modal__summary-name">
             <h3>{rec.workerName ?? "录音"} · {rec.badgeId}</h3>
-            <span className="so-modal__summary-demo">{new Date(rec.startedAt).toLocaleString("zh-CN")} · {Math.floor(dur / 60)}分{dur % 60}秒</span>
+            <span className="so-modal__summary-demo">{new Date(rec.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · {Math.floor(dur / 60)}分{dur % 60}秒</span>
           </div>
           <div className="so-modal__summary-actions">
             <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
@@ -1023,7 +1032,7 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
           <dl className="so-overview-grid">
             <div className="so-overview-item"><dt>服务人员</dt><dd>{rec.workerName ?? "—"}</dd></div>
             <div className="so-overview-item"><dt>工牌</dt><dd><span className="badges-code-tag">{rec.badgeId}</span></dd></div>
-            <div className="so-overview-item"><dt>时间</dt><dd>{new Date(rec.startedAt).toLocaleString("zh-CN")}</dd></div>
+            <div className="so-overview-item"><dt>时间</dt><dd>{new Date(rec.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</dd></div>
             <div className="so-overview-item"><dt>时长</dt><dd>{Math.floor(dur / 60)}分{dur % 60}秒</dd></div>
             {rec.matchedServiceObjectName && <div className="so-overview-item"><dt>服务对象</dt><dd>{rec.matchedServiceObjectName}</dd></div>}
             {rec.matchReason && <div className="so-overview-item"><dt>匹配原因</dt><dd>{rec.matchReason} ({Math.round((rec.matchConfidence ?? 0) * 100)}%)</dd></div>}

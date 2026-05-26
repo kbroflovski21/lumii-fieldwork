@@ -48,7 +48,8 @@ export function RecordingsArea() {
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
-    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+    const bj = new Date(d.getTime() + 8 * 3600000);
+    return `${bj.getUTCMonth()+1}/${bj.getUTCDate()} ${bj.getUTCHours().toString().padStart(2,"0")}:${bj.getUTCMinutes().toString().padStart(2,"0")}`;
   };
 
   const formatDuration = (secs: number) => {

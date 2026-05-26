@@ -218,6 +218,8 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
     }
   }
 
+  const transcript = (rec.transcriptText ?? "").toLowerCase();
+
   const candidates = await prisma.serviceSchedule.findMany({
     where,
     include: { sopLinks: { select: { sopId: true, sopName: true } } },
@@ -225,8 +227,6 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
   if (candidates.length === 0) {
     return await createUnscheduledServiceRecord(rec, transcript);
   }
-
-  const transcript = (rec.transcriptText ?? "").toLowerCase();
   const sopResults = rec.sopResults as any;
   const detectedServices = (sopResults?.service_project ?? "").split(",").map((s: string) => s.trim().toLowerCase()).filter(Boolean);
 
@@ -234,23 +234,25 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
   let bestCandidate: any = null;
   let bestReason = "";
 
+  const recBj = new Date(rec.startedAt.getTime() + 8 * 3600000);
+  const recMinOfDay = recBj.getUTCHours() * 60 + recBj.getUTCMinutes();
+
   for (const c of candidates) {
     let score = 0;
     const reasons: string[] = [];
 
-    // Time match: same day = +0.3, within 2 hours = +0.1
+    let timeDiffMin = Infinity;
+    if (c.startTime) {
+      const [h, m] = c.startTime.split(":").map(Number);
+      timeDiffMin = Math.abs(recMinOfDay - (h * 60 + m));
+    }
+
     if (c.serviceDate === recDate) {
       score += 0.3;
       reasons.push("同日");
-      if (c.startTime) {
-        const [h, m] = c.startTime.split(":").map(Number);
-        const schedStart = new Date(rec.startedAt);
-        schedStart.setHours(h, m, 0, 0);
-        const diffMs = Math.abs(rec.startedAt.getTime() - schedStart.getTime());
-        if (diffMs < 7200000) {
-          score += 0.1;
-          reasons.push("时间接近");
-        }
+      if (timeDiffMin < 120) {
+        score += 0.1;
+        reasons.push("时间接近");
       }
     }
 
@@ -350,54 +352,20 @@ async function createUnscheduledServiceRecord(rec: any, transcript: string): Pro
   return { matched: true, scheduleId: undefined, confidence: 0, reason: serviceObjectName ? `识别到${serviceObjectName}` : "无排班自动创建" };
 }
 
-// Create or update service record from a recording
+// Create a new service record from a recording (one recording = one service record)
 async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | null, serviceObjectName: string | null, scheduleId: string | null, expectedSops: Array<{sopId: string; sopName: string}> = [], elderName: string | null = null): Promise<string> {
-  // Check if there's already a service record for this schedule (multi-recording aggregation)
-  if (scheduleId) {
-    const existingSched = await prisma.serviceSchedule.findFirst({ where: { id: scheduleId }, select: { serviceRecordId: true } });
-    if (existingSched?.serviceRecordId) {
-      // Aggregate: update existing service record
-      const existingRec = await prisma.serviceRecord.findFirst({ where: { id: existingSched.serviceRecordId } });
-      if (existingRec) {
-        // Append transcript
-        const existingTranscript = existingRec.transcriptId
-          ? await prisma.transcript.findFirst({ where: { id: existingRec.transcriptId } })
-          : null;
-        if (existingTranscript) {
-          const combinedText = [existingTranscript.text, rec.transcriptText].filter(Boolean).join("\n\n--- 录音分段 ---\n\n");
-          const existingSegs = Array.isArray(existingTranscript.segments) ? existingTranscript.segments as any[] : [];
-          const newSegs = Array.isArray(rec.transcriptSegments) ? rec.transcriptSegments as any[] : [];
-          await prisma.transcript.update({
-            where: { id: existingTranscript.id },
-            data: { text: combinedText, segments: [...existingSegs, ...newSegs] },
-          });
-        }
-        // Update duration
-        const newDuration = (existingRec.durationMinutes ?? 0) + Math.round((rec.durationSeconds ?? 0) / 60);
-        const sopResults = rec.sopResults ? JSON.stringify(rec.sopResults) : existingRec.structuredSummary;
-        await prisma.serviceRecord.update({
-          where: { id: existingRec.id },
-          data: {
-            durationMinutes: newDuration,
-            endTime: rec.endedAt ? toBeijingTime(rec.endedAt) : existingRec.endTime,
-            generatedSummary: rec.aiSummary ?? existingRec.generatedSummary,
-            structuredSummary: sopResults,
-          },
-        });
-        return existingRec.id;
-      }
-    }
-  }
-
-  // Create new service record
   const recordId = genId("sr");
   const transcriptId = genId("tx");
   const audioId = genId("aud");
 
-  // Resolve names
-  if (!serviceObjectName && serviceObjectId) {
-    const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true } });
-    if (obj) serviceObjectName = obj.name;
+  // Resolve names and address from service object
+  let serviceAddress: string | null = null;
+  if (serviceObjectId) {
+    const obj = await prisma.serviceObject.findFirst({ where: { id: serviceObjectId }, select: { name: true, address: true } });
+    if (obj) {
+      if (!serviceObjectName) serviceObjectName = obj.name;
+      serviceAddress = obj.address || null;
+    }
   }
   let workerName = rec.workerName;
   if (!workerName && rec.workerId) {
@@ -421,6 +389,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
       serviceObjectId,
       serviceObjectName,
       elderName: elderName ?? undefined,
+      serviceAddress,
       serviceProject: sopResults?.service_project || null,
       assignmentConfidence: sopResults?.confidence ?? 0.5,
       reviewStatus: "needs_review",
