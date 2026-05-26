@@ -340,10 +340,16 @@ function RecordsList({ records, selectedId, onRowClick }: {
                 {!r.serviceObjectId ? <AlertTriangle size={12} className="sch-risk-icon" /> : null}
               </div>
               <div role="cell">{r.socialWorkerName ?? <span className="sw-text-muted">待确认</span>}</div>
-              <div role="cell">
-                {r.serviceProjects && r.serviceProjects.length > 0
-                  ? r.serviceProjects.map((p: string) => <span className="sw-tag" key={p}>{p}</span>)
-                  : <span className="sw-tag">{r.serviceProject ?? "未标注"}</span>}
+              <div role="cell" className="rec-projects-cell">
+                {(() => {
+                  const projects = r.serviceProjects?.length ? r.serviceProjects : [r.serviceProject ?? "未标注"];
+                  const show = projects.slice(0, 2);
+                  const rest = projects.length - 2;
+                  return <>
+                    {show.map((p: string) => <span className="sw-tag" key={p}>{p}</span>)}
+                    {rest > 0 && <span className="sw-tag sw-tag--more" title={projects.join("、")}>+{rest}</span>}
+                  </>;
+                })()}
               </div>
               <div role="cell"><span className="badges-code-tag">{r.badgeId.replace("badge-", "FW-")}</span></div>
               <div role="cell"><span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus] ?? r.reviewStatus}</span></div>
