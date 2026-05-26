@@ -700,8 +700,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                   完整对话记录 ({transcript.segments.length}条)
                   <button className="rec-download-btn" onClick={() => {
                     const text = transcript.segments.map((seg: any) => {
-                      const isW = seg.speaker === "social_worker" || seg.speaker === "社工";
-                      const name = isW ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
+                      const isW = seg.speaker === "社工";
+                      const name = isW ? (r.socialWorkerName ?? "服务人员") : seg.speaker === "老人" ? (r.serviceObjectName ?? "长者") : seg.speaker || "未知";
                       const raw = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : 0);
                       const m = Math.floor(raw / 60);
                       const s = raw % 60;
@@ -717,8 +717,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                 </h4>
                 <div className="rec-chat">
                   {transcript.segments.map((seg: any, i: number) => {
-                    const isWorker = seg.speaker === "social_worker" || seg.speaker === "社工";
-                    const name = isWorker ? (r.socialWorkerName ?? "服务人员") : (r.serviceObjectName ?? "长者");
+                    const isWorker = seg.speaker === "社工";
+                    const name = isWorker ? (r.socialWorkerName ?? "服务人员") : seg.speaker === "老人" ? (r.serviceObjectName ?? "长者") : seg.speaker || "未知";
                     const rawSeconds = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : null);
                     const mins = rawSeconds != null && !isNaN(rawSeconds) ? Math.floor(rawSeconds / 60) : null;
                     const secs = rawSeconds != null && !isNaN(rawSeconds) ? rawSeconds % 60 : null;
@@ -1063,8 +1063,8 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
             <div style={{ background: "#F8FAFC", padding: 14, borderRadius: 10, maxHeight: 400, overflowY: "auto", lineHeight: 1.8 }}>
               {Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0
                 ? rec.transcriptSegments.map((seg: any, i: number) => {
-                  const isWorker = seg.speaker === "社工" || seg.speaker?.includes("speaker_0") || seg.speaker?.includes("说话人0");
-                  const isElder = seg.speaker === "老人" || seg.speaker?.includes("speaker_1") || seg.speaker?.includes("说话人1");
+                  const isWorker = seg.speaker === "社工";
+                  const isElder = seg.speaker === "老人";
                   const displayName = isWorker && rec.workerName
                     ? `${rec.workerName}（社工）`
                     : isElder && rec.matchedServiceObjectName
