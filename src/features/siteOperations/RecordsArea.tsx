@@ -136,7 +136,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => setDrawer({ kind: "closed" }), []));
+  useEscClose(useCallback(() => { stopClip(); setDrawer({ kind: "closed" }); }, []));
 
   return (
     <>
@@ -277,7 +277,7 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
 
         {drawer.kind !== "closed" ? (
           <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => setDrawer({ kind: "closed" })} type="button" />
+            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => { stopClip(); setDrawer({ kind: "closed" }); }} type="button" />
             <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); setDrawer({ kind: "closed" }); }} onUpdated={handleUpdated} />
           </>
         ) : null}
@@ -559,7 +559,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isExpanded = collapsedGroups[group.sopName] === true;
               return (
                 <div className="so-tab-section" key={group.sopName}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] }))}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] })); }}}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
@@ -592,7 +592,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isScheduled = group._scheduled;
               return (
                 <div className="so-tab-section" key={`done-${group.sopName}`}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [`done-${group.sopName}`]: !prev[`done-${group.sopName}`] }))}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`done-${group.sopName}`]: !prev[`done-${group.sopName}`] })); }}}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
@@ -623,7 +623,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isExpanded = collapsedGroups[`diff-${group.sopName}`] === true;
               return (
                 <div className="so-tab-section" key={`diff-${group.sopName}`} style={{ borderLeft: "3px solid #FDBA74", paddingLeft: 12 }}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => setCollapsedGroups(prev => ({ ...prev, [`diff-${group.sopName}`]: !prev[`diff-${group.sopName}`] }))}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`diff-${group.sopName}`]: !prev[`diff-${group.sopName}`] })); }}}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
@@ -737,7 +737,7 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
 
   return (
     <div className="rec-si" data-status={item.status}>
-      <button className="rec-si__row" onClick={hasDetail ? onToggle : undefined} type="button" style={{ cursor: hasDetail ? "pointer" : "default" }}>
+      <button className="rec-si__row" onClick={hasDetail ? () => { stopClip(); onToggle(); } : undefined} type="button" style={{ cursor: hasDetail ? "pointer" : "default" }}>
         {itemStatusIcon(item.status)}
         <span className="rec-si__title">{item.title}</span>
         {hasExcerpts && excerpts[0].startTime ? (
