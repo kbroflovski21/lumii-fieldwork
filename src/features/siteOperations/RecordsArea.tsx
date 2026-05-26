@@ -620,7 +620,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                 const isScheduled = hasExpected && expectedSopNames.some((en: string) => en.includes(gName) || gName.includes(en));
                 const gItems = g.items ?? [];
                 const hasDone = gItems.some((i: any) => i.status === "completed" || i.status === "abnormal");
-                allDiffItems.push({ sopName: g.sopName, scheduled: isScheduled, done: hasDone });
+                if (isScheduled || hasDone) allDiffItems.push({ sopName: g.sopName, scheduled: isScheduled, done: hasDone });
               }
               // Add scheduled SOPs that have no matching group at all
               if (hasExpected) {
