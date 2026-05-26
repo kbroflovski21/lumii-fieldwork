@@ -128,8 +128,21 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
   }, [viewMode]);
 
   const filtered = records.filter((r) => {
+    if (dateFilter) {
+      const today = new Date().toISOString().slice(0, 10);
+      if (dateFilter === "today" && r.serviceDate !== today) return false;
+      if (dateFilter === "week") {
+        const now = new Date();
+        const ws = new Date(now); ws.setDate(ws.getDate() - ((ws.getDay() + 6) % 7));
+        const we = new Date(ws); we.setDate(we.getDate() + 6);
+        if (r.serviceDate < ws.toISOString().slice(0, 10) || r.serviceDate > we.toISOString().slice(0, 10)) return false;
+      }
+      if (dateFilter === "month") {
+        const ym = new Date().toISOString().slice(0, 7);
+        if (!r.serviceDate.startsWith(ym)) return false;
+      }
+    }
     if (reviewFilter && r.reviewStatus !== reviewFilter) return false;
-    if (exportFilter && r.exportStatus !== exportFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       if (!(r.serviceObjectName ?? "").toLowerCase().includes(q) && !(r.socialWorkerName ?? "").toLowerCase().includes(q)) return false;
@@ -158,13 +171,8 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
           <header className="sw-header">
             <div className="sw-header__title-group">
               <h2 className="sw-header__title">{viewMode === "records" ? "服务记录" : "录音记录"}</h2>
-              <p className="sw-header__desc">{viewMode === "records" ? "查看和复核已完成的服务事实，确认归属和导出结算材料" : "查看工牌录音原始数据，管理录音与服务记录的匹配关系"}</p>
+              <p className="sw-header__desc">{viewMode === "records" ? "查看和复核已完成的服务记录" : "查看工牌录音原始数据，管理录音与服务记录的匹配关系"}</p>
             </div>
-            {viewMode === "records" && (
-              <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} type="button">
-                <Download size={15} /> 导出记录
-              </button>
-            )}
           </header>
 
           {viewMode === "records" && (
@@ -181,7 +189,6 @@ export function RecordsArea({ resource, onMutate }: { resource: Resource<Service
                   ))}
                 </div>
                 <FilterDropdown onChange={(v) => setReviewFilter(v as ReviewFilter)} options={reviewFilterOptions} value={reviewFilter} />
-                <FilterDropdown onChange={(v) => setExportFilter(v as ExportFilter)} options={exportFilterOptions} value={exportFilter} />
               </div>
             </div>
 
@@ -319,10 +326,10 @@ function RecordsList({ records, selectedId, onRowClick }: {
           <span role="columnheader">日期/时间</span>
           <span role="columnheader">长者</span>
           <span role="columnheader">服务人员</span>
+          <span role="columnheader">服务地址</span>
           <span role="columnheader">服务内容</span>
           <span role="columnheader">工牌</span>
           <span role="columnheader">复核状态</span>
-          <span role="columnheader">导出状态</span>
         </div>
         {sorted.map((r) => {
           const color = avatarColor(r.serviceObjectName ?? "?");
@@ -340,6 +347,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
                 {!r.serviceObjectId ? <AlertTriangle size={12} className="sch-risk-icon" /> : null}
               </div>
               <div role="cell">{r.socialWorkerName ?? <span className="sw-text-muted">待确认</span>}</div>
+              <div role="cell" className="rec-address-cell">{r.serviceAddress ? <span title={r.serviceAddress}>{r.serviceAddress}</span> : <span className="sw-text-muted">—</span>}</div>
               <div role="cell" className="rec-projects-cell">
                 {(() => {
                   const projects = r.serviceProjects?.length ? r.serviceProjects : [r.serviceProject ?? "未标注"];
@@ -353,10 +361,6 @@ function RecordsList({ records, selectedId, onRowClick }: {
               </div>
               <div role="cell"><span className="badges-code-tag">{r.badgeId.replace("badge-", "FW-")}</span></div>
               <div role="cell"><span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus] ?? r.reviewStatus}</span></div>
-              <div role="cell">
-                <span className="sw-status-badge" data-tone={exportTone(r.exportStatus)}>{statusText[r.exportStatus] ?? r.exportStatus}</span>
-                {r.missingFields.length > 0 ? <small className="rec-missing-count">{r.missingFields.length}缺</small> : null}
-              </div>
             </div>
           );
         })}

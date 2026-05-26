@@ -4458,7 +4458,7 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 
 .rec-table__head,
 .rec-table__row {
-  grid-template-columns: 0.9fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.7fr;
+  grid-template-columns: 0.9fr 0.8fr 0.7fr 1fr 0.6fr 0.5fr 0.7fr;
 }
 
 .rec-table__row[data-exception="true"] {
@@ -7689,4 +7689,10 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 .rec-projects-cell { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
 .sw-tag--more {
   background: #F1F5F9; color: #64748B; font-weight: 500; cursor: default;
+}
+
+/* ── Record address cell (truncated) ── */
+.rec-address-cell {
+  max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: #64748B;
 }
