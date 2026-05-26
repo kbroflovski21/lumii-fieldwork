@@ -6,6 +6,7 @@ import { statusText } from "./contracts";
 import { authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
+import { useSite } from "../../auth/SiteContext";
 
 let _clipPlayer: HTMLAudioElement | null = null;
 let _clipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -806,16 +807,28 @@ function ServiceItemRow({ item, expanded, onToggle, itemStatusIcon, audioUrl }: 
 }
 
 function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record: ServiceRecord; mutationsDisabled: boolean; onUpdated: () => void }) {
+  const { currentSite } = useSite();
   const [editingWorker, setEditingWorker] = useState(false);
+  const [workerSearch, setWorkerSearch] = useState("");
   const [editingElder, setEditingElder] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [workers, setWorkers] = useState<Array<{ id: string; name: string }>>([]);
   const [elders, setElders] = useState<Array<{ id: string; name: string }>>([]);
+  const workerDropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    authFetch("/api/social-workers").then(r => r.json()).then(d => setWorkers((d.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })))).catch(() => {});
+    const siteId = currentSite?.id;
+    const wUrl = siteId ? `/api/social-workers?siteId=${siteId}` : "/api/social-workers";
+    authFetch(wUrl).then(r => r.json()).then(d => setWorkers((d.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })))).catch(() => {});
     authFetch("/api/service-objects").then(r => r.json()).then(d => setElders((d.serviceObjects ?? []).map((o: any) => ({ id: o.id, name: o.name })))).catch(() => {});
-  }, []);
+  }, [currentSite?.id]);
+
+  useEffect(() => {
+    if (!editingWorker) return;
+    const handler = (e: MouseEvent) => { if (workerDropRef.current && !workerDropRef.current.contains(e.target as Node)) setEditingWorker(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [editingWorker]);
 
   const updateField = async (updates: Record<string, any>) => {
     await authFetch(`/api/service-records/${r.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) });
@@ -836,16 +849,22 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
 
         <div className="so-overview-item"><dt>服务人员</dt><dd>
           {editingWorker ? (
-            <select autoFocus value={r.socialWorkerId ?? ""} onBlur={() => setEditingWorker(false)} onChange={async (e) => {
-              const w = workers.find(w => w.id === e.target.value);
-              await updateField({ socialWorkerId: e.target.value || null, socialWorkerName: w?.name ?? null });
-              setEditingWorker(false);
-            }}>
-              <option value="">未分配</option>
-              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            <div className="rec-worker-picker" ref={workerDropRef}>
+              <input className="rec-worker-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
+              <div className="rec-worker-picker__list">
+                <div className="rec-worker-picker__item" onClick={async () => { await updateField({ socialWorkerId: null, socialWorkerName: null }); setEditingWorker(false); setWorkerSearch(""); }}>
+                  <span style={{ color: "#94A3B8" }}>未分配</span>
+                </div>
+                {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
+                  <div key={w.id} className={`rec-worker-picker__item${w.id === r.socialWorkerId ? " rec-worker-picker__item--active" : ""}`}
+                    onClick={async () => { await updateField({ socialWorkerId: w.id, socialWorkerName: w.name }); setEditingWorker(false); setWorkerSearch(""); }}>
+                    {w.name}
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <span>{r.socialWorkerName ?? "未分配"} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingWorker(true)}><Edit3 size={12} /></button>}</span>
+            <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => setEditingWorker(true)}><Edit3 size={12} /></button>}</span>
           )}
         </dd></div>
 

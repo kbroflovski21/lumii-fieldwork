@@ -7600,3 +7600,25 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 6px;
   color: #9A3412; font-size: 12px; font-weight: 500;
 }
+
+/* ── Record worker picker (searchable dropdown) ── */
+.rec-worker-picker {
+  position: relative; width: 200px;
+}
+.rec-worker-picker__input {
+  width: 100%; height: 32px; padding: 0 8px; font-size: 13px;
+  border: 1.5px solid #0052CC; border-radius: 6px;
+  box-shadow: 0 0 0 3px rgba(0,82,204,0.1);
+  outline: none;
+}
+.rec-worker-picker__list {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+  max-height: 180px; overflow-y: auto;
+  background: #fff; border: 1px solid #E2E8F0; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 4px;
+}
+.rec-worker-picker__item {
+  padding: 7px 10px; font-size: 13px; cursor: pointer; color: #334155;
+}
+.rec-worker-picker__item:hover { background: #F0F5FF; }
+.rec-worker-picker__item--active { background: #EFF6FF; color: #0052CC; font-weight: 500; }
