@@ -326,7 +326,14 @@ async function createUnscheduledServiceRecord(rec: any, transcript: string): Pro
     }
   }
 
-  const serviceRecordId = await createOrUpdateServiceRecord(rec, serviceObjectId, serviceObjectName, null);
+  // If no match in DB, try to extract elder name from transcript (e.g. X阿姨/X爷爷/X奶奶)
+  let elderName: string | null = null;
+  if (!serviceObjectId) {
+    const nameMatch = (rec.transcriptText ?? "").match(/([^\s\n\[\]]{1,3}(?:阿姨|爷爷|奶奶|叔叔|大爷|大妈|婆婆))/);
+    if (nameMatch) elderName = nameMatch[1];
+  }
+
+  const serviceRecordId = await createOrUpdateServiceRecord(rec, serviceObjectId, serviceObjectName, null, [], elderName);
 
   await prisma.recording.update({
     where: { id: rec.id },
@@ -344,7 +351,7 @@ async function createUnscheduledServiceRecord(rec: any, transcript: string): Pro
 }
 
 // Create or update service record from a recording
-async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | null, serviceObjectName: string | null, scheduleId: string | null, expectedSops: Array<{sopId: string; sopName: string}> = []): Promise<string> {
+async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | null, serviceObjectName: string | null, scheduleId: string | null, expectedSops: Array<{sopId: string; sopName: string}> = [], elderName: string | null = null): Promise<string> {
   // Check if there's already a service record for this schedule (multi-recording aggregation)
   if (scheduleId) {
     const existingSched = await prisma.serviceSchedule.findFirst({ where: { id: scheduleId }, select: { serviceRecordId: true } });
@@ -413,6 +420,7 @@ async function createOrUpdateServiceRecord(rec: any, serviceObjectId: string | n
       socialWorkerName: workerName,
       serviceObjectId,
       serviceObjectName,
+      elderName: elderName ?? undefined,
       serviceProject: sopResults?.service_project || null,
       assignmentConfidence: sopResults?.confidence ?? 0.5,
       reviewStatus: "needs_review",
