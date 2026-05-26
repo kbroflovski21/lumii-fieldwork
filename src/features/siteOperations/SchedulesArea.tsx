@@ -7,6 +7,8 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 type ScheduleView = "list" | "calendar" | "map";
 
@@ -49,33 +51,28 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
-  const [dateFrom, setDateFrom] = useState(today);
-  const [dateTo, setDateTo] = useState(today);
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const [startDate, setStartDate] = useState<Date | null>(todayDate);
+  const [endDate, setEndDate] = useState<Date | null>(todayDate);
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const statusRef = useRef<HTMLDivElement>(null);
   const [statusDropOpen, setStatusDropOpen] = useState(false);
 
-  const datePresets: Array<{ label: string; from: string; to: string }> = (() => {
-    const d = (offset: number) => { const t = new Date(); t.setDate(t.getDate() + offset); return t.toISOString().slice(0, 10); };
-    const weekStart = (() => { const t = new Date(); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return t.toISOString().slice(0, 10); })();
-    const weekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 6); return t.toISOString().slice(0, 10); })();
-    const lastWeekStart = (() => { const t = new Date(weekStart); t.setDate(t.getDate() - 7); return t.toISOString().slice(0, 10); })();
-    const lastWeekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() - 1); return t.toISOString().slice(0, 10); })();
-    const nextWeekStart = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 7); return t.toISOString().slice(0, 10); })();
-    const nextWeekEnd = (() => { const t = new Date(weekStart); t.setDate(t.getDate() + 13); return t.toISOString().slice(0, 10); })();
-    return [
-      { label: "今天", from: today, to: today },
-      { label: "近3天", from: d(-2), to: today },
-      { label: "未来3天", from: today, to: d(2) },
-      { label: "本周", from: weekStart, to: weekEnd },
-      { label: "上周", from: lastWeekStart, to: lastWeekEnd },
-      { label: "下周", from: nextWeekStart, to: nextWeekEnd },
-      { label: "近30天", from: d(-29), to: today },
-      { label: "全部", from: "", to: "" },
-    ];
-  })();
+  useEffect(() => {
+    if (!statusDropOpen) return;
+    const handler = (e: MouseEvent) => { if (statusRef.current && !statusRef.current.contains(e.target as Node)) setStatusDropOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [statusDropOpen]);
 
-  const activePresetLabel = datePresets.find(p => p.from === dateFrom && p.to === dateTo)?.label;
+  const dateFrom = startDate ? startDate.toISOString().slice(0, 10) : "";
+  const dateTo = endDate ? endDate.toISOString().slice(0, 10) : "";
+
+  const applyPreset = (from: Date | null, to: Date | null) => { setStartDate(from); setEndDate(to); };
+  const d = (offset: number) => { const t = new Date(); t.setDate(t.getDate() + offset); t.setHours(0,0,0,0); return t; };
+  const weekStart = (() => { const t = new Date(); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); t.setHours(0,0,0,0); return t; })();
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
 
   const statusOptions = [
     { value: "unassigned", label: "待分配" },
@@ -135,25 +132,33 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
               </label>
               <div className="sw-toolbar__filters">
                 {view !== "calendar" && (
-                  <div className="sch-date-bar">
-                    <div className="sch-date-presets">
-                      {datePresets.map(p => (
-                        <button key={p.label} type="button" className={`sch-date-preset${(dateFrom === p.from && dateTo === p.to) ? " sch-date-preset--active" : ""}`}
-                          onClick={() => { setDateFrom(p.from); setDateTo(p.to); }}>{p.label}</button>
-                      ))}
-                    </div>
-                    <div className="sch-date-inputs">
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-                      <span>–</span>
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-                    </div>
+                  <div className="sch-date-picker-wrap">
+                    <DatePicker
+                      selectsRange
+                      startDate={startDate}
+                      endDate={endDate}
+                      onChange={([s, e]: [Date | null, Date | null]) => { setStartDate(s); setEndDate(e); }}
+                      dateFormat="yyyy/MM/dd"
+                      placeholderText="选择日期范围"
+                      className="sch-date-picker-input"
+                      isClearable
+                    >
+                      <div className="sch-date-picker-presets">
+                        <button type="button" onClick={() => applyPreset(todayDate, todayDate)}>今天</button>
+                        <button type="button" onClick={() => applyPreset(d(-2), todayDate)}>近3天</button>
+                        <button type="button" onClick={() => applyPreset(todayDate, d(2))}>未来3天</button>
+                        <button type="button" onClick={() => applyPreset(weekStart, weekEnd)}>本周</button>
+                        <button type="button" onClick={() => applyPreset(d(-6), todayDate)}>近7天</button>
+                        <button type="button" onClick={() => applyPreset(d(-29), todayDate)}>近30天</button>
+                        <button type="button" onClick={() => applyPreset(null, null)}>全部</button>
+                      </div>
+                    </DatePicker>
                   </div>
                 )}
-                <div className="sw-filter" style={{ position: "relative" }}>
-                  <button type="button" className={`sw-filter__trigger${statusFilters.length > 0 ? " sw-filter--active" : ""}`}
-                    onClick={() => setStatusDropOpen(!statusDropOpen)}>
-                    {statusLabel} <ChevronDown size={13} />
-                  </button>
+                <div className="sw-filter" ref={statusRef} style={{ position: "relative" }}>
+                  <select className={statusFilters.length > 0 ? "sw-filter--active" : ""} onMouseDown={(e) => { e.preventDefault(); setStatusDropOpen(!statusDropOpen); }} value="" readOnly>
+                    <option>{statusLabel}</option>
+                  </select>
                   {statusDropOpen && (
                     <div className="sw-filter__dropdown">
                       {statusOptions.map(opt => (

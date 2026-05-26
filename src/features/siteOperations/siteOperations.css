@@ -7557,40 +7557,29 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 }
 
 /* ── Date range inline fields ── */
-/* ── Schedule date bar ── */
-.sch-date-bar {
-  display: flex; flex-direction: column; gap: 6px;
+/* ── DatePicker range ── */
+.sch-date-picker-wrap { display: inline-block; }
+.sch-date-picker-input {
+  padding: 5px 10px; border: 1px solid #E2E8F0; border-radius: 8px;
+  font-size: 13px; color: #334155; width: 200px; cursor: pointer;
+  background: #fff;
 }
-.sch-date-presets {
-  display: flex; gap: 3px; flex-wrap: wrap;
+.sch-date-picker-input:focus { border-color: #0052CC; outline: none; }
+.sch-date-picker-presets {
+  display: flex; gap: 4px; flex-wrap: wrap; padding: 8px 10px; border-top: 1px solid #E2E8F0;
 }
-.sch-date-preset {
+.sch-date-picker-presets button {
   padding: 3px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;
   border: 1px solid #E2E8F0; background: #fff; color: #64748B;
-  transition: all 0.1s;
 }
-.sch-date-preset:hover { background: #F8FAFC; border-color: #CBD5E1; }
-.sch-date-preset--active {
-  border-color: #0052CC; background: #EFF6FF; color: #0052CC; font-weight: 500;
-}
-.sch-date-inputs {
-  display: flex; align-items: center; gap: 4px; font-size: 12px; color: #64748B;
-}
-.sch-date-inputs input[type="date"] {
-  padding: 3px 6px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 11px;
-}
+.sch-date-picker-presets button:hover { background: #EFF6FF; border-color: #0052CC; color: #0052CC; }
+.react-datepicker { font-family: inherit !important; font-size: 13px !important; }
+.react-datepicker__day--selected, .react-datepicker__day--in-range { background-color: #0052CC !important; }
+.react-datepicker__day--in-selecting-range { background-color: #BFDBFE !important; }
 
 /* ── Status multi-select dropdown ── */
-.sw-filter__trigger {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border: 1px solid #E2E8F0; border-radius: 8px;
-  background: #fff; font-size: 13px; color: #64748B; cursor: pointer;
-}
-.sw-filter__trigger.sw-filter--active {
-  border-color: #0052CC; color: #0052CC; background: #EFF6FF;
-}
 .sw-filter__dropdown {
-  position: absolute; top: calc(100% + 4px); right: 0; z-index: 50;
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 100;
   background: #fff; border: 1px solid #E2E8F0; border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 6px 0; min-width: 140px;
 }
