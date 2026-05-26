@@ -53,6 +53,7 @@ export interface ServiceTask {
   report?: ServiceReport;
   serviceObjectId?: string;
   serviceObjectContext?: any;
+  sopLinks?: Array<{ sopId: string; sopName: string }>;
 }
 
 interface ServiceContext {
@@ -1001,33 +1002,27 @@ function TaskDetailDrawer({
             )}
           </div>
 
-          {/* SOP checklist — tappable for details, AI-filled completion after service */}
+          {/* Service projects from schedule's sopLinks */}
           <div className="cw-sop-section">
-            <div className="cw-sop-section__title">SOP 执行清单{task.status === "pending" ? "（完成情况由AI自动分析）" : ""}</div>
+            <div className="cw-sop-section__title">服务项目</div>
             <div className="cw-sop-list">
-              {sopSteps.map((step, idx) => {
-                const done = sopChecked.has(idx);
-                const detail = sopDetails[idx]?.detail;
-                const isExpanded = expandedSop === idx;
-                return (
-                  <div key={idx} className="cw-sop-item" onClick={() => setExpandedSop(isExpanded ? null : idx)} style={{ cursor: "pointer" }}>
-                    <div className={`cw-sop-item__check ${done ? "cw-sop-item__check--done" : ""}`}>
-                      {done ? <IconCheck /> : <span style={{ fontSize: 11, color: "#94A3B8" }}>{idx + 1}</span>}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <span className={`cw-sop-item__label ${done ? "cw-sop-item__label--done" : ""}`}>
-                        {step}
-                      </span>
-                      {isExpanded && detail && (
-                        <div style={{ fontSize: 12, color: "#8C8279", lineHeight: 1.6, marginTop: 6, paddingRight: 8 }}>
-                          {detail}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ fontSize: 10, color: "#CBD5E1", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+              {(task.sopLinks && task.sopLinks.length > 0) ? task.sopLinks.map((link, idx) => (
+                <div key={link.sopId} className="cw-sop-item" onClick={() => setExpandedSop(expandedSop === idx ? null : idx)} style={{ cursor: "pointer" }}>
+                  <div className="cw-sop-item__check">
+                    <span style={{ fontSize: 11, color: "#EB6420" }}>{idx + 1}</span>
                   </div>
-                );
-              })}
+                  <div style={{ flex: 1 }}>
+                    <span className="cw-sop-item__label">{link.sopName}</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: "#CBD5E1" }}>▶</span>
+                </div>
+              )) : (
+                <div className="cw-sop-item">
+                  <div style={{ flex: 1 }}>
+                    <span className="cw-sop-item__label" style={{ color: "#94A3B8" }}>{task.serviceType || "未指定服务项目"}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1798,6 +1793,7 @@ export function CareworkerPage() {
             notes: s.notes || "",
             serviceObjectId: s.serviceObjectId,
             serviceObjectContext: s.serviceObjectContext,
+            sopLinks: s.sopLinks ?? [],
           }));
         setApiTasks(tasks);
         setTasksLoading(false);
