@@ -336,8 +336,8 @@ function RecordsList({ records, selectedId, onRowClick }: {
               </div>
               <div role="cell" className="sw-table__cell-name">
                 <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(r.serviceObjectName ?? "?")}</div>
-                <span className="sch-obj-name">{r.serviceObjectName ?? "待关联"}</span>
-                {r.assignmentConfidence < 0.7 ? <AlertTriangle size={12} className="sch-risk-icon" /> : null}
+                <span className="sch-obj-name">{r.serviceObjectName ?? r.elderName ?? "待关联"}</span>
+                {!r.serviceObjectId ? <AlertTriangle size={12} className="sch-risk-icon" /> : null}
               </div>
               <div role="cell">{r.socialWorkerName ?? <span className="sw-text-muted">待确认</span>}</div>
               <div role="cell">
