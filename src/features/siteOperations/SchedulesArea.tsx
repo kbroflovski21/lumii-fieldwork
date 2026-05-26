@@ -1,6 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2 } from "lucide-react";
+import { Search, X, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2 } from "lucide-react";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
@@ -9,24 +9,6 @@ import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 
 type ScheduleView = "list" | "calendar" | "map";
-type DateFilter = "" | "today" | "week" | "next_week";
-type StatusFilter = "" | ServiceScheduleOccurrence["status"];
-
-const dateFilterOptions: Array<{ label: string; value: DateFilter }> = [
-  { label: "全部", value: "" },
-  { label: "今天", value: "today" },
-  { label: "本周", value: "week" },
-  { label: "下周", value: "next_week" }
-];
-
-const statusFilterOptions: Array<{ label: string; value: StatusFilter }> = [
-  { label: "排期状态", value: "" },
-  { label: "待分配", value: "unassigned" },
-  { label: "待执行", value: "scheduled" },
-  { label: "执行中", value: "in_progress" },
-  { label: "已完成", value: "completed" },
-  { label: "已取消", value: "cancelled" }
-];
 
 function scheduleTone(status: string): string {
   if (status === "completed") return "success";
@@ -67,8 +49,10 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [dateFrom, setDateFrom] = useState(today);
+  const [dateTo, setDateTo] = useState(today);
+  const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;
   const mutationsDisabled = isMutationDisabled(operationalState);
@@ -81,7 +65,9 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
   }, [onMutate]);
 
   const filtered = schedules.filter((s) => {
-    if (statusFilter && s.status !== statusFilter) return false;
+    if (dateFrom && s.serviceDate < dateFrom) return false;
+    if (dateTo && s.serviceDate > dateTo) return false;
+    if (statusFilters.length > 0 && !statusFilters.includes(s.status)) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       if (!s.serviceObjectName.toLowerCase().includes(q) && !(s.addressSnapshot ?? "").toLowerCase().includes(q)) return false;
@@ -115,7 +101,28 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
                 <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或地址..." value={searchQuery} />
               </label>
               <div className="sw-toolbar__filters">
-                <FilterDropdown onChange={(v) => setStatusFilter(v as StatusFilter)} options={statusFilterOptions} value={statusFilter} />
+                <label className="sw-field sw-field--inline"><span>从</span>
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+                </label>
+                <label className="sw-field sw-field--inline"><span>至</span>
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                </label>
+              </div>
+            </div>
+            <div className="sw-toolbar" style={{ paddingTop: 0 }}>
+              <div className="sw-status-chips">
+                {[
+                  { value: "unassigned", label: "待分配" },
+                  { value: "scheduled", label: "待执行" },
+                  { value: "in_progress", label: "进行中" },
+                  { value: "completed", label: "已完成" },
+                  { value: "cancelled", label: "已取消" },
+                ].map(opt => (
+                  <button key={opt.value} type="button"
+                    className={`sw-status-chip${statusFilters.includes(opt.value) ? " sw-status-chip--active" : ""}`}
+                    onClick={() => setStatusFilters(prev => prev.includes(opt.value) ? prev.filter(v => v !== opt.value) : [...prev, opt.value])}
+                  >{opt.label}</button>
+                ))}
               </div>
             </div>
 
@@ -138,17 +145,6 @@ export function SchedulesArea({ resource, onMutate }: { resource: Resource<Servi
         ) : null}
       </section>
     </>
-  );
-}
-
-function FilterDropdown({ onChange, options, value }: { onChange: (v: string) => void; options: Array<{ label: string; value: string }>; value: string }) {
-  return (
-    <div className="sw-filter">
-      <select className={value ? "sw-filter--active" : ""} onChange={(e) => onChange(e.target.value)} value={value}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown size={14} />
-    </div>
   );
 }
 

@@ -421,6 +421,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [deletePlanConfirmId, setDeletePlanConfirmId] = useState<string | null>(null);
   const [cancelPlanConfirmId, setCancelPlanConfirmId] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   const color = avatarColor(obj.name);
   const status = compositeStateTone(obj);
@@ -445,6 +446,9 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
       if (data.error) { setGenerating(false); return; }
       setAiResult(data);
       setSelectedSopIds((data.matchedSops ?? []).map((s: any) => s.id));
+      if (data.matchedWorker) {
+        setPlanWorkerId(data.matchedWorker.id);
+      }
     } catch {}
     setGenerating(false);
   };
@@ -605,8 +609,31 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                 <div className="so-overview-item"><dt>性别</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
                 <div className="so-overview-item"><dt>服务资格</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
                 <div className="so-overview-item"><dt>服务套餐</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
-                <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : obj.address}</dd></div>
-                {!editingBasic && obj.mapDisplayPoint ? <div className="so-overview-item so-overview-item--full"><dt>地图点</dt><dd>{obj.mapDisplayPoint.label ?? `${obj.mapDisplayPoint.latitude}, ${obj.mapDisplayPoint.longitude}`}</dd></div> : null}
+                <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd className="so-address-cell">{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : (
+                  <>
+                    <span>{obj.address || "—"}</span>
+                    {obj.address && (
+                      <button className="so-map-btn" type="button" onClick={() => setShowMap(!showMap)} title="查看地图">
+                        <MapPin size={14} />
+                      </button>
+                    )}
+                  </>
+                )}</dd></div>
+                {showMap && obj.address && (
+                  <div className="so-overview-item so-overview-item--full" style={{ gridColumn: "1 / -1" }}>
+                    <div className="so-map-popup">
+                      <div className="so-map-popup__header">
+                        <span>地图位置</span>
+                        <button onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
+                      </div>
+                      <iframe
+                        className="so-map-popup__frame"
+                        src={`https://uri.amap.com/search?keyword=${encodeURIComponent(obj.address)}&src=goldenyears`}
+                        title="地图"
+                      />
+                    </div>
+                  </div>
+                )}
               </dl>
               {editingBasic && (
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>

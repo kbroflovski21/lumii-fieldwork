@@ -7546,3 +7546,40 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   background: var(--site-bg, #F5F0EA);
   border-radius: 0 0 12px 12px;
 }
+
+/* ── Date range inline fields ── */
+.sw-field--inline {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+}
+.sw-field--inline input[type="date"] {
+  padding: 4px 6px; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 12px;
+}
+
+/* ── Status multi-select chips ── */
+.sw-status-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.sw-status-chip {
+  padding: 3px 8px; border-radius: 12px; font-size: 11px; cursor: pointer;
+  border: 1px solid #CBD5E1; background: #fff; color: #64748B;
+}
+.sw-status-chip--active {
+  border-color: #0052CC; background: #EFF6FF; color: #0052CC; font-weight: 500;
+}
+
+/* ── Address cell with map button ── */
+.so-address-cell { display: flex; align-items: center; gap: 6px; }
+.so-map-btn {
+  background: none; border: none; cursor: pointer; color: #0052CC; padding: 2px;
+  display: inline-flex; align-items: center;
+}
+.so-map-btn:hover { color: #003D99; }
+.so-map-popup {
+  border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden;
+  margin-top: 8px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.so-map-popup__header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+  font-size: 13px; font-weight: 500;
+}
+.so-map-popup__header button { background: none; border: none; cursor: pointer; color: #64748B; }
+.so-map-popup__frame { width: 100%; height: 250px; border: none; }

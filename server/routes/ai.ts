@@ -531,6 +531,13 @@ export function aiRoutes() {
     });
     const sopList = sops.map(s => `- ID: ${s.id}, 名称: ${s.name}, 关键词: ${JSON.stringify(s.keywords)}`).join("\n");
 
+    // Fetch active workers for name matching
+    const workers = await prisma.socialWorker.findMany({
+      where: { status: "active" },
+      select: { id: true, name: true, siteId: true },
+    });
+    const workerList = workers.map(w => `- ID: ${w.id}, 姓名: ${w.name}`).join("\n");
+
     const now = new Date();
     const currentDate = today || now.toISOString().slice(0, 10);
     const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -556,6 +563,10 @@ export function aiRoutes() {
 服务项目匹配：根据用户描述的服务内容，从以下已有服务项目中匹配：
 ${sopList}
 
+服务人员匹配：如果用户描述中提到了具体的服务人员姓名（如"让王丽去"、"安排张敏"等），从以下服务人员列表中匹配：
+${workerList}
+如果匹配到，在输出中加入 "matchedWorkerId" 和 "matchedWorkerName" 字段。如果没有提到具体人员，这两个字段为null。
+
 输出严格JSON格式，不要输出其他文字：
 {
   "plan": {
@@ -567,6 +578,8 @@ ${sopList}
     "serviceContent": "用户描述的服务内容摘要"
   },
   "matchedSopIds": ["sop-id-1", "sop-id-2"],
+  "matchedWorkerId": "worker-id or null",
+  "matchedWorkerName": "worker name or null",
   "preview": [
     { "date": "YYYY-MM-DD", "dayLabel": "周X", "timeLabel": "上午/下午 HH:MM-HH:MM" }
   ]
@@ -615,6 +628,7 @@ preview只输出前3条。matchedSopIds只包含上面列表中存在的ID。`;
       res.json({
         plan,
         matchedSops,
+        matchedWorker: parsed.matchedWorkerId ? { id: parsed.matchedWorkerId, name: parsed.matchedWorkerName } : null,
         preview,
       });
     } catch (err: any) {
