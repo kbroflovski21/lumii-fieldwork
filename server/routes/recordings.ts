@@ -117,12 +117,21 @@ export function recordingInternalRoutes() {
     }
     if (!workerName) workerName = b.workerName ?? null;
 
+    // Resolve siteId from badge so matching is scoped to the correct station
+    let siteId = "site-001";
+    const badge = await prisma.smartBadge.findFirst({
+      where: { OR: [{ deviceCode: b.badgeId }, { id: b.badgeId }] },
+      select: { siteId: true },
+    });
+    if (badge) siteId = badge.siteId;
+
     const id = genId("rec");
     await prisma.recording.create({
       data: {
         id,
         sessionId: b.sessionId,
         badgeId: b.badgeId,
+        siteId,
         workerId: b.workerId ?? null,
         workerName,
         startedAt: b.startedAt ? new Date(b.startedAt) : new Date(),
@@ -202,6 +211,7 @@ async function autoMatchRecording(recordingId: string): Promise<{ matched: boole
   const where: any = {
     serviceDate: { in: [toBeijingDate(yesterday), recDate, toBeijingDate(tomorrow)] },
     status: { in: ["scheduled", "assigned", "in_progress"] },
+    siteId: rec.siteId,
   };
 
   // If we know the worker, filter by their assignments
@@ -319,7 +329,7 @@ async function createUnscheduledServiceRecord(rec: any, transcript: string): Pro
   let serviceObjectId: string | null = null;
   let serviceObjectName: string | null = null;
 
-  const allObjects = await prisma.serviceObject.findMany({ select: { id: true, name: true } });
+  const allObjects = await prisma.serviceObject.findMany({ where: { siteId: rec.siteId }, select: { id: true, name: true } });
   for (const obj of allObjects) {
     if (obj.name && transcript.includes(obj.name.toLowerCase())) {
       serviceObjectId = obj.id;
