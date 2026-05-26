@@ -559,7 +559,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isExpanded = collapsedGroups[group.sopName] === true;
               return (
                 <div className="so-tab-section" key={group.sopName}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] })); }}}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] })); }}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
@@ -592,7 +592,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isScheduled = group._scheduled;
               return (
                 <div className="so-tab-section" key={`done-${group.sopName}`}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`done-${group.sopName}`]: !prev[`done-${group.sopName}`] })); }}}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`done-${group.sopName}`]: !prev[`done-${group.sopName}`] })); }}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats"><span className="rec-si-stats__done">{gCompleted}/{gItems.length} 完成</span></span>
@@ -623,7 +623,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const isExpanded = collapsedGroups[`diff-${group.sopName}`] === true;
               return (
                 <div className="so-tab-section" key={`diff-${group.sopName}`} style={{ borderLeft: "3px solid #FDBA74", paddingLeft: 12 }}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`diff-${group.sopName}`]: !prev[`diff-${group.sopName}`] })); }}}>
+                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [`diff-${group.sopName}`]: !prev[`diff-${group.sopName}`] })); }}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
