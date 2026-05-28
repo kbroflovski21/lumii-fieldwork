@@ -107,7 +107,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   // URL -> drawer sync
   useEffect(() => {
     if (routeId === "activate") {
-      navigate("/badges/activate");
+      setDrawer({ kind: "activate" });
     } else if (routeId) {
       const badge = badges.find(b => b.id === routeId);
       if (badge) setDrawer({ kind: "view", badge });

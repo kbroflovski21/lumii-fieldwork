@@ -117,7 +117,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   // URL -> drawer sync
   useEffect(() => {
     if (routeId === "new") {
-      navigate("/workers/new");
+      setDrawer({ kind: "create" });
     } else if (routeId) {
       const worker = workers.find(w => w.id === routeId);
       if (worker) setDrawer({ kind: "view", worker });
