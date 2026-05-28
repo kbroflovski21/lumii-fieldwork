@@ -166,14 +166,15 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
     }
   }, [routeId, recordings, viewMode]);
 
+  const [recordingsFetched, setRecordingsFetched] = useState(false);
   useEffect(() => {
-    if (viewMode !== "recordings") return;
+    if (viewMode !== "recordings" || recordingsFetched) return;
     setRecordingsLoading(true);
     authFetch("/api/recordings")
       .then(r => r.json())
-      .then(data => { setRecordings(data.recordings ?? []); setRecordingsLoading(false); })
+      .then(data => { setRecordings(data.recordings ?? []); setRecordingsLoading(false); setRecordingsFetched(true); })
       .catch(() => setRecordingsLoading(false));
-  }, [viewMode]);
+  }, [viewMode, recordingsFetched]);
 
   const filtered = records.filter((r) => {
     if (dateFilter) {
