@@ -116,7 +116,9 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
 
   // URL -> drawer sync
   useEffect(() => {
-    if (routeId) {
+    if (routeId === "new") {
+      navigate("/workers/new");
+    } else if (routeId) {
       const worker = workers.find(w => w.id === routeId);
       if (worker) setDrawer({ kind: "view", worker });
     } else {
@@ -172,7 +174,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
               <button
                 className="sw-btn sw-btn--primary"
                 disabled={mutationsDisabled}
-                onClick={() => setDrawer({ kind: "create" })}
+                onClick={() => navigate("/workers/new")}
                 type="button"
               >
                 <Plus size={15} />
@@ -214,7 +216,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
                 isEmpty={resource.status === "success" && workers.length === 0}
                 isFilterEmpty={resource.status === "success" && workers.length > 0 && filtered.length === 0}
                 mutationsDisabled={mutationsDisabled}
-                onCreateClick={() => setDrawer({ kind: "create" })}
+                onCreateClick={() => navigate("/workers/new")}
                 onRowClick={openDrawer}
                 onNameClick={openDrawer}
                 selectedId={selectedId}

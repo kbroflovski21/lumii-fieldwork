@@ -106,7 +106,9 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
 
   // URL -> drawer sync
   useEffect(() => {
-    if (routeId) {
+    if (routeId === "activate") {
+      navigate("/badges/activate");
+    } else if (routeId) {
       const badge = badges.find(b => b.id === routeId);
       if (badge) setDrawer({ kind: "view", badge });
     } else {
@@ -147,7 +149,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
           <button
             className="sw-btn sw-btn--primary"
             disabled={mutationsDisabled}
-            onClick={() => setDrawer({ kind: "activate" })}
+            onClick={() => navigate("/badges/activate")}
             type="button"
           >
             <Plus size={15} />
@@ -181,7 +183,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
             isEmpty={resource.status === "success" && badges.length === 0}
             isFilterEmpty={resource.status === "success" && badges.length > 0 && filtered.length === 0}
             mutationsDisabled={mutationsDisabled}
-            onActivateClick={() => setDrawer({ kind: "activate" })}
+            onActivateClick={() => navigate("/badges/activate")}
             onRowClick={openDrawer}
             onCodeClick={openDrawer}
             selectedId={selectedId}
@@ -205,7 +207,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
 
   if (drawer.kind === "activate") {
     return (
-      <ActivateDrawer onClose={closeDrawer} onActivated={handleBadgeActivated} />
+      <ActivateDrawer onClose={closeDrawer} onActivated={handleBadgeActivated} onViewBadge={(id) => navigate(`/badges/${id}`)} />
     );
   }
 
@@ -488,7 +490,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   );
 }
 
-function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActivated: () => void }) {
+function ActivateDrawer({ onClose, onActivated, onViewBadge }: { onClose: () => void; onActivated: () => void; onViewBadge?: (id: string) => void }) {
   const { currentSite } = useSite();
   const [deviceCode, setDeviceCode] = useState("");
   const [step, setStep] = useState<"input" | "confirm" | "done">("input");
@@ -549,8 +551,8 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
               <strong style={{ fontSize: 16 }}>激活成功</strong>
               <p style={{ color: "var(--site-muted)", marginTop: 4 }}>{result?.deviceCode} 已绑定到 {result?.siteName}</p>
               <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
-                <button className="sw-btn sw-btn--secondary" onClick={() => { onActivated(); }} type="button">查看设备详情</button>
-                <button className="sw-btn sw-btn--primary" onClick={() => { onActivated(); setDeviceCode(""); setStep("input"); setResult(null); }} type="button">继续激活</button>
+                <button className="sw-btn sw-btn--secondary" onClick={() => { onActivated(); if (result) onViewBadge?.(result.id); }} type="button">查看设备详情</button>
+                <button className="sw-btn sw-btn--primary" onClick={() => { setDeviceCode(""); setStep("input"); setResult(null); setError(""); }} type="button">继续激活</button>
               </div>
             </div>
           )}
