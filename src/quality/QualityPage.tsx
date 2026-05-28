@@ -316,12 +316,13 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
           {view === "sites" && <SitesView />}
           {view === "users" && <UsersView />}
         </>
+      ) : view === "feishu" ? (
+        <FeishuView />
       ) : (
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
           {view === "sites" && <SitesView />}
           {view === "users" && <UsersView />}
-          {view === "feishu" && <FeishuView />}
         </div>
       )}
     </div>
@@ -1612,7 +1613,8 @@ function FeishuView() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  useEscClose(useCallback(() => { if (editUser) setEditUser(null); }, [editUser]));
+  const closeEdit = useCallback(() => setEditUser(null), []);
+  useEscClose(closeEdit);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
@@ -1666,14 +1668,17 @@ function FeishuView() {
       {editUser ? (
         <div className="detail-page">
           <div className="detail-page__header">
-            <button className="detail-page__back" onClick={() => setEditUser(null)} type="button" aria-label="返回">
+            <button className="detail-page__back" onClick={closeEdit} type="button" aria-label="返回">
               <ChevronLeft size={18} />
             </button>
-            <button className="detail-page__breadcrumb" onClick={() => setEditUser(null)} type="button">
+            <button className="detail-page__breadcrumb" onClick={closeEdit} type="button">
               飞书管理
             </button>
             <span className="detail-page__sep">/</span>
             <span className="detail-page__title">{editUser.name || editUser.openId}</span>
+            <div className="detail-page__actions">
+              <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => { setConfirmAction({ type: "delete", user: editUser }); }} type="button">删除</button>
+            </div>
           </div>
           <div className="detail-page__body">
             <div className="dp-card">
@@ -1723,7 +1728,7 @@ function FeishuView() {
           </div>
         </div>
       ) : (
-        <>
+        <div className="quality-content">
           <div className="quality-records__header">
             <div>
               <div className="quality-records__title">飞书管理</div>
@@ -1779,7 +1784,7 @@ function FeishuView() {
               </table>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {confirmAction && (
