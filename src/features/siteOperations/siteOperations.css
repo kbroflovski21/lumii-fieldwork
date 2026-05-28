@@ -7763,15 +7763,16 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   padding-top: 8px;
   border-top: 1px solid var(--site-line);
 }
-.site-operations-sidebar__profile-card {
+button.site-operations-sidebar__profile-card {
   display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 4px 8px; border-radius: 8px;
-  cursor: default;
+  width: 100%; padding: 6px 8px; border-radius: 8px;
+  cursor: pointer; border: none; background: none;
+  text-align: left; font-family: inherit;
 }
-.site-operations-sidebar__profile-card .so-shell__avatar {
-  width: 28px; height: 28px; font-size: 12px;
+button.site-operations-sidebar__profile-card .so-shell__avatar {
+  width: 28px; height: 28px; font-size: 12px; flex-shrink: 0;
 }
-.site-operations-sidebar__profile-card:hover { background: #F1F5F9; }
+button.site-operations-sidebar__profile-card:hover { background: #F1F5F9; }
 .site-operations-sidebar__profile-info {
   display: flex; flex-direction: column; min-width: 0; overflow: hidden;
 }

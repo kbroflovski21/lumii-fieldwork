@@ -117,20 +117,7 @@ export function QualityLayout() {
             })}
           </div>
           <div className="site-operations-sidebar__footer">
-            {sidebarCollapsed ? (
-              <ProfileMenu />
-            ) : (
-              <div className="site-operations-sidebar__profile-card" onClick={(e) => {
-                const avatar = e.currentTarget.querySelector('.so-shell__avatar') as HTMLButtonElement | null;
-                if (avatar && e.target !== avatar) avatar.click();
-              }}>
-                <ProfileMenu />
-                <div className="site-operations-sidebar__profile-info">
-                  <span className="site-operations-sidebar__profile-name">{user?.name ?? "用户"}</span>
-                  <span className="site-operations-sidebar__profile-role">集团管理</span>
-                </div>
-              </div>
-            )}
+            <ProfileMenu expanded={!sidebarCollapsed} roleName="集团管理" />
           </div>
           <button className="site-operations-sidebar__divider-toggle" onClick={toggleSidebar} type="button" title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}>
             {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}

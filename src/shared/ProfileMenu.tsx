@@ -16,7 +16,7 @@ function hashNameToColor(name: string): string {
   return `hsl(${hue}, 55%, 48%)`;
 }
 
-export function ProfileMenu() {
+export function ProfileMenu({ expanded, roleName }: { expanded?: boolean; roleName?: string } = {}) {
   const { user, token, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ left: number; bottom: number } | null>(null);
@@ -66,13 +66,21 @@ export function ProfileMenu() {
       <div className="so-shell__profile">
         <button
           ref={avatarRef}
-          className="so-shell__avatar"
+          className={expanded ? "site-operations-sidebar__profile-card" : "so-shell__avatar"}
           onClick={toggleMenu}
           aria-label="用户菜单"
-          style={{ background: hashNameToColor(user?.name ?? "") }}
+          style={expanded ? undefined : { background: hashNameToColor(user?.name ?? "") }}
           type="button"
         >
-          {(user?.name ?? "U")[0]}
+          {expanded ? (
+            <>
+              <span className="so-shell__avatar" style={{ background: hashNameToColor(user?.name ?? ""), pointerEvents: "none" }}>{(user?.name ?? "U")[0]}</span>
+              <span className="site-operations-sidebar__profile-info">
+                <span className="site-operations-sidebar__profile-name">{user?.name ?? "用户"}</span>
+                <span className="site-operations-sidebar__profile-role">{roleName ?? "站点运营"}</span>
+              </span>
+            </>
+          ) : (user?.name ?? "U")[0]}
         </button>
       </div>
 
