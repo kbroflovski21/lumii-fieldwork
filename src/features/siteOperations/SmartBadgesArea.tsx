@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
+import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, Smartphone, Battery, Clock, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
@@ -323,7 +324,6 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   onOpenRecords?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("info");
-  const [confirmAction, setConfirmAction] = useState<"disable" | "lost" | null>(null);
   const [selectedWorker, setSelectedWorker] = useState(badge.preferredWorkerId ?? "");
   const [recordsData, setRecordsData] = useState<any>(null);
 
@@ -338,7 +338,6 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
       await siteOperationsApi.updateSmartBadge(badge.id, { status: newStatus });
       onUpdated();
     } catch { /* noop */ }
-    setConfirmAction(null);
   };
 
   const [editingWorker, setEditingWorker] = useState(false);
@@ -365,24 +364,10 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
       try { await siteOperationsApi.updateSmartBadge(badge.id, { status: "available" }); onUpdated(); } catch {}
     }} type="button">激活此工牌</button>
   ) : canDisableOrLose(badge.status) && !mutationsDisabled ? (
-    confirmAction === "disable" ? (
-      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 13, color: "#B54E34" }}>确认停用？</span>
-        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={() => handleStatusChange("disabled")} type="button">确认停用</button>
-        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setConfirmAction(null)} type="button">取消</button>
-      </span>
-    ) : confirmAction === "lost" ? (
-      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 13, color: "#B54E34" }}>确认丢失？</span>
-        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={() => handleStatusChange("lost")} type="button">确认丢失</button>
-        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setConfirmAction(null)} type="button">取消</button>
-      </span>
-    ) : (
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmAction("disable")} type="button">停用</button>
-        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmAction("lost")} type="button">标记丢失</button>
-      </div>
-    )
+    <div style={{ display: "flex", gap: 8 }}>
+      <ConfirmAction label="停用" onConfirm={() => handleStatusChange("disabled")} buttonStyle={{ height: 28, fontSize: 12 }} />
+      <ConfirmAction label="标记丢失" onConfirm={() => handleStatusChange("lost")} buttonStyle={{ height: 28, fontSize: 12 }} />
+    </div>
   ) : canRestore(badge.status) && !mutationsDisabled ? (
     <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => handleStatusChange("available")} type="button"><RefreshCw size={14} /> 恢复为可用</button>
   ) : undefined;

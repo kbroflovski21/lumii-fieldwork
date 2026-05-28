@@ -2,9 +2,10 @@ import { useEscClose } from "./useEscClose";
 import { formatDateWithDay, formatWindow } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
+import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { Search, X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -527,7 +528,6 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   schedule: ServiceScheduleOccurrence; mutationsDisabled: boolean; onClose: () => void;
   onUpdated: () => void;
 }) {
-  const [showCancel, setShowCancel] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [editingTime, setEditingTime] = useState(false);
   const [editingWorker, setEditingWorker] = useState(false);
@@ -596,21 +596,12 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
       await siteOperationsApi.updateServiceScheduleOccurrence(s.id, { status: "cancelled" });
       onUpdated();
     } catch { /* noop */ }
-    setShowCancel(false);
   };
 
   const historyItems = ((s as any).adjustmentHistory ?? []) as Array<{ action: string; detail: string; operatorName: string; adjustedAt: string }>;
 
   const cancelAction = canAdjust && !mutationsDisabled ? (
-    showCancel ? (
-      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 13, color: "#B54E34" }}>确认取消？</span>
-        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">确认取消</button>
-        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowCancel(false)} type="button">返回</button>
-      </span>
-    ) : (
-      <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setShowCancel(true)} type="button"><Ban size={14} /> 取消排期</button>
-    )
+    <ConfirmAction label="取消排期" onConfirm={handleCancel} buttonStyle={{ height: 28, fontSize: 12 }} />
   ) : undefined;
 
   const filteredWorkers = workerSearch

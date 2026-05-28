@@ -2,6 +2,7 @@ import { useEscClose } from "./useEscClose";
 import { formatTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
+import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
@@ -333,7 +334,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onUpdated: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [viewingRecord, setViewingRecord] = useState<ServiceRecord | null>(null);
   const [savedSchedules, setSavedSchedules] = useState<Array<{ id: string; serviceDate: string; serviceProject: string; status: string; timeWindow?: any; assignedSocialWorkerName?: string; assignedSocialWorkerId?: string; source?: string; servicePlanId?: string }>>([]);
   const [savedPlans, setSavedPlans] = useState<any[]>([]);
@@ -537,15 +537,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
 
   const headerActions = (
     <>
-      {showArchiveConfirm ? (
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, color: "#B54E34" }}>确认归档？</span>
-          <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} type="button">确认归档</button>
-          <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowArchiveConfirm(false)} type="button">取消</button>
-        </span>
-      ) : (
-        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={() => setShowArchiveConfirm(true)} type="button">归档</button>
-      )}
+      <ConfirmAction label="归档" onConfirm={() => {}} disabled={mutationsDisabled} buttonStyle={{ height: 28, fontSize: 12 }} />
       <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={openAiScheduler} type="button">
         <CalendarPlus size={14} /> 安排服务
       </button>

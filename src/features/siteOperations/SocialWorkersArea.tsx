@@ -2,6 +2,7 @@ import { useEscClose } from "./useEscClose";
 import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
+import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, UserRound, Phone, Award, Edit3, ThumbsUp } from "lucide-react";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
@@ -386,7 +387,6 @@ function ViewModal({
   worker: SocialWorker;
 }) {
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showBadgeSelect, setShowBadgeSelect] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState(worker.preferredBadge?.badgeId ?? "");
   const [resetPwdResult, setResetPwdResult] = useState<string | null>(null);
@@ -447,14 +447,8 @@ function ViewModal({
     { id: "praise", label: "好评记录" },
   ];
 
-  const archiveAction = showArchiveConfirm ? (
-    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <span style={{ fontSize: 13, color: "#B54E34" }}>确认归档？</span>
-      <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} type="button">确认归档</button>
-      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowArchiveConfirm(false)} type="button">取消</button>
-    </span>
-  ) : (
-    <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={() => setShowArchiveConfirm(true)} type="button">归档人员</button>
+  const archiveAction = (
+    <ConfirmAction label="归档人员" onConfirm={() => {}} disabled={mutationsDisabled} buttonStyle={{ height: 28, fontSize: 12 }} />
   );
 
   return (
