@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Bot, Edit3, ChevronDown, ChevronLeft } from "lucide-react";
+import { Bot, Edit3, ChevronDown, ChevronLeft, Check } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
@@ -1683,18 +1683,28 @@ function FeishuView() {
           <div className="detail-page__body">
             <div className="dp-card">
               <div className="dp-card__body">
+                {/* 基本信息 */}
+                <div className="dp-section">
+                  <div className="dp-section__head">
+                    <h4 className="dp-section__title">基本信息</h4>
+                  </div>
+                  <dl className="dp-fields">
+                    <div className="dp-field"><dt>飞书昵称</dt><dd>{editUser.name || editUser.openId}</dd></div>
+                    <div className="dp-field"><dt>Open ID</dt><dd><code style={{ fontSize: 11, fontFamily: "monospace", color: "var(--site-muted)", background: "var(--site-muted-bg)", padding: "2px 6px", borderRadius: 4 }}>{editUser.openId}</code></dd></div>
+                    <div className="dp-field"><dt>注册时间</dt><dd>{new Date(editUser.createdAt).toLocaleDateString("zh-CN")}</dd></div>
+                  </dl>
+                </div>
+
+                {/* 角色设置 */}
                 <div className="dp-section">
                   <div className="dp-section__head">
                     <h4 className="dp-section__title">角色设置</h4>
                   </div>
                   <dl className="dp-fields">
-                    <div className="dp-field"><dt>飞书昵称</dt><dd>{editUser.name || editUser.openId}</dd></div>
-                    <div className="dp-field"><dt>Open ID</dt><dd style={{ fontSize: 11, fontFamily: "monospace" }}>{editUser.openId}</dd></div>
-                    <div className="dp-field"><dt>注册时间</dt><dd>{new Date(editUser.createdAt).toLocaleDateString("zh-CN")}</dd></div>
                     <div className="dp-field">
                       <dt>角色</dt>
                       <dd>
-                        <select value={editRole} onChange={e => setEditRole(e.target.value)}>
+                        <select value={editRole} onChange={e => setEditRole(e.target.value)} style={{ width: "100%" }}>
                           <option value="unset">未分配</option>
                           <option value="org_admin">集团管理</option>
                           <option value="service_supervisor">服务主管</option>
@@ -1705,23 +1715,36 @@ function FeishuView() {
                       <div className="dp-field dp-field--full">
                         <dt>管理站点</dt>
                         <dd>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            {sites.map(s => (
-                              <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                                <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
-                                  setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
-                                }} />
-                                {s.name}
-                              </label>
-                            ))}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {sites.map(s => {
+                              const selected = editSiteIds.includes(s.id);
+                              return (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={() => setEditSiteIds(selected ? editSiteIds.filter(x => x !== s.id) : [...editSiteIds, s.id])}
+                                  style={{
+                                    display: "inline-flex", alignItems: "center", gap: 6,
+                                    padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                                    cursor: "pointer", transition: "all 150ms", fontFamily: "inherit",
+                                    border: `1.5px solid ${selected ? "var(--site-accent)" : "var(--site-line)"}`,
+                                    background: selected ? "var(--site-accent-soft)" : "transparent",
+                                    color: selected ? "var(--site-accent)" : "var(--site-text)",
+                                  }}
+                                >
+                                  {selected ? <Check size={14} /> : <span style={{ width: 14 }} />}
+                                  {s.name}
+                                </button>
+                              );
+                            })}
                           </div>
                         </dd>
                       </div>
                     )}
                   </dl>
-                </div>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button className="sw-btn sw-btn--primary" disabled={editSubmitting} onClick={saveEdit} type="button">{editSubmitting ? "保存中..." : "保存"}</button>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                    <button className="sw-btn sw-btn--primary" disabled={editSubmitting} onClick={saveEdit} type="button">{editSubmitting ? "保存中..." : "保存"}</button>
+                  </div>
                 </div>
               </div>
             </div>
