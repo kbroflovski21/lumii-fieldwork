@@ -178,24 +178,58 @@ Order by complexity (simple first):
 - Verify browser back button returns to list
 - Verify nested modals (ConfirmDialog etc.) still work on top of detail pages
 
-## 6. Files Changed
+## 6. Additional Features Implemented
+
+### Card-based detail page layout (`dp-*` CSS system)
+- `dp-card` — white card with border + rounded corners
+- `dp-tabs` / `dp-tabs__btn` — tab bar at card top with rounded top corners
+- `dp-card__body` — card content area
+- `dp-section` / `dp-section__head` / `dp-section__title` — section grouping with dividers
+- `dp-fields` / `dp-field` / `dp-field--full` — 3-column responsive field grid (1-column on mobile)
+- `dp-field--editable` — position:relative anchor for floating popovers
+- `dp-field-popover` — floating edit panel (position:absolute, shadow, border)
+- `dp-section__edit-btn` — pencil icon edit trigger on field labels
+
+### Per-field inline editing (SchedulesArea)
+- Worker: searchable dropdown (text filter + multi-line select) in floating popover
+- Service time: merged date+time with react-datepicker in floating popover
+- Address: inline expanding map with leaflet + 高德 tiles
+
+### Sidebar sub-menu (recordings)
+- `/recordings` as independent route with sidebar sub-item under "服务记录"
+- Chevron indicator (expand/collapse) on parent menu item
+- RecordingDrawer converted to DetailPageShell full-page detail
+
+### Compact layout
+- All content padding: 24px → 16px
+- Page titles + subtitles: vertical → horizontal inline
+- Header min-height: 36px for consistency with/without buttons
+
+### Performance optimizations
+- Recordings list API: Prisma `select` excludes heavy fields (419KB → 15KB)
+- 18 database indexes added for query performance
+- Shared `AddressMap` component extracted for reuse
+
+## 7. Files Changed
 
 ### New files
-- `src/shared/DetailPageShell.tsx`
-- `src/shared/detail-page.css`
-- `src/shared/__tests__/DetailPageShell.test.tsx`
+- `src/shared/DetailPageShell.tsx` — breadcrumb header wrapper
+- `src/shared/detail-page.css` — full dp-* CSS system
+- `src/shared/AddressMap.tsx` — shared leaflet + 高德 map component
+- `src/shared/__tests__/DetailPageShell.test.tsx` — unit tests
+- `prisma/migrations/20260528160000_add_database_indexes/migration.sql` — 18 indexes
 
 ### Modified files
-- `src/features/siteOperations/ServiceObjectsArea.tsx` — conditional render + extract detail/create page components
-- `src/features/siteOperations/SocialWorkersArea.tsx` — same pattern
-- `src/features/siteOperations/SmartBadgesArea.tsx` — same pattern
-- `src/features/siteOperations/SchedulesArea.tsx` — same pattern
-- `src/features/siteOperations/RecordsArea.tsx` — same pattern
-- `src/quality/QualityPage.tsx` — SitesView + UsersView conditional render
-- `src/features/siteOperations/siteOperations.css` — remove `so-modal` styles that are no longer used (keep styles used by remaining modals)
-- `src/quality/quality.css` — remove `quality-user-modal` styles for converted modals
-
-### No changes to
-- `src/router.tsx` — existing `:id` routes are reused
-- `src/layouts/SiteOperationsLayout.tsx` — layout unchanged
-- `src/layouts/QualityLayout.tsx` — layout unchanged
+- `src/features/siteOperations/ServiceObjectsArea.tsx` — dp-card layout, inline edit
+- `src/features/siteOperations/SocialWorkersArea.tsx` — dp-card layout, URL-based create
+- `src/features/siteOperations/SmartBadgesArea.tsx` — dp-card layout, activate as full page
+- `src/features/siteOperations/SchedulesArea.tsx` — dp-card layout, per-field popover edit, react-datepicker
+- `src/features/siteOperations/RecordsArea.tsx` — dp-card layout, recordings sub-menu, URL-based detail
+- `src/quality/QualityPage.tsx` — dp-card layout for all admin modals, feishu chip selectors
+- `src/features/siteOperations/siteOperations.css` — compact padding, sub-menu styles, header min-height
+- `src/quality/quality.css` — compact padding, inline subtitles
+- `src/supervisor/supervisor.css` — compact padding, inline subtitle
+- `src/layouts/SiteOperationsLayout.tsx` — sub-menu with children + chevron indicator
+- `src/router.tsx` — `/recordings` route, removed static `path: "new"` routes
+- `server/routes/recordings.ts` — select-only list API
+- `prisma/schema.prisma` — 18 @@index declarations

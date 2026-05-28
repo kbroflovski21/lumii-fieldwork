@@ -64,4 +64,27 @@ describe("DetailPageShell", () => {
     expect(container.querySelector(".detail-page__header")).toBeTruthy();
     expect(container.querySelector(".detail-page__body")).toBeTruthy();
   });
+
+  it("does not render actions wrapper when no actions prop", () => {
+    const { container } = renderShell();
+    expect(container.querySelector(".detail-page__actions")).toBeNull();
+  });
+
+  it("renders actions wrapper when actions prop is provided", () => {
+    const { container } = renderShell({ actions: <button>删除</button> });
+    expect(container.querySelector(".detail-page__actions")).toBeTruthy();
+    expect(screen.getByText("删除")).toBeInTheDocument();
+  });
+
+  it("renders separator between parent label and title", () => {
+    const { container } = renderShell();
+    expect(container.querySelector(".detail-page__sep")?.textContent).toBe("/");
+  });
+
+  it("renders with different parent paths", async () => {
+    renderShell({ parentLabel: "录音记录", parentPath: "/recordings", title: "REC-001" });
+    const user = userEvent.setup();
+    await user.click(screen.getByText("录音记录"));
+    expect(mockNavigate).toHaveBeenCalledWith("/recordings");
+  });
 });

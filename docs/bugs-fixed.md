@@ -319,3 +319,69 @@
 - **Description:** Navigating directly to `/admin/users?search=站点运营员` did not pre-fill the search box or filter the list. The search functionality was purely local state-driven.
 - **Root cause:** SitesView and UsersView initialized search from an `initialSearch` prop (passed from parent component state) rather than reading the URL `?search=` query parameter. The URL search param was only used for copilot navigation, not for the views themselves.
 - **Fix:** Replaced local `useState` search with `useSearchParams()` from react-router-dom. Search reads from `searchParams.get("search")` and writes back via `setSearchParams()` with `{ replace: true }`. This enables URL-based search filtering consistent with the site operations pattern.
+
+---
+
+# 2026-05-28 Modal-to-Detail-Page Refactor Bug Fixes
+
+---
+
+## Bug 51: Modal content unstyled in full-page layout
+
+- **Description:** After converting modals to full-page detail views, the content still used modal CSS classes (`so-modal__summary`, `so-modal__tabs`, `so-modal__content`, `so-modal__footer`) which had modal-specific styling (gradient backgrounds, rounded corners, fixed positioning).
+- **Root cause:** Initial refactor only replaced the outer wrapper with `DetailPageShell` but kept all inner CSS classes unchanged.
+- **Fix:** Introduced new `dp-card`, `dp-tabs`, `dp-section`, `dp-fields`, `dp-field` CSS classes in `detail-page.css`. Each detail page rewritten to use card-based layout with consistent sections, field grids, and inline edit patterns.
+
+## Bug 52: Mobile responsive layout broken on detail pages
+
+- **Description:** Detail pages were unreadable on mobile — content pushed off-screen, fields not wrapping.
+- **Root cause:** `.site-operations-main--layout` had `grid-column: 2` but mobile breakpoint changed grid to `1fr`, causing content to be placed in non-existent column 2.
+- **Fix:** Added `grid-column: 1` to `.site-operations-main--layout` in mobile breakpoint. Added responsive rules for `dp-fields` (single column), header wrapping, and reduced padding.
+
+## Bug 53: Breadcrumb back navigation not working for create/activate pages
+
+- **Description:** Clicking breadcrumb back arrow on "新增服务人员" and "激活工牌" pages had no effect — URL changed but page stayed.
+- **Root cause:** Create/activate were triggered via `setDrawer()` local state, not URL navigation. `DetailPageShell` called `navigate("/workers")` but `routeId` was already undefined, so the useEffect didn't fire.
+- **Fix:** Changed create to use `navigate("/workers/new")` and activate to use `navigate("/badges/activate")`. Added `routeId === "new"` / `routeId === "activate"` handling in URL→drawer sync useEffect.
+
+## Bug 54: `replace_all` broke useEffect URL→state sync
+
+- **Description:** After fixing bug 53, clicking "新增人员" and "激活工牌" buttons had no effect — URL changed but page showed list.
+- **Root cause:** `replace_all` for `setDrawer({ kind: "create" })` → `navigate("/workers/new")` also replaced the occurrence inside `useEffect`, creating an infinite navigation loop.
+- **Fix:** Restored `setDrawer()` calls inside useEffect (URL→state direction), kept `navigate()` only in button click handlers (state→URL direction).
+
+## Bug 55: `/elders/new` route not matching — static `path: "new"` steals from `:id`
+
+- **Description:** Clicking "新增长者" button navigated to `/elders/new` but the create page didn't render.
+- **Root cause:** Router had both `{ path: "new", element: null }` and `{ path: ":id", element: null }`. React Router v6 prioritizes static `"new"` over dynamic `:id`, so `useParams()` returned `{}` instead of `{id: "new"}`.
+- **Fix:** Removed `path: "new"` static route, letting `:id` catch "new" as a param value.
+
+## Bug 56: Cross-navigation between service records and recordings detail stuck
+
+- **Description:** When viewing a service record detail, clicking "录音记录" sidebar item did nothing. Same in reverse.
+- **Root cause:** Navigating changed `viewMode` but didn't reset the other mode's state (`drawer` for records, `selectedRecording` for recordings). The conditional rendering prioritized the stale detail state.
+- **Fix:** Each viewMode sync effect now clears the other mode's state — records mode clears `selectedRecording`, recordings mode clears `drawer`.
+
+## Bug 57: Org admin detail page layout inconsistent with site operations
+
+- **Description:** Admin detail pages (site, user) had larger margins than site operations detail pages.
+- **Root cause:** Admin detail pages were rendered inside `quality-content` wrapper (padding: 24px→16px) plus `detail-page__body` padding, creating double padding. Site operations rendered directly without the outer wrapper.
+- **Fix:** QualityPage bypasses `quality-content` when `showingDetail` is true. FeishuView always renders outside `quality-content` with its own padding management.
+
+## Bug 58: FeishuView ESC key not closing detail page
+
+- **Description:** Pressing ESC on the feishu edit detail page did not return to the list.
+- **Root cause:** Initial `useEscClose` callback had `if (editUser)` guard with `[editUser]` dependency. When `editUser` was null, callback was a no-op. The callback reference changed when `editUser` changed, but the ESC handler sometimes missed the update.
+- **Fix:** Simplified to `useCallback(() => setEditUser(null), [])` — stable reference, always works. Setting null to null is harmless.
+
+## Bug 59: Recordings list API returning 419KB response (performance)
+
+- **Description:** "录音记录" page took 1-3 seconds to load, showing "加载中..." for several seconds.
+- **Root cause:** `GET /api/recordings` returned all fields including `sopResults` (348KB), `transcriptSegments` (191KB), `transcriptText` (24KB) per record. 22 records = 419KB response.
+- **Fix:** Added Prisma `select` to list API excluding heavy text/JSON fields. Detail page fetches full data from `/recordings/:id`. Response: 419KB → 15KB, latency: 0.6-3.2s → 0.27-0.44s.
+
+## Bug 60: Missing database indexes across all tables
+
+- **Description:** Query performance could degrade as data grows — no indexes existed on foreign key columns or common filter fields.
+- **Root cause:** Initial Prisma schema only had primary keys and a few unique constraints. No composite indexes for list queries (site+date), no FK indexes for join lookups.
+- **Fix:** Added 18 indexes covering all high-frequency query patterns: site-scoped list queries, FK lookups, date-sorted pagination. Migration file: `20260528160000_add_database_indexes`.
