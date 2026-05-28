@@ -3,11 +3,12 @@ import { formatDateShort, formatTime, toBjStr } from "../../shared/utils/dateTim
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { Search, X, Download, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { AddressMap } from "../../shared/AddressMap";
-import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
+import type { ServiceRecord, ServiceItem, ServiceRecordsResponse } from "./contracts";
 import { statusText } from "./contracts";
 import { authFetch } from "./api";
 import { CreateModal as CreateElderModal } from "./ServiceObjectsArea";
@@ -209,7 +210,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                 </div>
               </div>
 
-              {operationalState ? <OperationalBanner state={operationalState} /> : null}
+              {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务记录" readOnlyHint="可查看数据，复核和导出操作已禁用。" restrictedHint="原始音频不可播放，敏感信息已隐藏。" /> : null}
 
               {isLoading ? <EmptyState icon={FileText} description="服务记录数据加载中..." />
               : resource.status === "error" ? <EmptyState icon={X} description={resource.error} isError />
@@ -307,12 +308,6 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 }
 
 
-function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
-  if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>服务记录暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
-  if (state.permission === "read_only") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>只读模式</strong><span>可查看数据，复核和导出操作已禁用。</span></div></div>;
-  if (state.permission === "restricted") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>权限受限</strong><span>原始音频不可播放，敏感信息已隐藏。</span></div></div>;
-  return null;
-}
 
 function RecordsList({ records, selectedId, onRowClick }: {
   records: ServiceRecord[]; selectedId: string | null;

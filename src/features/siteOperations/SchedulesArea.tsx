@@ -4,12 +4,13 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { Search, X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import { AddressMap } from "../../shared/AddressMap";
-import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
+import type { ServiceScheduleOccurrence, ServiceSchedulesResponse } from "./contracts";
 import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
@@ -160,7 +161,7 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
               </div>
             </div>
 
-            {operationalState ? <OperationalBanner state={operationalState} /> : null}
+            {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务排期" readOnlyHint="可查看数据，调整和取消操作已禁用。" /> : null}
 
             {isLoading ? <EmptyState icon={Calendar} description="服务排期数据加载中..." />
             : resource.status === "error" ? <EmptyState icon={X} description={resource.error} isError />
@@ -175,11 +176,6 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   );
 }
 
-function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
-  if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>服务排期暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
-  if (state.permission === "read_only") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>只读模式</strong><span>可查看数据，调整和取消操作已禁用。</span></div></div>;
-  return null;
-}
 
 function ListView({ schedules, selectedId, onRowClick }: {
   schedules: ServiceScheduleOccurrence[]; selectedId: string | null;

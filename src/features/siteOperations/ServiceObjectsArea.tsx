@@ -3,7 +3,8 @@ import { formatTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { DetailPageShell } from "../../shared/DetailPageShell";
@@ -12,7 +13,6 @@ import type {
   ServiceObjectState,
   ServiceEligibilityType,
   ServiceRecord,
-  WorkAreaOperationalState,
   ServiceObjectsResponse,
   FamilyContact,
   AiScheduleResult,
@@ -213,7 +213,7 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
                 </div>
               </div>
 
-              {operationalState ? <OperationalBanner state={operationalState} /> : null}
+              {operationalState ? <OperationalBanner state={operationalState} resourceLabel="长者" readOnlyHint="可查看数据，新增、编辑和归档操作已禁用。" /> : null}
 
               <ObjectContent
                 filtered={filtered}
@@ -236,12 +236,6 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
 }
 
 
-function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
-  if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>长者暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
-  if (state.permission === "read_only") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>只读模式</strong><span>可查看数据，新增、编辑和归档操作已禁用。</span></div></div>;
-  if (state.permission === "restricted") return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>权限受限</strong><span>敏感信息已隐藏，部分操作不可用。</span></div></div>;
-  return null;
-}
 
 function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onCreateClick, onRowClick, onNameClick, selectedId }: {
   filtered: ServiceObject[]; loading: boolean; error?: string; isEmpty: boolean; isFilterEmpty: boolean;

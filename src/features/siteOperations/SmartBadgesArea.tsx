@@ -2,14 +2,14 @@ import { useEscClose } from "./useEscClose";
 import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
-import { Search, X, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, X, Plus, Smartphone, Battery, Clock, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type {
   SmartBadge,
   SmartBadgeStatus,
-  WorkAreaOperationalState,
   SmartBadgesResponse
 } from "./contracts";
 import { statusText } from "./contracts";
@@ -171,7 +171,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
             </div>
           </div>
 
-          {operationalState ? <OperationalBanner state={operationalState} /> : null}
+          {operationalState ? <OperationalBanner state={operationalState} resourceLabel="设备" readOnlyHint="可查看数据，激活和生命周期动作已禁用。" /> : null}
 
           <BadgeContent
             filtered={filtered}
@@ -212,18 +212,6 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
 }
 
 
-function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
-  if (state.unavailableMessage) {
-    return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>设备暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;
-  }
-  if (state.permission === "read_only") {
-    return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>只读模式</strong><span>可查看数据，激活和生命周期动作已禁用。</span></div></div>;
-  }
-  if (state.permission === "restricted") {
-    return <div className="sw-banner sw-banner--warning" role="status"><Shield size={16} /><div><strong>权限受限</strong><span>敏感信息已隐藏，部分操作不可用。</span></div></div>;
-  }
-  return null;
-}
 
 function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutationsDisabled, onActivateClick, onRowClick, onCodeClick, selectedId }: {
   filtered: SmartBadge[];
