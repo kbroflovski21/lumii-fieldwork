@@ -261,7 +261,17 @@ export function SiteOperationsLayout() {
             })}
           </div>
           <div className="site-operations-sidebar__footer">
-            <ProfileMenu />
+            {sidebarCollapsed ? (
+              <ProfileMenu />
+            ) : (
+              <div className="site-operations-sidebar__profile-card">
+                <ProfileMenu />
+                <div className="site-operations-sidebar__profile-info">
+                  <span className="site-operations-sidebar__profile-name">{user?.name ?? "用户"}</span>
+                  <span className="site-operations-sidebar__profile-role">{user?.role === "org_admin" ? "集团管理" : "站点运营"}</span>
+                </div>
+              </div>
+            )}
           </div>
           {/* Floating collapse toggle on divider */}
           <button className="site-operations-sidebar__divider-toggle" onClick={toggleSidebar} type="button" title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}>
