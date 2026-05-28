@@ -19,18 +19,32 @@
 
 `3004` 端口保留给本项目使用，因为它在当前 staging 主机上可公开访问。产品参考来源以本文档链记录为准。
 
-## 从本地工作区部署
+## 从本地工作区部署（推荐方式）
 
-完成评审后的构建产物和文档可从本地仓库根目录同步到 staging。`docs/` 必须随 staging 部署同步到静态根目录，便于直接查看当前文档链：
+使用项目根目录的 `deploy.sh` 脚本一键部署：
 
 ```bash
-rsync -az --delete dist/ ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/deploy/current/
-rsync -az --delete docs/ ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/deploy/current/docs/
-rsync -az deploy/server.mjs ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/deploy/server.mjs
-rsync -az deploy/site-operations-api-fixture.mjs ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/deploy/site-operations-api-fixture.mjs
+./deploy.sh
 ```
 
-默认部署方式是从本地工作区使用 `rsync` 同步。需要主机侧拉取仓库时，再配置部署密钥。
+脚本自动完成：构建前端 → rsync 同步 → Prisma schema push → 重启服务 → 健康检查。
+
+**⚠️ 重要：`.env` 保护规则**
+
+- `deploy.sh` 的 rsync 命令**排除了 `.env` 和 `.env.*`**，永远不会覆盖 staging 的环境变量
+- **禁止**手动 rsync 整个项目目录到 staging（会覆盖 `.env`）
+- 如需修改 staging 环境变量，必须 SSH 到 staging 主机直接编辑 `.env`
+- 本地开发的 `.env` 内容和 staging 不同（数据库、密钥等），绝对不能混用
+
+### 手动部署（不推荐）
+
+如果需要手动 rsync，**必须**加 `--exclude='.env'`：
+
+```bash
+rsync -az --delete --exclude='.env' --exclude='.env.*' \
+  server/ ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/server/
+rsync -az --delete dist/ ubuntu@124.221.48.52:/home/ubuntu/lumii-goldenyears-dashboard/dist/
+```
 
 ## 替换 SQLite 数据库
 
