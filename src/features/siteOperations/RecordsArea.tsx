@@ -153,26 +153,27 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
     }
   }, [routeId, records, viewMode]);
 
-  // URL -> recording detail sync
+  // URL -> recording detail sync (fetch full record from API)
   useEffect(() => {
     if (viewMode === "recordings") {
       setDrawer({ kind: "closed" });
       if (routeId) {
-        const rec = recordings.find((r: any) => r.id === routeId);
-        if (rec) setSelectedRecording(rec);
+        authFetch(`/api/recordings/${routeId}`)
+          .then(r => r.json())
+          .then(data => { if (data) setSelectedRecording(data); })
+          .catch(() => {});
       } else {
         setSelectedRecording(null);
       }
     }
-  }, [routeId, recordings, viewMode]);
+  }, [routeId, viewMode]);
 
-  const [recordingsFetched, setRecordingsFetched] = useState(false);
   useEffect(() => {
     if (viewMode !== "recordings") return;
-    if (!recordingsFetched) setRecordingsLoading(true);
+    setRecordingsLoading(true);
     authFetch("/api/recordings")
       .then(r => r.json())
-      .then(data => { setRecordings(data.recordings ?? []); setRecordingsLoading(false); setRecordingsFetched(true); })
+      .then(data => { setRecordings(data.recordings ?? []); setRecordingsLoading(false); })
       .catch(() => setRecordingsLoading(false));
   }, [viewMode]);
 

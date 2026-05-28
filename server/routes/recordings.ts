@@ -32,6 +32,14 @@ export function recordingRoutes() {
         where,
         orderBy: { startedAt: "desc" },
         take: 50,
+        select: {
+          id: true, sessionId: true, badgeId: true, workerId: true, workerName: true,
+          siteId: true, startedAt: true, endedAt: true, durationSeconds: true,
+          audioUrl: true, status: true, matchConfidence: true,
+          matchedServiceRecordId: true, matchedScheduleId: true,
+          matchedServiceObjectId: true, matchedServiceObjectName: true,
+          matchReason: true, createdAt: true, updatedAt: true,
+        },
       });
       res.json({ recordings });
     } catch {
