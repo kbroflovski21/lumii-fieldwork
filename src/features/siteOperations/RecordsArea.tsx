@@ -10,6 +10,7 @@ import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 import { useParams, useNavigate } from "react-router-dom";
+import { DetailPageShell } from "../../shared/DetailPageShell";
 
 let _clipPlayer: HTMLAudioElement | null = null;
 let _clipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -183,149 +184,146 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
   return (
     <>
-      <section aria-label="服务记录" className="sw-page">
-        <div className="sw-page__inner">
-          <div style={{ display: "inline-flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16, alignSelf: "flex-start" }}>
-            <button
-              onClick={() => setViewMode("records")}
-              style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-            >服务记录</button>
-            <button
-              onClick={() => setViewMode("recordings")}
-              style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "recordings" ? "#fff" : "transparent", color: viewMode === "recordings" ? "#0F172A" : "#64748B", boxShadow: viewMode === "recordings" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-            >录音记录</button>
-          </div>
-
-          <header className="sw-header">
-            <div className="sw-header__title-group">
-              <h2 className="sw-header__title">{viewMode === "records" ? "服务记录" : "录音记录"}</h2>
-              <p className="sw-header__desc">{viewMode === "records" ? "查看和复核已完成的服务记录" : "查看工牌录音原始数据，管理录音与服务记录的匹配关系"}</p>
+      {drawer.kind !== "closed" ? (
+        <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); closeDrawer(); }} onUpdated={handleUpdated} />
+      ) : (
+        <section aria-label="服务记录" className="sw-page">
+          <div className="sw-page__inner">
+            <div style={{ display: "inline-flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16, alignSelf: "flex-start" }}>
+              <button
+                onClick={() => setViewMode("records")}
+                style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
+              >服务记录</button>
+              <button
+                onClick={() => setViewMode("recordings")}
+                style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "recordings" ? "#fff" : "transparent", color: viewMode === "recordings" ? "#0F172A" : "#64748B", boxShadow: viewMode === "recordings" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
+              >录音记录</button>
             </div>
-          </header>
 
-          {viewMode === "records" && (
-          <div className="sw-table-container">
-            <div className="sw-toolbar">
-              <label className="sw-search">
-                <Search size={16} />
-                <input aria-label="搜索服务记录" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或人员..." value={searchQuery} />
-              </label>
-              <div className="sw-toolbar__filters">
-                <div className="sch-date-btns">
-                  {dateFilterOptions.map(o => (
-                    <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
-                  ))}
-                </div>
-                <FilterDropdown onChange={(v) => setReviewFilter(v as ReviewFilter)} options={reviewFilterOptions} value={reviewFilter} />
+            <header className="sw-header">
+              <div className="sw-header__title-group">
+                <h2 className="sw-header__title">{viewMode === "records" ? "服务记录" : "录音记录"}</h2>
+                <p className="sw-header__desc">{viewMode === "records" ? "查看和复核已完成的服务记录" : "查看工牌录音原始数据，管理录音与服务记录的匹配关系"}</p>
               </div>
-            </div>
+            </header>
 
-            {operationalState ? <OperationalBanner state={operationalState} /> : null}
-
-            {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>服务记录数据加载中...</span></div>
-            : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
-            : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>{records.length === 0 ? "暂无服务记录" : "没有匹配的记录"}</span></div>
-            : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => navigate(`/records/${r.id}`)} />}
-          </div>
-          )}
-
-          {viewMode === "recordings" && (
+            {viewMode === "records" && (
             <div className="sw-table-container">
-              {recordingsLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>录音记录加载中...</span></div>
-              : recordings.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>暂无录音记录</span></div>
-              : (
-                <>
-                  <div className="sw-table rec-table" role="table">
-                    <div className="sw-table__head rec-table__head" role="row">
-                      <span role="columnheader">时间</span>
-                      <span role="columnheader">服务人员</span>
-                      <span role="columnheader">服务对象</span>
-                      <span role="columnheader">工牌</span>
-                      <span role="columnheader">时长</span>
-                      <span role="columnheader">匹配状态</span>
-                    </div>
-                    {recordings
-                      .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
-                      .map((rec: any) => {
-                        const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
-                        const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
-                        const bj = toBjStr(new Date(rec.startedAt));
-                        const dur = rec.durationSeconds ?? 0;
-                        const workerColor = avatarColor(rec.workerName ?? "?");
-                        return (
-                          <div className="sw-table__row rec-table__row" key={rec.id}
-                            data-selected={selectedRecording?.id === rec.id}
-                            onClick={() => setSelectedRecording(rec)}
-                            role="row" style={{ cursor: "pointer" }}>
-                            <div role="cell" className="sch-cell-datetime">
-                              <span className="sch-cell-date">{bj.date}</span>
-                              <span className="sch-cell-time">{bj.time} · {Math.floor(dur/60)}分{dur%60}秒</span>
-                            </div>
-                            <div role="cell" className="sw-table__cell-name">
-                              <div className="sw-avatar" style={{ background: workerColor.bg, color: workerColor.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(rec.workerName ?? "?")}</div>
-                              <span>{rec.workerName ?? <span className="sw-text-muted">未知</span>}</span>
-                            </div>
-                            <div role="cell">{rec.matchedServiceObjectName ?? <span className="sw-text-muted">—</span>}</div>
-                            <div role="cell"><span className="badges-code-tag">{rec.badgeId}</span></div>
-                            <div role="cell">{Math.floor(dur/60)}分{dur%60}秒</div>
-                            <div role="cell"><span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span></div>
-                          </div>
-                        );
-                      })}
+              <div className="sw-toolbar">
+                <label className="sw-search">
+                  <Search size={16} />
+                  <input aria-label="搜索服务记录" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或人员..." value={searchQuery} />
+                </label>
+                <div className="sw-toolbar__filters">
+                  <div className="sch-date-btns">
+                    {dateFilterOptions.map(o => (
+                      <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
+                    ))}
                   </div>
+                  <FilterDropdown onChange={(v) => setReviewFilter(v as ReviewFilter)} options={reviewFilterOptions} value={reviewFilter} />
+                </div>
+              </div>
 
-                  <div className="sw-mobile-list">
-                    {recordings
-                      .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
-                      .map((rec: any) => {
-                        const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
-                        const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
-                        const bj = toBjStr(new Date(rec.startedAt));
-                        const dur = rec.durationSeconds ?? 0;
-                        return (
-                          <button className="sw-mobile-card" key={rec.id} onClick={() => setSelectedRecording(rec)} type="button">
-                            <div className="sw-mobile-card__top">
-                              <span className="sch-cell-date">{bj.date} {bj.time}</span>
-                              <span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span>
-                            </div>
-                            <div className="sw-mobile-card__info"><span>{rec.workerName ?? "未知"}</span></div>
-                            <div className="sw-mobile-card__meta">
-                              <span>{rec.badgeId}</span>
-                              <span>{Math.floor(dur/60)}分{dur%60}秒</span>
-                              {rec.matchedServiceObjectName && <span>{rec.matchedServiceObjectName}</span>}
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
+              {operationalState ? <OperationalBanner state={operationalState} /> : null}
 
-                  {recordings.length > RECORDINGS_PER_PAGE && (
-                    <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "12px 0" }}>
-                      <button className="sw-btn sw-btn--secondary" disabled={recordingsPage <= 1} onClick={() => setRecordingsPage(p => p - 1)}>上一页</button>
-                      <span style={{ fontSize: 13, color: "#64748B", lineHeight: "32px" }}>{recordingsPage} / {Math.ceil(recordings.length / RECORDINGS_PER_PAGE)}</span>
-                      <button className="sw-btn sw-btn--secondary" disabled={recordingsPage >= Math.ceil(recordings.length / RECORDINGS_PER_PAGE)} onClick={() => setRecordingsPage(p => p + 1)}>下一页</button>
-                    </div>
-                  )}
-                </>
-              )}
+              {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>服务记录数据加载中...</span></div>
+              : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
+              : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>{records.length === 0 ? "暂无服务记录" : "没有匹配的记录"}</span></div>
+              : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => navigate(`/records/${r.id}`)} />}
             </div>
+            )}
+
+            {viewMode === "recordings" && (
+              <div className="sw-table-container">
+                {recordingsLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>录音记录加载中...</span></div>
+                : recordings.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>暂无录音记录</span></div>
+                : (
+                  <>
+                    <div className="sw-table rec-table" role="table">
+                      <div className="sw-table__head rec-table__head" role="row">
+                        <span role="columnheader">时间</span>
+                        <span role="columnheader">服务人员</span>
+                        <span role="columnheader">服务对象</span>
+                        <span role="columnheader">工牌</span>
+                        <span role="columnheader">时长</span>
+                        <span role="columnheader">匹配状态</span>
+                      </div>
+                      {recordings
+                        .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
+                        .map((rec: any) => {
+                          const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
+                          const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
+                          const bj = toBjStr(new Date(rec.startedAt));
+                          const dur = rec.durationSeconds ?? 0;
+                          const workerColor = avatarColor(rec.workerName ?? "?");
+                          return (
+                            <div className="sw-table__row rec-table__row" key={rec.id}
+                              data-selected={selectedRecording?.id === rec.id}
+                              onClick={() => setSelectedRecording(rec)}
+                              role="row" style={{ cursor: "pointer" }}>
+                              <div role="cell" className="sch-cell-datetime">
+                                <span className="sch-cell-date">{bj.date}</span>
+                                <span className="sch-cell-time">{bj.time} · {Math.floor(dur/60)}分{dur%60}秒</span>
+                              </div>
+                              <div role="cell" className="sw-table__cell-name">
+                                <div className="sw-avatar" style={{ background: workerColor.bg, color: workerColor.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(rec.workerName ?? "?")}</div>
+                                <span>{rec.workerName ?? <span className="sw-text-muted">未知</span>}</span>
+                              </div>
+                              <div role="cell">{rec.matchedServiceObjectName ?? <span className="sw-text-muted">—</span>}</div>
+                              <div role="cell"><span className="badges-code-tag">{rec.badgeId}</span></div>
+                              <div role="cell">{Math.floor(dur/60)}分{dur%60}秒</div>
+                              <div role="cell"><span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span></div>
+                            </div>
+                          );
+                        })}
+                    </div>
+
+                    <div className="sw-mobile-list">
+                      {recordings
+                        .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
+                        .map((rec: any) => {
+                          const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
+                          const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
+                          const bj = toBjStr(new Date(rec.startedAt));
+                          const dur = rec.durationSeconds ?? 0;
+                          return (
+                            <button className="sw-mobile-card" key={rec.id} onClick={() => setSelectedRecording(rec)} type="button">
+                              <div className="sw-mobile-card__top">
+                                <span className="sch-cell-date">{bj.date} {bj.time}</span>
+                                <span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span>
+                              </div>
+                              <div className="sw-mobile-card__info"><span>{rec.workerName ?? "未知"}</span></div>
+                              <div className="sw-mobile-card__meta">
+                                <span>{rec.badgeId}</span>
+                                <span>{Math.floor(dur/60)}分{dur%60}秒</span>
+                                {rec.matchedServiceObjectName && <span>{rec.matchedServiceObjectName}</span>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                    </div>
+
+                    {recordings.length > RECORDINGS_PER_PAGE && (
+                      <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "12px 0" }}>
+                        <button className="sw-btn sw-btn--secondary" disabled={recordingsPage <= 1} onClick={() => setRecordingsPage(p => p - 1)}>上一页</button>
+                        <span style={{ fontSize: 13, color: "#64748B", lineHeight: "32px" }}>{recordingsPage} / {Math.ceil(recordings.length / RECORDINGS_PER_PAGE)}</span>
+                        <button className="sw-btn sw-btn--secondary" disabled={recordingsPage >= Math.ceil(recordings.length / RECORDINGS_PER_PAGE)} onClick={() => setRecordingsPage(p => p + 1)}>下一页</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {selectedRecording && (
+            <>
+              <button aria-label="关闭录音详情" className="sw-scrim" onClick={() => setSelectedRecording(null)} type="button" />
+              <RecordingDrawer recording={selectedRecording} onClose={() => setSelectedRecording(null)} />
+            </>
           )}
-        </div>
-
-        {drawer.kind !== "closed" ? (
-          <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => { stopClip(); closeDrawer(); }} type="button" />
-            <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); closeDrawer(); }} onUpdated={handleUpdated} />
-          </>
-        ) : null}
-
-        {selectedRecording && (
-          <>
-            <button aria-label="关闭录音详情" className="sw-scrim" onClick={() => setSelectedRecording(null)} type="button" />
-            <RecordingDrawer recording={selectedRecording} onClose={() => setSelectedRecording(null)} />
-          </>
-        )}
-      </section>
+        </section>
+      )}
     </>
   );
 }
@@ -508,11 +506,16 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   const sopTabs = [
   ];
 
+  const title = `${r.serviceObjectName ?? "待关联"} · ${formatDate(r.serviceDate)}`;
+
+  useEffect(() => {
+    return () => { stopClip(); };
+  }, []);
+
   return (
-    <div className="so-modal rec-modal--no-footer" role="dialog" aria-label="服务记录详情">
+    <DetailPageShell parentLabel="服务记录" parentPath="/records" title={title}>
       {/* ── Header Banner ── */}
       <div className="rec-modal__header" data-tone={tone}>
-        <button aria-label="关闭" className="so-modal__close sch-event__banner-close" onClick={onClose} type="button"><X size={18} /></button>
         <div className="rec-modal__header-top">
           <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 36, height: 36, fontSize: 14 }}>{getInitials(r.serviceObjectName ?? "?")}</div>
           <div className="rec-modal__header-info">
@@ -766,7 +769,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
           <BasicInfoSection record={r} mutationsDisabled={mutationsDisabled} onUpdated={onUpdated} />
         )}
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
 
