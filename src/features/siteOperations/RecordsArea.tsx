@@ -143,6 +143,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   // URL -> drawer sync (service records)
   useEffect(() => {
     if (viewMode === "records") {
+      setSelectedRecording(null);
       if (routeId) {
         const rec = records.find(r => r.id === routeId);
         if (rec) setDrawer({ kind: "view", record: rec });
@@ -154,11 +155,14 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
   // URL -> recording detail sync
   useEffect(() => {
-    if (viewMode === "recordings" && routeId) {
-      const rec = recordings.find((r: any) => r.id === routeId);
-      if (rec) setSelectedRecording(rec);
-    } else if (viewMode === "recordings") {
-      setSelectedRecording(null);
+    if (viewMode === "recordings") {
+      setDrawer({ kind: "closed" });
+      if (routeId) {
+        const rec = recordings.find((r: any) => r.id === routeId);
+        if (rec) setSelectedRecording(rec);
+      } else {
+        setSelectedRecording(null);
+      }
     }
   }, [routeId, recordings, viewMode]);
 
@@ -995,21 +999,27 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
 
           {rec.transcriptText && (
             <div className="dp-section">
-              <div className="dp-section__head"><h4 className="dp-section__title">对话记录</h4></div>
-              <div style={{ background: "#F8FAFC", padding: 14, borderRadius: 10, maxHeight: 400, overflowY: "auto", lineHeight: 1.8 }}>
+              <div className="dp-section__head"><h4 className="dp-section__title">完整对话记录{Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0 ? ` (${rec.transcriptSegments.length}条)` : ""}</h4></div>
+              <div className="rec-chat">
                 {Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0
                   ? rec.transcriptSegments.map((seg: any, i: number) => {
                     const isWorker = seg.speaker === "社工";
-                    const isElder = seg.speaker === "老人";
-                    const displayName = isWorker && rec.workerName
-                      ? `${rec.workerName}（社工）`
-                      : isElder && rec.matchedServiceObjectName
-                        ? `${rec.matchedServiceObjectName}（服务对象）`
-                        : seg.speaker;
+                    const name = isWorker && rec.workerName ? rec.workerName : seg.speaker === "老人" && rec.matchedServiceObjectName ? rec.matchedServiceObjectName : seg.speaker || "未知";
+                    const rawSeconds = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : null);
+                    const mins = rawSeconds != null && !isNaN(rawSeconds) ? Math.floor(rawSeconds / 60) : null;
+                    const secs = rawSeconds != null && !isNaN(rawSeconds) ? rawSeconds % 60 : null;
+                    const ac = avatarColor(name);
                     return (
-                      <div key={i} style={{ marginBottom: 4 }}>
-                        {seg.speaker && <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4, marginRight: 4, background: isWorker ? "rgba(96,165,250,.15)" : "rgba(52,211,153,.15)", color: isWorker ? "#3B82F6" : "#10B981" }}>{displayName}</span>}
-                        <span style={{ fontSize: 13 }}>{seg.text}</span>
+                      <div className={`rec-chat__row ${isWorker ? "rec-chat__row--left" : "rec-chat__row--right"}`} key={i}>
+                        {isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
+                        <div className={`rec-chat__bubble ${isWorker ? "rec-chat__bubble--worker" : "rec-chat__bubble--object"}`}>
+                          <div className="rec-chat__meta">
+                            <span className="rec-chat__name" style={{ color: isWorker ? "#4F46E5" : "#059669" }}>{name}</span>
+                            {mins != null ? <span className="rec-chat__time">{mins}:{String(secs).padStart(2, "0")}</span> : null}
+                          </div>
+                          <p className="rec-chat__text">{seg.text}</p>
+                        </div>
+                        {!isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
                       </div>
                     );
                   })
