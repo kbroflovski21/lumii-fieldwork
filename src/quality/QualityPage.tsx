@@ -9,6 +9,7 @@ import { ADMIN_COMMANDS, HeaderCopilotInput } from "../features/siteOperations/C
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { DetailPageShell } from "../shared/DetailPageShell";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
+import { useEscClose } from "../shared/hooks/useEscClose";
 import "./quality.css";
 
 /* ── Types ── */
@@ -1379,14 +1380,6 @@ function CloseBtn({ onClick }: { onClick: () => void }) {
 }
 
 /* ── User Detail Modal with inline edit ── */
-function useEscClose(onClose: () => void) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-}
-
 function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, initialEditing = false }: {
   user: QualityUser; token: string; onClose: () => void; onSaved: () => void;
   onToggle: (u: QualityUser) => void; onDelete: (u: QualityUser) => void; initialEditing?: boolean;

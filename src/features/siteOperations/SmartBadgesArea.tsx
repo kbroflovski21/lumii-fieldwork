@@ -1,4 +1,4 @@
-import { useEscClose } from "./useEscClose";
+import { useEscClose } from "../../shared/hooks/useEscClose";
 import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";

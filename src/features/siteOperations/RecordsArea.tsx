@@ -1,4 +1,4 @@
-import { useEscClose } from "./useEscClose";
+import { useEscClose } from "../../shared/hooks/useEscClose";
 import { formatDateShort, formatTime, toBjStr } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
