@@ -619,20 +619,8 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   return (
     <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`} actions={cancelAction}>
       <div className="dp-card">
-      {/* ── Status Banner ── */}
-      <div className="sch-event__banner" data-tone={tone}>
-        <span className="sw-status-badge" data-tone={tone} style={{ marginBottom: 6 }}>{statusText[s.status] ?? s.status}</span>
-        <h2 className="sch-event__title">{s.serviceProject}</h2>
-        <p className="sch-event__datetime">{formatDate(s.serviceDate)} · {formatWindow(s)}</p>
-        <div className="sch-event__badges">
-          <span className="so-modal__chip">{s.source === "service_plan" ? "周期计划" : "按次服务"}</span>
-          {s.planExceptionApplied ? <span className="so-modal__chip" style={{ background: "#FEF3C7", borderColor: "#F59E0B", color: "#92400E" }}>已受例外影响</span> : null}
-          {s.riskTags.map(t => <span className="so-modal__risk-chip" key={t}><AlertTriangle size={12} /> {t}</span>)}
-        </div>
-      </div>
-
       {/* ── Three Info Cards ── */}
-      <div className="sch-event__cards">
+      <div className="sch-event__cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, padding: 20 }}>
         <div className="sch-event__card">
           <span className="sch-event__card-label">长者</span>
           <div className="sch-event__card-main">

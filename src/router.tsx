@@ -78,7 +78,6 @@ export const router = createBrowserRouter([
             path: "elders",
             element: <ServiceObjectsArea />,
             children: [
-              { path: "new", element: null },
               { path: ":id", element: null },
             ],
           },
