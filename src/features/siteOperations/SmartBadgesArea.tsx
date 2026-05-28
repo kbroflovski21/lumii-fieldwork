@@ -205,11 +205,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
 
   if (drawer.kind === "activate") {
     return (
-      <>
-        {listContent}
-        <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
-        <ActivateDrawer onClose={closeDrawer} onActivated={handleBadgeActivated} />
-      </>
+      <ActivateDrawer onClose={closeDrawer} onActivated={handleBadgeActivated} />
     );
   }
 
@@ -515,61 +511,57 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
     }
   };
 
+  const stepActions = step === "input" ? (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={onClose} type="button">取消</button>
+      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={activating || !deviceCode.trim()} onClick={() => setStep("confirm")} type="button">下一步</button>
+    </div>
+  ) : step === "confirm" ? (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => { setStep("input"); setError(""); }} type="button">上一步</button>
+      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={activating} onClick={handleActivate} type="button">{activating ? "激活中..." : "确认激活"}</button>
+    </div>
+  ) : (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => { onActivated(); }} type="button">查看设备详情</button>
+      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} onClick={() => { onActivated(); setDeviceCode(""); setStep("input"); setResult(null); }} type="button">继续激活</button>
+    </div>
+  );
+
   return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="激活工牌">
-      <div className="so-modal__form-header">
-        <h3>激活工牌</h3>
-        <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-      </div>
-      <div className="so-modal__content">
-        {step === "input" ? (
-          <div className="so-form-cards">
-            <div className="so-form-card">
-              <h4 className="so-form-card__title">设备信息</h4>
-              <label className="sw-field"><span>设备码</span><input onChange={(e) => setDeviceCode(e.target.value)} placeholder="输入设备码，如 FW-030" value={deviceCode} /></label>
-            </div>
-            {error ? <p className="badges-error">{error}</p> : null}
-          </div>
-        ) : step === "confirm" ? (
-          <div className="so-form-cards">
-            <div className="so-form-card">
-              <h4 className="so-form-card__title">确认激活</h4>
-              <dl className="so-overview-grid">
-                <div className="so-overview-item"><dt>设备码</dt><dd><span className="badges-code-tag">{deviceCode}</span></dd></div>
-                <div className="so-overview-item"><dt>绑定站点</dt><dd>{currentSite?.name ?? "未选择"}</dd></div>
-              </dl>
-            </div>
-            {error ? <p className="badges-error">{error}</p> : null}
-          </div>
-        ) : (
-          <div className="badges-success">
-            <div className="badges-success__icon"><Smartphone size={28} /></div>
-            <strong>激活成功</strong>
-            <p>{result?.deviceCode} 已绑定到 {result?.siteName}</p>
-          </div>
-        )}
-      </div>
-      <div className="so-modal__footer">
-        <div />
-        <div className="so-modal__footer-right">
+    <DetailPageShell parentLabel="设备" parentPath="/badges" title="激活工牌" actions={stepActions}>
+      <div className="dp-card">
+        <div className="dp-card__body">
           {step === "input" ? (
-            <>
-              <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-              <button className="sw-btn sw-btn--primary" disabled={activating || !deviceCode.trim()} onClick={() => setStep("confirm")} type="button">下一步</button>
-            </>
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">设备信息</h4>
+              </div>
+              <dl className="dp-fields">
+                <div className="dp-field"><dt>设备码</dt><dd><input onChange={(e) => setDeviceCode(e.target.value)} placeholder="输入设备码，如 FW-030" value={deviceCode} /></dd></div>
+              </dl>
+              {error ? <p className="badges-error" style={{ marginTop: 12 }}>{error}</p> : null}
+            </div>
           ) : step === "confirm" ? (
-            <>
-              <button className="sw-btn sw-btn--secondary" onClick={() => { setStep("input"); setError(""); }} type="button">上一步</button>
-              <button className="sw-btn sw-btn--primary" disabled={activating} onClick={handleActivate} type="button">{activating ? "激活中..." : "确认激活"}</button>
-            </>
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">确认激活</h4>
+              </div>
+              <dl className="dp-fields">
+                <div className="dp-field"><dt>设备码</dt><dd><span className="badges-code-tag">{deviceCode}</span></dd></div>
+                <div className="dp-field"><dt>绑定站点</dt><dd>{currentSite?.name ?? "未选择"}</dd></div>
+              </dl>
+              {error ? <p className="badges-error" style={{ marginTop: 12 }}>{error}</p> : null}
+            </div>
           ) : (
-            <>
-              <button className="sw-btn sw-btn--secondary" onClick={() => { onActivated(); }} type="button">查看设备详情</button>
-              <button className="sw-btn sw-btn--primary" onClick={() => { onActivated(); setDeviceCode(""); setStep("input"); setResult(null); }} type="button">继续激活下一个</button>
-            </>
+            <div className="dp-section" style={{ textAlign: "center", padding: "40px 0" }}>
+              <div className="badges-success__icon" style={{ margin: "0 auto 12px" }}><Smartphone size={28} /></div>
+              <strong style={{ fontSize: 16 }}>激活成功</strong>
+              <p style={{ color: "var(--site-muted)", marginTop: 4 }}>{result?.deviceCode} 已绑定到 {result?.siteName}</p>
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
