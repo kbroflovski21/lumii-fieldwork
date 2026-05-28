@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Bot, Edit3, ChevronDown } from "lucide-react";
+import { Bot, Edit3, ChevronDown, ChevronLeft } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
@@ -952,20 +952,22 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
   const handleCancel = () => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setSelectedOps(new Set(site.operators.map(o => o.id))); setEditing(false); setError(""); };
 
   return (
-    <DetailPageShell parentLabel="站点管理" parentPath="/admin/sites" title={site.name}>
-        <div className="quality-user-modal__body">
+    <DetailPageShell parentLabel="站点管理" parentPath="/admin/sites" title={site.name}
+      actions={<button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(site)} type="button">删除</button>}>
+      <div className="dp-card">
+        <div className="dp-card__body">
           {error && <div className="quality-modal__error">{error}</div>}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>站点信息</h4>
-              {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--quality-text-muted)", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">站点信息</h4>
+              {!editing && <button className="dp-section__edit-btn" onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
             </div>
-            <div className="so-overview-grid">
-              <dl className="so-overview-item"><dt>站点名称</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : site.name}</dd></dl>
-              <dl className="so-overview-item"><dt>联系人</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactName} onChange={e => setContactName(e.target.value)} /> : (site.contactName || "—")}</dd></dl>
-              <dl className="so-overview-item"><dt>联系电话</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={contactPhone} onChange={e => setContactPhone(e.target.value)} /> : (site.contactPhone || "—")}</dd></dl>
-              <dl className="so-overview-item so-overview-item--full"><dt>地址</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={address} onChange={e => setAddress(e.target.value)} /> : (site.address || "—")}</dd></dl>
-            </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>站点名称</dt><dd>{editing ? <input value={name} onChange={e => setName(e.target.value)} /> : site.name}</dd></div>
+              <div className="dp-field"><dt>联系人</dt><dd>{editing ? <input value={contactName} onChange={e => setContactName(e.target.value)} /> : (site.contactName || "—")}</dd></div>
+              <div className="dp-field"><dt>联系电话</dt><dd>{editing ? <input value={contactPhone} onChange={e => setContactPhone(e.target.value)} /> : (site.contactPhone || "—")}</dd></div>
+              <div className="dp-field dp-field--full"><dt>地址</dt><dd>{editing ? <input value={address} onChange={e => setAddress(e.target.value)} /> : (site.address || "—")}</dd></div>
+            </dl>
             {editing && (
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
                 <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">取消</button>
@@ -973,8 +975,10 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
               </div>
             )}
           </div>
-          <div>
-            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>运营人员</h4>
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">运营人员</h4>
+            </div>
             {opsLoading ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>加载中...</span> : allOperators.length === 0 ? <span style={{ color: "var(--quality-text-muted)", fontSize: 14 }}>暂无站点运营账号</span> : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {allOperators.map(op => (
@@ -993,12 +997,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
             )}
           </div>
         </div>
-        <div className="quality-user-modal__footer">
-          <div className="quality-user-modal__footer-left">
-            <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(site)} type="button">删除</button>
-          </div>
-          <div />
-        </div>
+      </div>
     </DetailPageShell>
   );
 }
@@ -1024,30 +1023,25 @@ function SiteCreateModal({ token, onClose, onCreated }: { token: string; onClose
 
   return (
     <DetailPageShell parentLabel="站点管理" parentPath="/admin/sites" title="新增">
-        <div className="quality-user-modal__body">
+      <div className="dp-card">
+        <div className="dp-card__body">
           {error && <div className="quality-modal__error">{error}</div>}
-          <div className="so-form-cards">
-            <div className="so-form-card">
-              <h4 className="so-form-card__title">站点信息</h4>
-              <div className="so-form-card__row">
-                <div className="sw-field"><span>站点名称</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
-                <div className="sw-field"><span>联系人</span><input value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} /></div>
-              </div>
-              <div className="so-form-card__row">
-                <div className="sw-field"><span>联系电话</span><input value={form.contactPhone} onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))} /></div>
-                <div />
-              </div>
-              <div className="sw-field"><span>地址</span><input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></div>
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">站点信息</h4>
             </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>站点名称</dt><dd><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></dd></div>
+              <div className="dp-field"><dt>联系人</dt><dd><input value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} /></dd></div>
+              <div className="dp-field"><dt>联系电话</dt><dd><input value={form.contactPhone} onChange={e => setForm(f => ({ ...f, contactPhone: e.target.value }))} /></dd></div>
+              <div className="dp-field dp-field--full"><dt>地址</dt><dd><input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></dd></div>
+            </dl>
           </div>
-        </div>
-        <div className="quality-user-modal__footer">
-          <div />
-          <div className="quality-user-modal__footer-right">
-            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "创建中..." : "创建站点"}</button>
           </div>
         </div>
+      </div>
     </DetailPageShell>
   );
 }
@@ -1414,35 +1408,36 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
   const handleCancel = () => { setName(user.name); setPhone(user.phone); setEditing(false); setError(""); };
 
   return (
-    <DetailPageShell parentLabel="用户管理" parentPath="/admin/users" title={user.name}>
-        <div className="quality-user-modal__body">
+    <DetailPageShell parentLabel="用户管理" parentPath="/admin/users" title={user.name}
+      actions={<>
+        <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button">{user.status === "active" ? "禁用" : "启用"}</button>
+        <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
+      </>}>
+      <div className="dp-card">
+        <div className="dp-card__body">
           {error && <div className="quality-modal__error">{error}</div>}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>用户信息</h4>
-            {!editing && <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--quality-text-muted)", padding: 2, display: "flex" }} onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
-          </div>
-          <div className="so-overview-grid">
-            <dl className="so-overview-item"><dt>用户名</dt><dd>{user.username}</dd></dl>
-            <dl className="so-overview-item"><dt>姓名</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={name} onChange={e => setName(e.target.value)} /> : user.name}</dd></dl>
-            <dl className="so-overview-item"><dt>手机号</dt><dd>{editing ? <input className="quality-user-modal__inline-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /> : (user.phone || "—")}</dd></dl>
-            <dl className="so-overview-item"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></dl>
-            <dl className="so-overview-item"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></dl>
-            <dl className="so-overview-item"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></dl>
-          </div>
-          {editing && (
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-              <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">取消</button>
-              <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">用户信息</h4>
+              {!editing && <button className="dp-section__edit-btn" onClick={() => setEditing(true)} type="button" title="编辑"><Edit3 size={14} /></button>}
             </div>
-          )}
-        </div>
-        <div className="quality-user-modal__footer">
-          <div className="quality-user-modal__footer-left">
-            <button className="sw-btn sw-btn--danger-ghost" onClick={() => onDelete(user)} type="button">删除</button>
-            <button className="sw-btn sw-btn--secondary" onClick={() => onToggle(user)} type="button">{user.status === "active" ? "禁用" : "启用"}</button>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>用户名</dt><dd>{user.username}</dd></div>
+              <div className="dp-field"><dt>姓名</dt><dd>{editing ? <input value={name} onChange={e => setName(e.target.value)} /> : user.name}</dd></div>
+              <div className="dp-field"><dt>手机号</dt><dd>{editing ? <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="选填" /> : (user.phone || "—")}</dd></div>
+              <div className="dp-field"><dt>角色</dt><dd>{QUALITY_ROLE_LABELS[user.role] ?? user.role}</dd></div>
+              <div className="dp-field"><dt>状态</dt><dd>{user.status === "active" ? "正常" : "已禁用"}</dd></div>
+              <div className="dp-field"><dt>创建时间</dt><dd>{user.createdAt?.slice(0, 10) ?? "—"}</dd></div>
+            </dl>
+            {editing && (
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">取消</button>
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={submitting} onClick={handleSave} type="button">{submitting ? "保存中..." : "保存"}</button>
+              </div>
+            )}
           </div>
-          <div />
         </div>
+      </div>
     </DetailPageShell>
   );
 }
@@ -1469,39 +1464,31 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
 
   return (
     <DetailPageShell parentLabel="用户管理" parentPath="/admin/users" title="新增">
-        <div className="quality-user-modal__body">
+      <div className="dp-card">
+        <div className="dp-card__body">
           {error && <div className="quality-modal__error">{error}</div>}
-          <div className="so-form-cards">
-            <div className="so-form-card">
-              <h4 className="so-form-card__title">账号信息</h4>
-              <div className="so-form-card__row">
-                <div className="sw-field"><span>用户名</span><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></div>
-                <div className="sw-field"><span>密码</span><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></div>
-              </div>
-              <div className="so-form-card__row">
-                <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></div>
-                <div className="sw-field"><span>手机号</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></div>
-              </div>
-              <div className="so-form-card__row">
-                <div className="sw-field">
-                  <span>角色</span>
-                  <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                    <option value="site_operator">站点运营</option>
-                    <option value="org_admin">集团管理</option>
-                  </select>
-                </div>
-                <div />
-              </div>
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">账号信息</h4>
             </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>用户名</dt><dd><input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required /></dd></div>
+              <div className="dp-field"><dt>密码</dt><dd><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required placeholder="至少6位" /></dd></div>
+              <div className="dp-field"><dt>姓名</dt><dd><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required /></dd></div>
+              <div className="dp-field"><dt>手机号</dt><dd><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="选填" /></dd></div>
+              <div className="dp-field"><dt>角色</dt><dd>
+                <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+                  <option value="site_operator">站点运营</option>
+                  <option value="org_admin">集团管理</option>
+                </select>
+              </dd></div>
+            </dl>
           </div>
-        </div>
-        <div className="quality-user-modal__footer">
-          <div />
-          <div className="quality-user-modal__footer-right">
-            <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "创建中..." : "创建用户"}</button>
           </div>
         </div>
+      </div>
     </DetailPageShell>
   );
 }
@@ -1667,120 +1654,124 @@ function FeishuView() {
     <>
       {toast && <div className="quality-toast">{toast}</div>}
 
-      <div className="quality-records__header">
-        <div>
-          <div className="quality-records__title">飞书管理</div>
-          <div className="quality-records__subtitle">管理飞书机器人用户的角色绑定。飞书用户首次给机器人发消息后自动出现在此列表。</div>
-        </div>
-      </div>
-
-      <div className="quality-table-wrap">
-        <div className="quality-toolbar">
-          <div className="quality-toolbar__search-wrap">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索飞书昵称..." className="quality-toolbar__search" />
+      {editUser ? (
+        <div className="detail-page">
+          <div className="detail-page__header">
+            <button className="detail-page__back" onClick={() => setEditUser(null)} type="button" aria-label="返回">
+              <ChevronLeft size={18} />
+            </button>
+            <button className="detail-page__breadcrumb" onClick={() => setEditUser(null)} type="button">
+              飞书管理
+            </button>
+            <span className="detail-page__sep">/</span>
+            <span className="detail-page__title">{editUser.name || editUser.openId}</span>
           </div>
-          <div className="quality-toolbar__spacer" />
-          <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-            <option value="">全部角色</option>
-            <option value="集团管理">集团管理</option>
-            <option value="服务主管">服务主管</option>
-            <option value="未分配">未分配</option>
-          </select>
-        </div>
-        {loading ? (
-          <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
-        ) : (
-          <table className="quality-records-table">
-            <thead>
-              <tr>
-                {["飞书昵称", "角色", "管理站点", "注册时间", "操作"].map(h => (<th key={h}>{h}</th>))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 && (
-                <tr><td colSpan={5} className="quality-records-table__empty">暂无飞书用户</td></tr>
-              )}
-              {filteredUsers.map(u => (
-                <tr key={u.id} onClick={() => openEdit(u)} style={{ cursor: "pointer" }}>
-                  <td className="quality-records-table__worker">{u.name || u.openId}</td>
-                  <td>
-                    <span className={`quality-status-badge quality-status-badge--${u.role === "unset" ? "anomaly" : "normal"}`}>
-                      {FEISHU_ROLE_LABELS[u.role] ?? u.role}
-                    </span>
-                  </td>
-                  <td>{u.role === "org_admin" ? "全部" : u.role === "service_supervisor" && Array.isArray(u.siteIds) && u.siteIds.length > 0 ? u.siteIds.map(siteName).join(", ") : "—"}</td>
-                  <td>{new Date(u.createdAt).toLocaleDateString("zh-CN")}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
+          <div className="detail-page__body">
+            <div className="dp-card">
+              <div className="dp-card__body">
+                <div className="dp-section">
+                  <div className="dp-section__head">
+                    <h4 className="dp-section__title">角色设置</h4>
+                  </div>
+                  <dl className="dp-fields">
+                    <div className="dp-field"><dt>飞书昵称</dt><dd>{editUser.name || editUser.openId}</dd></div>
+                    <div className="dp-field"><dt>Open ID</dt><dd style={{ fontSize: 11, fontFamily: "monospace" }}>{editUser.openId}</dd></div>
+                    <div className="dp-field"><dt>注册时间</dt><dd>{new Date(editUser.createdAt).toLocaleDateString("zh-CN")}</dd></div>
+                    <div className="dp-field">
+                      <dt>角色</dt>
+                      <dd>
+                        <select value={editRole} onChange={e => setEditRole(e.target.value)}>
+                          <option value="unset">未分配</option>
+                          <option value="org_admin">集团管理</option>
+                          <option value="service_supervisor">服务主管</option>
+                        </select>
+                      </dd>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {editUser && (<>
-        <div className="sw-scrim" onClick={() => setEditUser(null)} />
-        <div className="quality-user-modal" role="dialog" aria-label={editUser.name || editUser.openId}>
-          <div className="quality-user-modal__header">
-            <div>
-              <div className="quality-user-modal__title">{editUser.name || editUser.openId}</div>
-              <div className="quality-user-modal__tags">
-                <span className={`so-modal__chip ${editUser.role === "unset" ? "so-modal__chip--danger" : ""}`}>
-                  {FEISHU_ROLE_LABELS[editUser.role] ?? editUser.role}
-                </span>
+                    {editRole === "service_supervisor" && (
+                      <div className="dp-field dp-field--full">
+                        <dt>管理站点</dt>
+                        <dd>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {sites.map(s => (
+                              <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
+                                  setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
+                                }} />
+                                {s.name}
+                              </label>
+                            ))}
+                          </div>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button className="sw-btn sw-btn--primary" disabled={editSubmitting} onClick={saveEdit} type="button">{editSubmitting ? "保存中..." : "保存"}</button>
+                </div>
               </div>
             </div>
-            <CloseBtn onClick={() => setEditUser(null)} />
-          </div>
-          <div className="quality-user-modal__body">
-            <h4 style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 600, color: "var(--quality-text)" }}>角色设置</h4>
-            <div className="so-overview-grid">
-              <dl className="so-overview-item"><dt>飞书昵称</dt><dd>{editUser.name || editUser.openId}</dd></dl>
-              <dl className="so-overview-item"><dt>Open ID</dt><dd style={{ fontSize: 11, fontFamily: "monospace" }}>{editUser.openId}</dd></dl>
-              <dl className="so-overview-item"><dt>注册时间</dt><dd>{new Date(editUser.createdAt).toLocaleDateString("zh-CN")}</dd></dl>
-              <dl className="so-overview-item">
-                <dt>角色</dt>
-                <dd>
-                  <select className="quality-user-modal__inline-input" value={editRole} onChange={e => setEditRole(e.target.value)} style={{ width: "100%", padding: "4px 8px" }}>
-                    <option value="unset">未分配</option>
-                    <option value="org_admin">集团管理</option>
-                    <option value="service_supervisor">服务主管</option>
-                  </select>
-                </dd>
-              </dl>
-              {editRole === "service_supervisor" && (
-                <dl className="so-overview-item" style={{ gridColumn: "1 / -1" }}>
-                  <dt>管理站点</dt>
-                  <dd>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {sites.map(s => (
-                        <label key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                          <input type="checkbox" checked={editSiteIds.includes(s.id)} onChange={e => {
-                            setEditSiteIds(e.target.checked ? [...editSiteIds, s.id] : editSiteIds.filter(x => x !== s.id));
-                          }} />
-                          {s.name}
-                        </label>
-                      ))}
-                    </div>
-                  </dd>
-                </dl>
-              )}
-            </div>
-          </div>
-          <div className="quality-user-modal__footer">
-            <div />
-            <div className="quality-user-modal__footer-right">
-              <button className="sw-btn sw-btn--secondary" onClick={() => setEditUser(null)} type="button">取消</button>
-              <button className="sw-btn sw-btn--primary" disabled={editSubmitting} onClick={saveEdit} type="button">{editSubmitting ? "保存中..." : "保存"}</button>
-            </div>
           </div>
         </div>
-      </>)}
+      ) : (
+        <>
+          <div className="quality-records__header">
+            <div>
+              <div className="quality-records__title">飞书管理</div>
+              <div className="quality-records__subtitle">管理飞书机器人用户的角色绑定。飞书用户首次给机器人发消息后自动出现在此列表。</div>
+            </div>
+          </div>
+
+          <div className="quality-table-wrap">
+            <div className="quality-toolbar">
+              <div className="quality-toolbar__search-wrap">
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索飞书昵称..." className="quality-toolbar__search" />
+              </div>
+              <div className="quality-toolbar__spacer" />
+              <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+                <option value="">全部角色</option>
+                <option value="集团管理">集团管理</option>
+                <option value="服务主管">服务主管</option>
+                <option value="未分配">未分配</option>
+              </select>
+            </div>
+            {loading ? (
+              <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
+            ) : (
+              <table className="quality-records-table">
+                <thead>
+                  <tr>
+                    {["飞书昵称", "角色", "管理站点", "注册时间", "操作"].map(h => (<th key={h}>{h}</th>))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={5} className="quality-records-table__empty">暂无飞书用户</td></tr>
+                  )}
+                  {filteredUsers.map(u => (
+                    <tr key={u.id} onClick={() => openEdit(u)} style={{ cursor: "pointer" }}>
+                      <td className="quality-records-table__worker">{u.name || u.openId}</td>
+                      <td>
+                        <span className={`quality-status-badge quality-status-badge--${u.role === "unset" ? "anomaly" : "normal"}`}>
+                          {FEISHU_ROLE_LABELS[u.role] ?? u.role}
+                        </span>
+                      </td>
+                      <td>{u.role === "org_admin" ? "全部" : u.role === "service_supervisor" && Array.isArray(u.siteIds) && u.siteIds.length > 0 ? u.siteIds.map(siteName).join(", ") : "—"}</td>
+                      <td>{new Date(u.createdAt).toLocaleDateString("zh-CN")}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>编辑</button>
+                          <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
 
       {confirmAction && (
         <ConfirmDialog
