@@ -256,9 +256,12 @@ const VIEW_LABELS: Record<View, string> = {
 
 const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard", feishu: "feishu" };
 
-export function QualityPage() {
+export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: onNavigateProp }: {
+  activeView?: View; onSelectView?: (v: string) => void; onNavigate?: (area: string, params: Record<string, string>) => void;
+} = {}) {
   const { user } = useAuth();
-  const [view, setView] = useState<View>("dashboard");
+  const [viewFallback, setViewFallback] = useState<View>("dashboard");
+  const view = viewProp ?? viewFallback;
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -275,17 +278,22 @@ export function QualityPage() {
   }, [view, handleSend]);
 
   const handleAdminNavigate = useCallback((area: string, params: Record<string, string>) => {
-    const target = ADMIN_NAV_MAP[area];
-    if (target) {
-      setView(target);
-      setSearchFilter(params.search ?? "");
+    if (onNavigateProp) {
+      onNavigateProp(area, params);
+    } else {
+      const target = ADMIN_NAV_MAP[area];
+      if (target) { setViewFallback(target); setSearchFilter(params.search ?? ""); }
     }
-  }, []);
+  }, [onNavigateProp]);
 
   const handleSelectView = useCallback((v: View) => {
-    setView(v);
+    if (onSelectView) {
+      onSelectView(v);
+    } else {
+      setViewFallback(v);
+    }
     setSearchFilter("");
-  }, []);
+  }, [onSelectView]);
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
     { key: "dashboard", label: "质量总览", icon: <IconShield /> },
