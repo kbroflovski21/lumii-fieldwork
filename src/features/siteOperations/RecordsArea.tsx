@@ -140,15 +140,27 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
     navigate("/records");
   }, [onMutate, navigate]);
 
-  // URL -> drawer sync
+  // URL -> drawer sync (service records)
   useEffect(() => {
-    if (routeId) {
-      const rec = records.find(r => r.id === routeId);
-      if (rec) setDrawer({ kind: "view", record: rec });
-    } else {
-      setDrawer({ kind: "closed" });
+    if (viewMode === "records") {
+      if (routeId) {
+        const rec = records.find(r => r.id === routeId);
+        if (rec) setDrawer({ kind: "view", record: rec });
+      } else {
+        setDrawer({ kind: "closed" });
+      }
     }
-  }, [routeId, records]);
+  }, [routeId, records, viewMode]);
+
+  // URL -> recording detail sync
+  useEffect(() => {
+    if (viewMode === "recordings" && routeId) {
+      const rec = recordings.find((r: any) => r.id === routeId);
+      if (rec) setSelectedRecording(rec);
+    } else if (viewMode === "recordings") {
+      setSelectedRecording(null);
+    }
+  }, [routeId, recordings, viewMode]);
 
   useEffect(() => {
     if (viewMode !== "recordings") return;
@@ -189,6 +201,8 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
     <>
       {drawer.kind !== "closed" ? (
         <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); closeDrawer(); }} onUpdated={handleUpdated} />
+      ) : selectedRecording ? (
+        <RecordingDrawer recording={selectedRecording} onClose={() => navigate("/recordings")} />
       ) : (
         <section aria-label="服务记录" className="sw-page">
           <div className="sw-page__inner">
@@ -251,7 +265,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                           return (
                             <div className="sw-table__row rec-table__row" key={rec.id}
                               data-selected={selectedRecording?.id === rec.id}
-                              onClick={() => setSelectedRecording(rec)}
+                              onClick={() => navigate(`/recordings/${rec.id}`)}
                               role="row" style={{ cursor: "pointer" }}>
                               <div role="cell" className="sch-cell-datetime">
                                 <span className="sch-cell-date">{bj.date}</span>
@@ -279,7 +293,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                           const bj = toBjStr(new Date(rec.startedAt));
                           const dur = rec.durationSeconds ?? 0;
                           return (
-                            <button className="sw-mobile-card" key={rec.id} onClick={() => setSelectedRecording(rec)} type="button">
+                            <button className="sw-mobile-card" key={rec.id} onClick={() => navigate(`/recordings/${rec.id}`)} type="button">
                               <div className="sw-mobile-card__top">
                                 <span className="sch-cell-date">{bj.date} {bj.time}</span>
                                 <span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span>
@@ -308,12 +322,6 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
             )}
           </div>
 
-          {selectedRecording && (
-            <>
-              <button aria-label="关闭录音详情" className="sw-scrim" onClick={() => setSelectedRecording(null)} type="button" />
-              <RecordingDrawer recording={selectedRecording} onClose={() => setSelectedRecording(null)} />
-            </>
-          )}
         </section>
       )}
     </>
@@ -952,79 +960,66 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
   useEscClose(onClose);
 
   return (
-    <div className="so-modal so-modal--view" role="dialog" aria-label="录音详情">
-      <div className="so-modal__summary">
-        <div className="so-modal__summary-main">
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Headphones size={18} style={{ color: "#0052CC" }} />
+    <DetailPageShell parentLabel="录音记录" parentPath="/recordings" title={`${rec.workerName ?? "录音"} · ${rec.badgeId}`}>
+      <div className="dp-card">
+        <div className="dp-card__body">
+          <div className="dp-section">
+            <div className="dp-section__head"><h4 className="dp-section__title">基本信息</h4></div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>服务人员</dt><dd>{rec.workerName ?? "—"}</dd></div>
+              <div className="dp-field"><dt>工牌</dt><dd><span className="badges-code-tag">{rec.badgeId}</span></dd></div>
+              <div className="dp-field"><dt>时间</dt><dd>{new Date(rec.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</dd></div>
+              <div className="dp-field"><dt>时长</dt><dd>{Math.floor(dur / 60)}分{dur % 60}秒</dd></div>
+              {rec.matchedServiceObjectName && <div className="dp-field"><dt>服务对象</dt><dd>{rec.matchedServiceObjectName}</dd></div>}
+              {rec.matchReason && <div className="dp-field"><dt>匹配原因</dt><dd>{rec.matchReason} ({Math.round((rec.matchConfidence ?? 0) * 100)}%)</dd></div>}
+            </dl>
           </div>
-          <div className="so-modal__summary-name">
-            <h3>{rec.workerName ?? "录音"} · {rec.badgeId}</h3>
-            <span className="so-modal__summary-demo">{new Date(rec.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })} · {Math.floor(dur / 60)}分{dur % 60}秒</span>
-          </div>
-          <div className="so-modal__summary-actions">
-            <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-          </div>
+
+          {rec.audioUrl && (
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">录音</h4></div>
+              <div className="rec-audio-player">
+                <Headphones size={16} />
+                <audio controls preload="auto" src={rec.audioUrl} style={{ flex: 1, height: 36 }} />
+                <a href={rec.audioUrl} download className="rec-audio-download">下载</a>
+              </div>
+            </div>
+          )}
+
+          {rec.aiSummary && (
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">AI 摘要</h4></div>
+              <div style={{ fontSize: 13, lineHeight: 1.7, color: "#334155", background: "#F8FAFC", padding: 14, borderRadius: 10 }}>{rec.aiSummary}</div>
+            </div>
+          )}
+
+          {rec.transcriptText && (
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">对话记录</h4></div>
+              <div style={{ background: "#F8FAFC", padding: 14, borderRadius: 10, maxHeight: 400, overflowY: "auto", lineHeight: 1.8 }}>
+                {Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0
+                  ? rec.transcriptSegments.map((seg: any, i: number) => {
+                    const isWorker = seg.speaker === "社工";
+                    const isElder = seg.speaker === "老人";
+                    const displayName = isWorker && rec.workerName
+                      ? `${rec.workerName}（社工）`
+                      : isElder && rec.matchedServiceObjectName
+                        ? `${rec.matchedServiceObjectName}（服务对象）`
+                        : seg.speaker;
+                    return (
+                      <div key={i} style={{ marginBottom: 4 }}>
+                        {seg.speaker && <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4, marginRight: 4, background: isWorker ? "rgba(96,165,250,.15)" : "rgba(52,211,153,.15)", color: isWorker ? "#3B82F6" : "#10B981" }}>{displayName}</span>}
+                        <span style={{ fontSize: 13 }}>{seg.text}</span>
+                      </div>
+                    );
+                  })
+                  : <div style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{rec.transcriptText}</div>
+                }
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      <div className="so-modal__content" style={{ padding: 20 }}>
-        <div className="so-tab-section">
-          <h4 className="so-tab-section-title">基本信息</h4>
-          <dl className="so-overview-grid">
-            <div className="so-overview-item"><dt>服务人员</dt><dd>{rec.workerName ?? "—"}</dd></div>
-            <div className="so-overview-item"><dt>工牌</dt><dd><span className="badges-code-tag">{rec.badgeId}</span></dd></div>
-            <div className="so-overview-item"><dt>时间</dt><dd>{new Date(rec.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}</dd></div>
-            <div className="so-overview-item"><dt>时长</dt><dd>{Math.floor(dur / 60)}分{dur % 60}秒</dd></div>
-            {rec.matchedServiceObjectName && <div className="so-overview-item"><dt>服务对象</dt><dd>{rec.matchedServiceObjectName}</dd></div>}
-            {rec.matchReason && <div className="so-overview-item"><dt>匹配原因</dt><dd>{rec.matchReason} ({Math.round((rec.matchConfidence ?? 0) * 100)}%)</dd></div>}
-          </dl>
-        </div>
-
-        {rec.audioUrl && (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">录音</h4>
-            <div className="rec-audio-player">
-              <Headphones size={16} />
-              <audio controls preload="auto" src={rec.audioUrl} style={{ flex: 1, height: 36 }} />
-              <a href={rec.audioUrl} download className="rec-audio-download">下载</a>
-            </div>
-          </div>
-        )}
-
-        {rec.aiSummary && (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">AI 摘要</h4>
-            <div style={{ fontSize: 13, lineHeight: 1.7, color: "#334155", background: "#F8FAFC", padding: 14, borderRadius: 10 }}>{rec.aiSummary}</div>
-          </div>
-        )}
-
-        {rec.transcriptText && (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">对话记录</h4>
-            <div style={{ background: "#F8FAFC", padding: 14, borderRadius: 10, maxHeight: 400, overflowY: "auto", lineHeight: 1.8 }}>
-              {Array.isArray(rec.transcriptSegments) && rec.transcriptSegments.length > 0
-                ? rec.transcriptSegments.map((seg: any, i: number) => {
-                  const isWorker = seg.speaker === "社工";
-                  const isElder = seg.speaker === "老人";
-                  const displayName = isWorker && rec.workerName
-                    ? `${rec.workerName}（社工）`
-                    : isElder && rec.matchedServiceObjectName
-                      ? `${rec.matchedServiceObjectName}（服务对象）`
-                      : seg.speaker;
-                  return (
-                    <div key={i} style={{ marginBottom: 4 }}>
-                      {seg.speaker && <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4, marginRight: 4, background: isWorker ? "rgba(96,165,250,.15)" : "rgba(52,211,153,.15)", color: isWorker ? "#3B82F6" : "#10B981" }}>{displayName}</span>}
-                      <span style={{ fontSize: 13 }}>{seg.text}</span>
-                    </div>
-                  );
-                })
-                : <div style={{ whiteSpace: "pre-wrap", fontSize: 13 }}>{rec.transcriptText}</div>
-              }
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    </DetailPageShell>
   );
 }

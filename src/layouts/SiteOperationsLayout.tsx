@@ -261,7 +261,8 @@ export function SiteOperationsLayout() {
                   <div key={item.id}>
                     <Link to={item.path} className="site-operations-sidebar__item" data-active={isParentActive} title={undefined}>
                       <Icon size={20} />
-                      <span>{item.label}</span>
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {isParentActive ? <ChevronDown size={14} style={{ color: "var(--site-muted)", flexShrink: 0 }} /> : <ChevronRight size={14} style={{ color: "var(--site-muted)", flexShrink: 0 }} />}
                     </Link>
                     {isParentActive && (
                       <div className="site-operations-sidebar__sub-items">

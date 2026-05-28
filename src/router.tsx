@@ -96,6 +96,7 @@ export const router = createBrowserRouter([
           {
             path: "recordings",
             element: <RecordsArea />,
+            children: [{ path: ":id", element: null }],
           },
         ],
       },
