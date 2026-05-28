@@ -788,15 +788,8 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     } catch { setCreating(false); }
   };
 
-  const submitActions = (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={onClose} type="button">取消</button>
-      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={creating || !name.trim() || !phone.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
-    </div>
-  );
-
   return (
-    <DetailPageShell parentLabel="服务人员" parentPath="/workers" title="新增" actions={submitActions}>
+    <DetailPageShell parentLabel="服务人员" parentPath="/workers" title="新增">
       <div className="dp-card">
         <div className="dp-card__body">
           <div className="dp-section">
@@ -808,6 +801,9 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
               <div className="dp-field"><dt>电话 *</dt><dd><input onChange={(e) => setPhone(e.target.value)} placeholder="输入电话" value={phone} /></dd></div>
               <div className="dp-field dp-field--full"><dt>资质</dt><dd><input onChange={(e) => setQualifications(e.target.value)} placeholder="用顿号分隔，如：助餐、陪诊" value={qualifications} /></dd></div>
             </dl>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+              <button className="sw-btn sw-btn--primary" disabled={creating || !name.trim() || !phone.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
+            </div>
           </div>
         </div>
       </div>

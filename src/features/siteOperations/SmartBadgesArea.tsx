@@ -511,25 +511,8 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
     }
   };
 
-  const stepActions = step === "input" ? (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={onClose} type="button">取消</button>
-      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={activating || !deviceCode.trim()} onClick={() => setStep("confirm")} type="button">下一步</button>
-    </div>
-  ) : step === "confirm" ? (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => { setStep("input"); setError(""); }} type="button">上一步</button>
-      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={activating} onClick={handleActivate} type="button">{activating ? "激活中..." : "确认激活"}</button>
-    </div>
-  ) : (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => { onActivated(); }} type="button">查看设备详情</button>
-      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} onClick={() => { onActivated(); setDeviceCode(""); setStep("input"); setResult(null); }} type="button">继续激活</button>
-    </div>
-  );
-
   return (
-    <DetailPageShell parentLabel="设备" parentPath="/badges" title="激活工牌" actions={stepActions}>
+    <DetailPageShell parentLabel="设备" parentPath="/badges" title="激活工牌">
       <div className="dp-card">
         <div className="dp-card__body">
           {step === "input" ? (
@@ -541,6 +524,9 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
                 <div className="dp-field"><dt>设备码</dt><dd><input onChange={(e) => setDeviceCode(e.target.value)} placeholder="输入设备码，如 FW-030" value={deviceCode} /></dd></div>
               </dl>
               {error ? <p className="badges-error" style={{ marginTop: 12 }}>{error}</p> : null}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+                <button className="sw-btn sw-btn--primary" disabled={activating || !deviceCode.trim()} onClick={() => setStep("confirm")} type="button">下一步</button>
+              </div>
             </div>
           ) : step === "confirm" ? (
             <div className="dp-section">
@@ -552,12 +538,20 @@ function ActivateDrawer({ onClose, onActivated }: { onClose: () => void; onActiv
                 <div className="dp-field"><dt>绑定站点</dt><dd>{currentSite?.name ?? "未选择"}</dd></div>
               </dl>
               {error ? <p className="badges-error" style={{ marginTop: 12 }}>{error}</p> : null}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
+                <button className="sw-btn sw-btn--secondary" onClick={() => { setStep("input"); setError(""); }} type="button">上一步</button>
+                <button className="sw-btn sw-btn--primary" disabled={activating} onClick={handleActivate} type="button">{activating ? "激活中..." : "确认激活"}</button>
+              </div>
             </div>
           ) : (
             <div className="dp-section" style={{ textAlign: "center", padding: "40px 0" }}>
               <div className="badges-success__icon" style={{ margin: "0 auto 12px" }}><Smartphone size={28} /></div>
               <strong style={{ fontSize: 16 }}>激活成功</strong>
               <p style={{ color: "var(--site-muted)", marginTop: 4 }}>{result?.deviceCode} 已绑定到 {result?.siteName}</p>
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
+                <button className="sw-btn sw-btn--secondary" onClick={() => { onActivated(); }} type="button">查看设备详情</button>
+                <button className="sw-btn sw-btn--primary" onClick={() => { onActivated(); setDeviceCode(""); setStep("input"); setResult(null); }} type="button">继续激活</button>
+              </div>
             </div>
           )}
         </div>
