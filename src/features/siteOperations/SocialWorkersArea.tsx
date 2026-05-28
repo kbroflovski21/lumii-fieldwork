@@ -3,7 +3,8 @@ import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect } from "react";
-import { Search, X, ChevronDown, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
+import { Search, X, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
+import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   SocialWorker,
@@ -207,31 +208,6 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   );
 }
 
-function FilterDropdown({
-  onChange,
-  options,
-  value
-}: {
-  onChange: (value: string) => void;
-  options: Array<{ label: string; value: string }>;
-  value: string;
-}) {
-  const isFiltered = value !== "";
-  return (
-    <div className="sw-filter">
-      <select
-        className={isFiltered ? "sw-filter--active" : ""}
-        onChange={(e) => onChange(e.target.value)}
-        value={value}
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      <ChevronDown size={14} />
-    </div>
-  );
-}
 
 function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   if (state.unavailableMessage) {

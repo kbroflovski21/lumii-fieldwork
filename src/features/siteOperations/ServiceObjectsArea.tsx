@@ -3,7 +3,8 @@ import { formatTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { Search, X, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   ServiceObject,
@@ -233,16 +234,6 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
   );
 }
 
-function FilterDropdown({ onChange, options, value }: { onChange: (v: string) => void; options: Array<{ label: string; value: string }>; value: string }) {
-  return (
-    <div className="sw-filter">
-      <select className={value ? "sw-filter--active" : ""} onChange={(e) => onChange(e.target.value)} value={value}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown size={14} />
-    </div>
-  );
-}
 
 function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   if (state.unavailableMessage) return <div className="sw-banner sw-banner--danger" role="status"><Shield size={16} /><div><strong>长者暂不可用</strong><span>{state.unavailableMessage}</span></div></div>;

@@ -2,7 +2,8 @@ import { useEscClose } from "./useEscClose";
 import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
-import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, X, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type {
   SmartBadge,
@@ -209,20 +210,6 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   return listContent;
 }
 
-function FilterDropdown({ onChange, options, value }: {
-  onChange: (v: string) => void;
-  options: Array<{ label: string; value: string }>;
-  value: string;
-}) {
-  return (
-    <div className="sw-filter">
-      <select className={value ? "sw-filter--active" : ""} onChange={(e) => onChange(e.target.value)} value={value}>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown size={14} />
-    </div>
-  );
-}
 
 function OperationalBanner({ state }: { state: WorkAreaOperationalState }) {
   if (state.unavailableMessage) {
