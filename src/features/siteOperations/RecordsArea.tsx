@@ -10,7 +10,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 
 let _clipPlayer: HTMLAudioElement | null = null;
@@ -114,13 +114,15 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const viewMode = location.pathname.startsWith("/recordings") ? "recordings" as const : "records" as const;
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<DateFilter>("");
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("");
   const [exportFilter, setExportFilter] = useState<ExportFilter>("");
-  const [viewMode, setViewMode] = useState<"records" | "recordings">("records");
+  // viewMode derived from URL path (see above)
   const [recordings, setRecordings] = useState<any[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(false);
   const [recordingsPage, setRecordingsPage] = useState(1);
@@ -190,17 +192,6 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
       ) : (
         <section aria-label="服务记录" className="sw-page">
           <div className="sw-page__inner">
-            <div style={{ display: "inline-flex", gap: 4, background: "#F1F5F9", borderRadius: 8, padding: 2, marginBottom: 16, alignSelf: "flex-start" }}>
-              <button
-                onClick={() => setViewMode("records")}
-                style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "records" ? "#fff" : "transparent", color: viewMode === "records" ? "#0F172A" : "#64748B", boxShadow: viewMode === "records" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-              >服务记录</button>
-              <button
-                onClick={() => setViewMode("recordings")}
-                style={{ padding: "6px 16px", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer", background: viewMode === "recordings" ? "#fff" : "transparent", color: viewMode === "recordings" ? "#0F172A" : "#64748B", boxShadow: viewMode === "recordings" ? "0 1px 3px rgba(0,0,0,.08)" : "none" }}
-              >录音记录</button>
-            </div>
-
             <header className="sw-header">
               <div className="sw-header__title-group">
                 <h2 className="sw-header__title">{viewMode === "records" ? "服务记录" : "录音记录"}</h2>

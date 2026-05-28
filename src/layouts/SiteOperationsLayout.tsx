@@ -23,14 +23,17 @@ export function useSiteOpsData() {
 }
 
 /* ── Nav items ── */
-const NAV_ITEMS = [
+const NAV_ITEMS: Array<{ id: string; path: string; icon: typeof Bot; label: string; children?: Array<{ id: string; path: string; label: string }> }> = [
   { id: "home", path: "/", icon: Bot, label: "首页" },
   { id: "social_workers", path: "/workers", icon: UsersRound, label: "服务人员" },
   { id: "smart_badges", path: "/badges", icon: Smartphone, label: "设备" },
   { id: "service_objects", path: "/elders", icon: UserRound, label: "长者" },
   { id: "service_schedules", path: "/schedules", icon: CalendarDays, label: "服务排期" },
-  { id: "service_records", path: "/records", icon: FileText, label: "服务记录" },
-] as const;
+  { id: "service_records", path: "/records", icon: FileText, label: "服务记录", children: [
+    { id: "service_records", path: "/records", label: "服务记录" },
+    { id: "recordings", path: "/recordings", label: "录音记录" },
+  ] },
+];
 
 const AREA_LABELS: Record<string, string> = {
   home: "首页",
@@ -39,6 +42,7 @@ const AREA_LABELS: Record<string, string> = {
   service_objects: "长者",
   service_schedules: "服务排期",
   service_records: "服务记录",
+  recordings: "录音记录",
 };
 
 export function SiteOperationsLayout() {
@@ -251,9 +255,28 @@ export function SiteOperationsLayout() {
           <div className="site-operations-sidebar__items">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
-              const isActive = item.id === activeArea;
+              const isParentActive = item.id === activeArea || (item.children?.some(c => c.id === activeArea));
+              if (item.children && !sidebarCollapsed) {
+                return (
+                  <div key={item.id}>
+                    <Link to={item.path} className="site-operations-sidebar__item" data-active={isParentActive} title={undefined}>
+                      <Icon size={20} />
+                      <span>{item.label}</span>
+                    </Link>
+                    {isParentActive && (
+                      <div className="site-operations-sidebar__sub-items">
+                        {item.children.map(child => (
+                          <Link key={child.id} to={child.path} className="site-operations-sidebar__sub-item" data-active={child.id === activeArea}>
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               return (
-                <Link key={item.id} to={item.path} className="site-operations-sidebar__item" data-active={isActive} title={sidebarCollapsed ? item.label : undefined}>
+                <Link key={item.id} to={item.path} className="site-operations-sidebar__item" data-active={isParentActive} title={sidebarCollapsed ? item.label : undefined}>
                   <Icon size={20} />
                   {!sidebarCollapsed && <span>{item.label}</span>}
                 </Link>

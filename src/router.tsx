@@ -19,6 +19,7 @@ export const PATH_TO_AREA: Record<string, string> = {
   "/elders": "service_objects",
   "/schedules": "service_schedules",
   "/records": "service_records",
+  "/recordings": "recordings",
 };
 
 export const GY_AREA_TO_PATH: Record<string, string> = {
@@ -28,6 +29,7 @@ export const GY_AREA_TO_PATH: Record<string, string> = {
   service_objects: "/elders",
   service_schedules: "/schedules",
   service_records: "/records",
+  recordings: "/recordings",
   dashboard: "/admin",
   sites: "/admin/sites",
   users: "/admin/users",
@@ -90,6 +92,10 @@ export const router = createBrowserRouter([
             path: "records",
             element: <RecordsArea />,
             children: [{ path: ":id", element: null }],
+          },
+          {
+            path: "recordings",
+            element: <RecordsArea />,
           },
         ],
       },
