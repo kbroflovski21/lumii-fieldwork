@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2 } from "lucide-react";
+import { DetailPageShell } from "../../shared/DetailPageShell";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
@@ -134,6 +135,10 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   const isLoading = resource.status === "loading" || resource.status === "idle";
   useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
+  if (drawer.kind !== "closed") {
+    return <ScheduleDrawer schedule={drawer.schedule} mutationsDisabled={mutationsDisabled} onClose={closeDrawer} onUpdated={handleUpdated} />;
+  }
+
   return (
     <>
       <section aria-label="服务排期" className="sw-page">
@@ -183,13 +188,6 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
             : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => navigate(`/schedules/${s.id}`)} />}
           </div>
         </div>
-
-        {drawer.kind !== "closed" ? (
-          <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
-            <ScheduleDrawer schedule={drawer.schedule} mutationsDisabled={mutationsDisabled} onClose={closeDrawer} onUpdated={handleUpdated} />
-          </>
-        ) : null}
       </section>
     </>
   );
@@ -607,10 +605,9 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   const historyItems = ((s as any).adjustmentHistory ?? []) as Array<{ action: string; detail: string; operatorName: string; adjustedAt: string }>;
 
   return (
-    <div className="so-modal sch-event-modal" role="dialog" aria-label="排期详情">
+    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`}>
       {/* ── Status Banner ── */}
       <div className="sch-event__banner" data-tone={tone}>
-        <button aria-label="关闭" className="so-modal__close sch-event__banner-close" onClick={onClose} type="button"><X size={18} /></button>
         <span className="sw-status-badge" data-tone={tone} style={{ marginBottom: 6 }}>{statusText[s.status] ?? s.status}</span>
         <h2 className="sch-event__title">{s.serviceProject}</h2>
         <p className="sch-event__datetime">{formatDate(s.serviceDate)} · {formatWindow(s)}</p>
@@ -758,7 +755,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
         </div>
         <div className="so-modal__footer-right" />
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
 
