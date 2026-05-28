@@ -304,7 +304,7 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   ];
 
   return (
-    <div className="quality-page-content">
+    <div className="quality-main">
       {view === "sop" ? (
         <SupervisorContent />
       ) : (
