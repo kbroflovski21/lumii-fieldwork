@@ -1,7 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type {
   SmartBadge,
   SmartBadgeStatus,
@@ -68,11 +68,14 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   const onMutate = onMutateProp ?? ctxData.refetch;
   const navigate = useNavigate();
   const { id: routeId } = useParams();
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get("search") ?? "";
+  const effectiveInitialSearch = initialSearch ?? urlSearch;
   const onOpenRecords = onOpenRecordsProp ?? (() => navigate("/records"));
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
-  useEffect(() => { if (initialSearch) setSearchQuery(initialSearch); }, [initialSearch]);
+  const [searchQuery, setSearchQuery] = useState(effectiveInitialSearch);
+  useEffect(() => { if (effectiveInitialSearch) setSearchQuery(effectiveInitialSearch); }, [effectiveInitialSearch]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [preferredFilter, setPreferredFilter] = useState<PreferredFilter>("");
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;

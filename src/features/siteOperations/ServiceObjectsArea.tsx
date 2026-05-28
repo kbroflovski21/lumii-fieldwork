@@ -19,7 +19,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -118,10 +118,13 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get("search") ?? "";
+  const effectiveInitialSearch = initialSearch ?? urlSearch;
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
-  useEffect(() => { if (initialSearch) setSearchQuery(initialSearch); }, [initialSearch]);
+  const [searchQuery, setSearchQuery] = useState(effectiveInitialSearch);
+  useEffect(() => { if (effectiveInitialSearch) setSearchQuery(effectiveInitialSearch); }, [effectiveInitialSearch]);
   const [eligibilityFilter, setEligibilityFilter] = useState<EligibilityFilter>("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("");
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("");
