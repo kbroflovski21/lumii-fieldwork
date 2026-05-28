@@ -123,6 +123,7 @@ model User {
   siteUsers     SiteUser[]
   socialWorkers SocialWorker[]
 
+  @@index([orgId], name: "idx_users_org")
   @@map("users")
 }
 
@@ -174,6 +175,8 @@ model SocialWorker {
   createdAt                DateTime     @default(now()) @map("created_at")
   updatedAt                DateTime     @default(now()) @updatedAt @map("updated_at")
 
+  @@index([siteId], name: "idx_social_workers_site")
+  @@index([userId], name: "idx_social_workers_user")
   @@map("social_workers")
 }
 
@@ -194,6 +197,7 @@ model SmartBadge {
   createdAt             DateTime    @default(now()) @map("created_at")
   updatedAt             DateTime    @default(now()) @updatedAt @map("updated_at")
 
+  @@index([siteId], name: "idx_smart_badges_site")
   @@map("smart_badges")
 }
 
@@ -221,6 +225,7 @@ model ServiceObject {
   servicePlans    ServicePlan[]
   serviceSchedules ServiceSchedule[]
 
+  @@index([siteId], name: "idx_service_objects_site")
   @@map("service_objects")
 }
 
@@ -237,6 +242,7 @@ model FamilyContact {
 
   serviceObject ServiceObject @relation(fields: [serviceObjectId], references: [id])
 
+  @@index([serviceObjectId], name: "idx_family_contacts_object")
   @@map("family_contacts")
 }
 
@@ -261,6 +267,7 @@ model ServicePlan {
   exceptions    ServicePlanException[]
   sopLinks      ServicePlanSop[]
 
+  @@index([serviceObjectId], name: "idx_service_plans_object")
   @@map("service_plans")
 }
 
@@ -277,6 +284,7 @@ model ServicePlanException {
 
   servicePlan ServicePlan @relation(fields: [servicePlanId], references: [id])
 
+  @@index([servicePlanId], name: "idx_plan_exceptions_plan")
   @@map("service_plan_exceptions")
 }
 
@@ -309,6 +317,9 @@ model ServiceSchedule {
   serviceObject ServiceObject    @relation(fields: [serviceObjectId], references: [id])
   sopLinks      ServiceScheduleSop[]
 
+  @@index([siteId, serviceDate], name: "idx_schedules_site_date")
+  @@index([serviceObjectId], name: "idx_schedules_object")
+  @@index([servicePlanId], name: "idx_schedules_plan")
   @@map("service_schedules")
 }
 
@@ -348,6 +359,8 @@ model ServiceRecord {
   audioAssets AudioAsset[]
   transcripts Transcript[]
 
+  @@index([siteId, serviceDate(sort: Desc)], name: "idx_records_site_date")
+  @@index([badgeId], name: "idx_records_badge")
   @@map("service_records")
 }
 
@@ -362,6 +375,7 @@ model AudioAsset {
 
   record ServiceRecord @relation(fields: [recordId], references: [id])
 
+  @@index([recordId], name: "idx_audio_assets_record")
   @@map("audio_assets")
 }
 
@@ -375,6 +389,7 @@ model Transcript {
 
   record ServiceRecord @relation(fields: [recordId], references: [id])
 
+  @@index([recordId], name: "idx_transcripts_record")
   @@map("transcripts")
 }
 
@@ -463,6 +478,7 @@ model SopStep {
 
   sop Sop @relation(fields: [sopId], references: [id], onDelete: Cascade)
 
+  @@index([sopId], name: "idx_sop_steps_sop")
   @@map("sop_steps")
 }
 
@@ -499,6 +515,9 @@ model Recording {
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @default(now()) @updatedAt @map("updated_at")
 
+  @@index([siteId, startedAt(sort: Desc)], name: "idx_recordings_site_started")
+  @@index([badgeId], name: "idx_recordings_badge")
+  @@index([workerId], name: "idx_recordings_worker")
   @@map("recordings")
 }
 
