@@ -12,6 +12,7 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { useParams, useNavigate } from "react-router-dom";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -76,6 +77,8 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   const ctxData = useSiteOpsData();
   const resource = resourceProp ?? ctxData.socialWorkers;
   const onMutate = onMutateProp ?? ctxData.refetch;
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
@@ -88,22 +91,34 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   const workers = resource.status === "success" ? resource.data.socialWorkers : [];
 
   const openDrawer = useCallback((worker: SocialWorker) => {
-    setDrawer({ kind: "view", worker });
-  }, []);
+    navigate(`/workers/${worker.id}`);
+  }, [navigate]);
+
+  const closeDrawer = useCallback(() => { navigate("/workers"); }, [navigate]);
 
   const handleWorkerCreated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/workers");
+  }, [onMutate, navigate]);
 
   const handleWorkerUpdated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/workers");
+  }, [onMutate, navigate]);
 
   const handleWorkerRefresh = useCallback(() => {
     onMutate?.();
   }, [onMutate]);
+
+  // URL -> drawer sync
+  useEffect(() => {
+    if (routeId) {
+      const worker = workers.find(w => w.id === routeId);
+      if (worker) setDrawer({ kind: "view", worker });
+    } else {
+      setDrawer({ kind: "closed" });
+    }
+  }, [routeId, workers]);
 
   // Sync drawer worker with refreshed list data
   useEffect(() => {
@@ -127,7 +142,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => setDrawer({ kind: "closed" }), []));
+  useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
   return (
     <>
@@ -196,13 +211,13 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
             <button
               aria-label="关闭抽屉遮罩"
               className="sw-scrim"
-              onClick={() => setDrawer({ kind: "closed" })}
+              onClick={closeDrawer}
               type="button"
             />
             <WorkerDrawer
               drawer={drawer}
               mutationsDisabled={mutationsDisabled}
-              onClose={() => setDrawer({ kind: "closed" })}
+              onClose={closeDrawer}
               onEdit={(worker) => setDrawer({ kind: "edit", worker })}
               onView={(worker) => setDrawer({ kind: "view", worker })}
               onWorkerCreated={handleWorkerCreated}

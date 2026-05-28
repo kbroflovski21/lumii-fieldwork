@@ -1,7 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type {
   SmartBadge,
   SmartBadgeStatus,
@@ -66,8 +66,9 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   const ctxData = useSiteOpsData();
   const resource = resourceProp ?? ctxData.smartBadges;
   const onMutate = onMutateProp ?? ctxData.refetch;
-  const routerNavigate = useNavigate();
-  const onOpenRecords = onOpenRecordsProp ?? (() => routerNavigate("/records"));
+  const navigate = useNavigate();
+  const { id: routeId } = useParams();
+  const onOpenRecords = onOpenRecordsProp ?? (() => navigate("/records"));
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
@@ -80,22 +81,34 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   const badges = resource.status === "success" ? resource.data.smartBadges : [];
 
   const openDrawer = useCallback((badge: SmartBadge) => {
-    setDrawer({ kind: "view", badge });
-  }, []);
+    navigate(`/badges/${badge.id}`);
+  }, [navigate]);
+
+  const closeDrawer = useCallback(() => { navigate("/badges"); }, [navigate]);
 
   const handleBadgeActivated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/badges");
+  }, [onMutate, navigate]);
 
   const handleBadgeUpdated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/badges");
+  }, [onMutate, navigate]);
 
   const handleBadgeRefresh = useCallback(() => {
     onMutate?.();
   }, [onMutate]);
+
+  // URL -> drawer sync
+  useEffect(() => {
+    if (routeId) {
+      const badge = badges.find(b => b.id === routeId);
+      if (badge) setDrawer({ kind: "view", badge });
+    } else {
+      setDrawer({ kind: "closed" });
+    }
+  }, [routeId, badges]);
 
   // Sync drawer badge with refreshed list data
   useEffect(() => {
@@ -117,7 +130,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => setDrawer({ kind: "closed" }), []));
+  useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
   return (
     <>
@@ -175,18 +188,18 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
 
         {drawer.kind !== "closed" ? (
           <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => setDrawer({ kind: "closed" })} type="button" />
+            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
             {drawer.kind === "view" ? (
               <ViewDrawer
                 badge={drawer.badge}
                 mutationsDisabled={mutationsDisabled}
-                onClose={() => setDrawer({ kind: "closed" })}
+                onClose={closeDrawer}
                 onUpdated={handleBadgeRefresh}
                 onOpenRecords={onOpenRecords}
               />
             ) : (
               <ActivateDrawer
-                onClose={() => setDrawer({ kind: "closed" })}
+                onClose={closeDrawer}
                 onActivated={handleBadgeActivated}
               />
             )}

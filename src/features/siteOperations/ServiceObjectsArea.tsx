@@ -19,6 +19,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { useParams, useNavigate } from "react-router-dom";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -115,6 +116,8 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
   const ctxData = useSiteOpsData();
   const resource = resourceProp ?? ctxData.serviceObjects;
   const onMutate = onMutateProp ?? ctxData.refetch;
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");
@@ -127,21 +130,37 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
 
   const objects = resource.status === "success" ? resource.data.serviceObjects : [];
 
-  const openDrawer = useCallback((obj: ServiceObject) => { setDrawer({ kind: "view", object: obj }); }, []);
+  const openDrawer = useCallback((obj: ServiceObject) => { navigate(`/elders/${obj.id}`); }, [navigate]);
+
+  const closeDrawer = useCallback(() => { navigate("/elders"); }, [navigate]);
+
+  const openCreateDrawer = useCallback(() => { navigate("/elders/new"); }, [navigate]);
 
   const handleCreated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/elders");
+  }, [onMutate, navigate]);
 
   const handleUpdated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/elders");
+  }, [onMutate, navigate]);
 
   const handleObjectRefresh = useCallback(() => {
     onMutate?.();
   }, [onMutate]);
+
+  // URL -> drawer sync
+  useEffect(() => {
+    if (routeId === "new") {
+      setDrawer({ kind: "create" });
+    } else if (routeId) {
+      const obj = objects.find(o => o.id === routeId);
+      if (obj) setDrawer({ kind: "view", object: obj });
+    } else {
+      setDrawer({ kind: "closed" });
+    }
+  }, [routeId, objects]);
 
   // Sync drawer object with refreshed list data
   useEffect(() => {
@@ -166,7 +185,7 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => setDrawer({ kind: "closed" }), []));
+  useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
   return (
     <>
@@ -177,7 +196,7 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
               <h2 className="sw-header__title">长者</h2>
               <p className="sw-header__desc">管理长者档案、服务计划、照护重点和家属订阅</p>
             </div>
-            <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={() => setDrawer({ kind: "create" })} type="button">
+            <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={openCreateDrawer} type="button">
               <Plus size={15} /> 新增长者
             </button>
           </header>
@@ -204,7 +223,7 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
               isEmpty={resource.status === "success" && objects.length === 0}
               isFilterEmpty={resource.status === "success" && objects.length > 0 && filtered.length === 0}
               mutationsDisabled={mutationsDisabled}
-              onCreateClick={() => setDrawer({ kind: "create" })}
+              onCreateClick={openCreateDrawer}
               onRowClick={openDrawer}
               onNameClick={openDrawer}
               selectedId={selectedId}
@@ -214,11 +233,11 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
 
         {drawer.kind !== "closed" ? (
           <>
-            <button aria-label="关闭遮罩" className="sw-scrim" onClick={() => setDrawer({ kind: "closed" })} type="button" />
+            <button aria-label="关闭遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
             <ObjectDrawer
               drawer={drawer}
               mutationsDisabled={mutationsDisabled}
-              onClose={() => setDrawer({ kind: "closed" })}
+              onClose={closeDrawer}
               onCreated={handleCreated}
               onUpdated={handleObjectRefresh}
             />

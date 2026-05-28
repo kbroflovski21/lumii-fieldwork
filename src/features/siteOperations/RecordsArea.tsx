@@ -9,6 +9,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { useParams, useNavigate } from "react-router-dom";
 
 let _clipPlayer: HTMLAudioElement | null = null;
 let _clipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -109,6 +110,8 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   const ctxData = useSiteOpsData();
   const resource = resourceProp ?? ctxData.serviceRecords;
   const onMutate = onMutateProp ?? ctxData.refetch;
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,10 +129,22 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
   const records = resource.status === "success" ? resource.data.serviceRecords : [];
 
+  const closeDrawer = useCallback(() => { navigate("/records"); }, [navigate]);
+
   const handleUpdated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/records");
+  }, [onMutate, navigate]);
+
+  // URL -> drawer sync
+  useEffect(() => {
+    if (routeId) {
+      const rec = records.find(r => r.id === routeId);
+      if (rec) setDrawer({ kind: "view", record: rec });
+    } else {
+      setDrawer({ kind: "closed" });
+    }
+  }, [routeId, records]);
 
   useEffect(() => {
     if (viewMode !== "recordings") return;
@@ -164,7 +179,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => { stopClip(); setDrawer({ kind: "closed" }); }, []));
+  useEscClose(useCallback(() => { stopClip(); closeDrawer(); }, [closeDrawer]));
 
   return (
     <>
@@ -210,7 +225,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
             {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>服务记录数据加载中...</span></div>
             : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
             : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>{records.length === 0 ? "暂无服务记录" : "没有匹配的记录"}</span></div>
-            : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => setDrawer({ kind: "view", record: r })} />}
+            : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => navigate(`/records/${r.id}`)} />}
           </div>
           )}
 
@@ -299,8 +314,8 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
         {drawer.kind !== "closed" ? (
           <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => { stopClip(); setDrawer({ kind: "closed" }); }} type="button" />
-            <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); setDrawer({ kind: "closed" }); }} onUpdated={handleUpdated} />
+            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => { stopClip(); closeDrawer(); }} type="button" />
+            <RecordDrawer record={drawer.record} data={resource.status === "success" ? resource.data : undefined} mutationsDisabled={mutationsDisabled} onClose={() => { stopClip(); closeDrawer(); }} onUpdated={handleUpdated} />
           </>
         ) : null}
 

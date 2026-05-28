@@ -8,6 +8,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { useParams, useNavigate } from "react-router-dom";
 
 type ScheduleView = "list" | "calendar" | "map";
 
@@ -50,6 +51,8 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   const ctxData = useSiteOpsData();
   const resource = resourceProp ?? ctxData.serviceSchedules;
   const onMutate = onMutateProp ?? ctxData.refetch;
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,10 +89,22 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
 
   const schedules = resource.status === "success" ? resource.data.serviceSchedules : [];
 
+  const closeDrawer = useCallback(() => { navigate("/schedules"); }, [navigate]);
+
   const handleUpdated = useCallback(() => {
     onMutate?.();
-    setDrawer({ kind: "closed" });
-  }, [onMutate]);
+    navigate("/schedules");
+  }, [onMutate, navigate]);
+
+  // URL -> drawer sync
+  useEffect(() => {
+    if (routeId) {
+      const sch = schedules.find(s => s.id === routeId);
+      if (sch) setDrawer({ kind: "view", schedule: sch });
+    } else {
+      setDrawer({ kind: "closed" });
+    }
+  }, [routeId, schedules]);
 
   const filtered = schedules.filter((s) => {
     if (view !== "calendar") {
@@ -117,7 +132,7 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   });
 
   const isLoading = resource.status === "loading" || resource.status === "idle";
-  useEscClose(useCallback(() => setDrawer({ kind: "closed" }), []));
+  useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
   return (
     <>
@@ -163,16 +178,16 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
             {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><Calendar size={32} /></div><span>服务排期数据加载中...</span></div>
             : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
             : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><Calendar size={32} /></div><span>{schedules.length === 0 ? "暂无服务排期" : "没有匹配的排期"}</span></div>
-            : view === "calendar" ? <CalendarView schedules={filtered} onSelect={(s) => setDrawer({ kind: "view", schedule: s })} />
-            : view === "map" ? <MapView schedules={filtered} onSelect={(s) => setDrawer({ kind: "view", schedule: s })} />
-            : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => setDrawer({ kind: "view", schedule: s })} />}
+            : view === "calendar" ? <CalendarView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
+            : view === "map" ? <MapView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
+            : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => navigate(`/schedules/${s.id}`)} />}
           </div>
         </div>
 
         {drawer.kind !== "closed" ? (
           <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={() => setDrawer({ kind: "closed" })} type="button" />
-            <ScheduleDrawer schedule={drawer.schedule} mutationsDisabled={mutationsDisabled} onClose={() => setDrawer({ kind: "closed" })} onUpdated={handleUpdated} />
+            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
+            <ScheduleDrawer schedule={drawer.schedule} mutationsDisabled={mutationsDisabled} onClose={closeDrawer} onUpdated={handleUpdated} />
           </>
         ) : null}
       </section>
