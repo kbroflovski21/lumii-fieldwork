@@ -5,7 +5,8 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -140,12 +141,11 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
           </header>
 
           <div className="sw-table-container">
-            <div className="sw-toolbar">
-              <label className="sw-search">
-                <Search size={16} />
-                <input aria-label="搜索排期" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或地址..." value={searchQuery} />
-              </label>
-              <div className="sw-toolbar__filters">
+            <ListToolbar
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchPlaceholder="搜索长者或地址..."
+              filters={<>
                 {view !== "calendar" && (
                   <div className="sch-date-btns">
                     {dateFilterOptions.map(o => (
@@ -159,8 +159,8 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
                   </select>
                   {statusDropOpen && <StatusDropdown anchorRef={statusRef} options={statusOptions} selected={statusFilters} onToggle={toggleStatus} onClear={() => { setStatusFilters([]); setStatusDropOpen(false); }} />}
                 </div>
-              </div>
-            </div>
+              </>}
+            />
 
             {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务排期" readOnlyHint="可查看数据，调整和取消操作已禁用。" /> : null}
 

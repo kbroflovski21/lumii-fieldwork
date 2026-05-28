@@ -5,6 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -202,17 +203,16 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
             </header>
 
             <div className="sw-table-container">
-              <div className="sw-toolbar">
-                <label className="sw-search">
-                  <Search size={16} />
-                  <input aria-label="搜索长者" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索姓名或地址..." value={searchQuery} />
-                </label>
-                <div className="sw-toolbar__filters">
+              <ListToolbar
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="搜索姓名或地址..."
+                filters={<>
                   <FilterDropdown onChange={(v) => setEligibilityFilter(v as EligibilityFilter)} options={eligibilityFilterOptions} value={eligibilityFilter} />
                   <FilterDropdown onChange={(v) => setStateFilter(v as StateFilter)} options={stateFilterOptions} value={stateFilter} />
                   <FilterDropdown onChange={(v) => setRiskFilter(v as RiskFilter)} options={riskFilterOptions} value={riskFilter} />
-                </div>
-              </div>
+                </>}
+              />
 
               {operationalState ? <OperationalBanner state={operationalState} resourceLabel="长者" readOnlyHint="可查看数据，新增、编辑和归档操作已禁用。" /> : null}
 

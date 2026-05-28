@@ -4,6 +4,7 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, Smartphone, Battery, Clock, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -156,21 +157,15 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
         </header>
 
         <div className="sw-table-container">
-          <div className="sw-toolbar">
-            <label className="sw-search">
-              <Search size={16} />
-              <input
-                aria-label="搜索设备"
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="搜索设备码..."
-                value={searchQuery}
-              />
-            </label>
-            <div className="sw-toolbar__filters">
+          <ListToolbar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="搜索设备码..."
+            filters={<>
               <FilterDropdown onChange={(v) => setStatusFilter(v as StatusFilter)} options={statusFilterOptions} value={statusFilter} />
               <FilterDropdown onChange={(v) => setPreferredFilter(v as PreferredFilter)} options={preferredFilterOptions} value={preferredFilter} />
-            </div>
-          </div>
+            </>}
+          />
 
           {operationalState ? <OperationalBanner state={operationalState} resourceLabel="设备" readOnlyHint="可查看数据，激活和生命周期动作已禁用。" /> : null}
 

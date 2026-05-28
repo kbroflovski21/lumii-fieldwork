@@ -5,6 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, UserRound, Phone, Award, Edit3, ThumbsUp } from "lucide-react";
+import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -164,17 +165,11 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
             </header>
 
             <div className="sw-table-container">
-              <div className="sw-toolbar">
-                <label className="sw-search">
-                  <Search size={16} />
-                  <input
-                    aria-label="搜索服务人员"
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索姓名或电话..."
-                    value={searchQuery}
-                  />
-                </label>
-                <div className="sw-toolbar__filters">
+              <ListToolbar
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="搜索姓名或电话..."
+                filters={<>
                   <FilterDropdown
                     onChange={(v) => setStatusFilter(v as StatusFilter)}
                     options={statusFilterOptions}
@@ -185,8 +180,8 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
                     options={badgeFilterOptions}
                     value={badgeFilter}
                   />
-                </div>
-              </div>
+                </>}
+              />
 
               {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务人员" readOnlyHint="可查看数据，新增、编辑、归档等操作已禁用。" /> : null}
 

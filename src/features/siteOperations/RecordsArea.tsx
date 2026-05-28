@@ -3,7 +3,8 @@ import { formatDateShort, formatTime, toBjStr } from "../../shared/utils/dateTim
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, Download, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { X, Download, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
@@ -195,20 +196,19 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
             {viewMode === "records" && (
             <div className="sw-table-container">
-              <div className="sw-toolbar">
-                <label className="sw-search">
-                  <Search size={16} />
-                  <input aria-label="搜索服务记录" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索长者或人员..." value={searchQuery} />
-                </label>
-                <div className="sw-toolbar__filters">
+              <ListToolbar
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="搜索长者或人员..."
+                filters={<>
                   <div className="sch-date-btns">
                     {dateFilterOptions.map(o => (
                       <button className={`sch-date-btn ${dateFilter === o.value ? "sch-date-btn--active" : ""}`} key={o.value} onClick={() => setDateFilter(o.value)} type="button">{o.label}</button>
                     ))}
                   </div>
                   <FilterDropdown onChange={(v) => setReviewFilter(v as ReviewFilter)} options={reviewFilterOptions} value={reviewFilter} />
-                </div>
-              </div>
+                </>}
+              />
 
               {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务记录" readOnlyHint="可查看数据，复核和导出操作已禁用。" restrictedHint="原始音频不可播放，敏感信息已隐藏。" /> : null}
 
