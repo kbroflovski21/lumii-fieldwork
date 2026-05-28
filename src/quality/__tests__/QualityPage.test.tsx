@@ -184,7 +184,7 @@ describe("QualityPage — URL modal sync", () => {
     });
 
     // The modal scrim should be rendered
-    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+    expect(document.querySelector(".detail-page")).toBeTruthy();
   });
 
   it("opens site detail modal when URL has :id param", async () => {
@@ -202,7 +202,7 @@ describe("QualityPage — URL modal sync", () => {
       await vi.advanceTimersByTimeAsync(100);
     });
 
-    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+    expect(document.querySelector(".detail-page")).toBeTruthy();
   });
 
   it("opens create user modal when URL is /admin/users/new", async () => {
@@ -217,7 +217,7 @@ describe("QualityPage — URL modal sync", () => {
     });
 
     // Create modal should be present
-    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+    expect(document.querySelector(".detail-page")).toBeTruthy();
   });
 
   it("does NOT open modal when URL has no :id param", async () => {
@@ -235,6 +235,6 @@ describe("QualityPage — URL modal sync", () => {
       await vi.advanceTimersByTimeAsync(100);
     });
 
-    expect(document.querySelector(".sw-scrim")).toBeNull();
+    expect(document.querySelector(".detail-page")).toBeNull();
   });
 });
