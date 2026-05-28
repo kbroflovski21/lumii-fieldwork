@@ -5,6 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
+import { EmptyState } from "../../shared/components/EmptyState";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   ServiceObject,
@@ -247,10 +248,17 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
   mutationsDisabled: boolean; onCreateClick: () => void; onRowClick: (o: ServiceObject) => void;
   onNameClick: (o: ServiceObject) => void; selectedId: string | null;
 }) {
-  if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><span>长者数据加载中...</span></div>;
-  if (error) return <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{error}</span></div>;
-  if (isEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><UserRound size={32} /></div><strong>暂无长者</strong><span>点击新增创建第一条记录</span><button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button"><Plus size={15} />新增长者</button></div>;
-  if (isFilterEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><Search size={32} /></div><span>没有匹配的长者</span></div>;
+  if (loading) return <EmptyState icon={UserRound} description="长者数据加载中..." />;
+  if (error) return <EmptyState icon={X} description={error} isError />;
+  if (isEmpty) return (
+    <EmptyState
+      icon={UserRound}
+      title="暂无长者"
+      description="点击新增创建第一条记录"
+      action={<button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button"><Plus size={15} />新增长者</button>}
+    />
+  );
+  if (isFilterEmpty) return <EmptyState icon={Search} description="没有匹配的长者" />;
 
   return (
     <>

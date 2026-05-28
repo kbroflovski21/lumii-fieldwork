@@ -5,6 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
+import { EmptyState } from "../../shared/components/EmptyState";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   SocialWorker,
@@ -269,43 +270,17 @@ function WorkerContent({
   onNameClick: (worker: SocialWorker) => void;
   selectedId: string | null;
 }) {
-  if (loading) {
-    return (
-      <div className="sw-empty">
-        <div className="sw-empty__icon"><UserRound size={32} /></div>
-        <span>服务人员数据加载中...</span>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="sw-empty">
-        <div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div>
-        <span>{error}</span>
-      </div>
-    );
-  }
-  if (isEmpty) {
-    return (
-      <div className="sw-empty">
-        <div className="sw-empty__icon"><UserRound size={32} /></div>
-        <strong>暂无服务人员</strong>
-        <span>点击新增创建第一条记录</span>
-        <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button">
-          <Plus size={15} />
-          新增服务人员
-        </button>
-      </div>
-    );
-  }
-  if (isFilterEmpty) {
-    return (
-      <div className="sw-empty">
-        <div className="sw-empty__icon"><Search size={32} /></div>
-        <span>没有匹配的服务人员</span>
-      </div>
-    );
-  }
+  if (loading) return <EmptyState icon={UserRound} description="服务人员数据加载中..." />;
+  if (error) return <EmptyState icon={X} description={error} isError />;
+  if (isEmpty) return (
+    <EmptyState
+      icon={UserRound}
+      title="暂无服务人员"
+      description="点击新增创建第一条记录"
+      action={<button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onCreateClick} type="button"><Plus size={15} />新增服务人员</button>}
+    />
+  );
+  if (isFilterEmpty) return <EmptyState icon={Search} description="没有匹配的服务人员" />;
 
   return (
     <>

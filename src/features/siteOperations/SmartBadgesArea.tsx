@@ -4,6 +4,7 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
+import { EmptyState } from "../../shared/components/EmptyState";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type {
   SmartBadge,
@@ -236,16 +237,17 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
   onCodeClick: (b: SmartBadge) => void;
   selectedId: string | null;
 }) {
-  if (loading) return <div className="sw-empty"><div className="sw-empty__icon"><Smartphone size={32} /></div><span>设备数据加载中...</span></div>;
-  if (error) return <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{error}</span></div>;
+  if (loading) return <EmptyState icon={Smartphone} description="设备数据加载中..." />;
+  if (error) return <EmptyState icon={X} description={error} isError />;
   if (isEmpty) return (
-    <div className="sw-empty">
-      <div className="sw-empty__icon"><Smartphone size={32} /></div>
-      <strong>暂无智能工牌</strong><span>点击激活工牌添加第一个设备</span>
-      <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onActivateClick} type="button"><Plus size={15} />激活工牌</button>
-    </div>
+    <EmptyState
+      icon={Smartphone}
+      title="暂无智能工牌"
+      description="点击激活工牌添加第一个设备"
+      action={<button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={onActivateClick} type="button"><Plus size={15} />激活工牌</button>}
+    />
   );
-  if (isFilterEmpty) return <div className="sw-empty"><div className="sw-empty__icon"><Search size={32} /></div><span>没有匹配的设备</span></div>;
+  if (isFilterEmpty) return <EmptyState icon={Search} description="没有匹配的设备" />;
 
   return (
     <>

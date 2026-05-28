@@ -5,6 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
+import { EmptyState } from "../../shared/components/EmptyState";
 import { AddressMap } from "../../shared/AddressMap";
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
@@ -210,17 +211,17 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
               {operationalState ? <OperationalBanner state={operationalState} /> : null}
 
-              {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>服务记录数据加载中...</span></div>
-              : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
-              : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>{records.length === 0 ? "暂无服务记录" : "没有匹配的记录"}</span></div>
+              {isLoading ? <EmptyState icon={FileText} description="服务记录数据加载中..." />
+              : resource.status === "error" ? <EmptyState icon={X} description={resource.error} isError />
+              : filtered.length === 0 ? <EmptyState icon={FileText} description={records.length === 0 ? "暂无服务记录" : "没有匹配的记录"} />
               : <RecordsList records={filtered} selectedId={selectedId} onRowClick={(r) => navigate(`/records/${r.id}`)} />}
             </div>
             )}
 
             {viewMode === "recordings" && (
               <div className="sw-table-container">
-                {recordingsLoading ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>录音记录加载中...</span></div>
-                : recordings.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><FileText size={32} /></div><span>暂无录音记录</span></div>
+                {recordingsLoading ? <EmptyState icon={FileText} description="录音记录加载中..." />
+                : recordings.length === 0 ? <EmptyState icon={FileText} description="暂无录音记录" />
                 : (
                   <>
                     <div className="sw-table rec-table" role="table">

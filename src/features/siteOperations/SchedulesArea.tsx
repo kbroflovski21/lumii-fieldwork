@@ -2,6 +2,7 @@ import { useEscClose } from "./useEscClose";
 import { formatDateWithDay, formatWindow } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
+import { EmptyState } from "../../shared/components/EmptyState";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import DatePicker from "react-datepicker";
@@ -161,9 +162,9 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
 
             {operationalState ? <OperationalBanner state={operationalState} /> : null}
 
-            {isLoading ? <div className="sw-empty"><div className="sw-empty__icon"><Calendar size={32} /></div><span>服务排期数据加载中...</span></div>
-            : resource.status === "error" ? <div className="sw-empty"><div className="sw-empty__icon sw-empty__icon--error"><X size={32} /></div><span>{resource.error}</span></div>
-            : filtered.length === 0 ? <div className="sw-empty"><div className="sw-empty__icon"><Calendar size={32} /></div><span>{schedules.length === 0 ? "暂无服务排期" : "没有匹配的排期"}</span></div>
+            {isLoading ? <EmptyState icon={Calendar} description="服务排期数据加载中..." />
+            : resource.status === "error" ? <EmptyState icon={X} description={resource.error} isError />
+            : filtered.length === 0 ? <EmptyState icon={Calendar} description={schedules.length === 0 ? "暂无服务排期" : "没有匹配的排期"} />
             : view === "calendar" ? <CalendarView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
             : view === "map" ? <MapView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
             : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => navigate(`/schedules/${s.id}`)} />}
