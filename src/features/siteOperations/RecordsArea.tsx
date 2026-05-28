@@ -859,31 +859,32 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
         <div className="dp-field"><dt>服务日期</dt><dd>{r.serviceDate} {dow}</dd></div>
         <div className="dp-field"><dt>服务时间</dt><dd>{r.startTime} – {r.endTime} ({r.durationMinutes}分钟)</dd></div>
 
-        <div className="dp-field dp-field--editable"><dt>服务人员</dt><dd style={{ position: "relative" }}>
-          <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); setWorkerSearch(""); }}><Edit3 size={12} /></button>}</span>
+        <div className="dp-field dp-field--editable"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务人员{!mutationsDisabled && !editingWorker && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); setWorkerSearch(""); }}><Edit3 size={12} /></button>}</dt><dd>
+          {r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>}
           {editingWorker && (
             <div className="dp-field-popover" ref={workerDropRef}>
-              <input autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid #E2E8F0", borderRadius: 6, fontSize: 13, outline: "none" }} />
-              <div style={{ maxHeight: 180, overflowY: "auto" }}>
+              <input autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1px solid var(--site-line)", padding: "0 8px", fontSize: 13 }} />
+              <select value={selectedWorkerId} onChange={e => setSelectedWorkerId(e.target.value)} size={Math.min(workers.filter(w => !workerSearch || w.name.includes(workerSearch)).length + 1, 6)} style={{ borderRadius: 6, border: "1px solid var(--site-line)", padding: 4, fontSize: 13 }}>
+                <option value="">未分配</option>
                 {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
-                  <div key={w.id} style={{ padding: "6px 8px", cursor: "pointer", borderRadius: 4, fontSize: 13, background: w.id === selectedWorkerId ? "#EEF2FF" : undefined, fontWeight: w.id === selectedWorkerId ? 600 : undefined }} onClick={() => setSelectedWorkerId(w.id)}>{w.name}</div>
+                  <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
-              </div>
+              </select>
               <div className="dp-field-popover__actions">
-                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
+                <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11 }} onClick={() => { setEditingWorker(false); }}>取消</button>
+                <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11 }} onClick={async () => {
                   const w = workers.find(w => w.id === selectedWorkerId);
                   await updateField({ socialWorkerId: selectedWorkerId || null, socialWorkerName: w?.name ?? null });
                   setEditingWorker(false);
-                }}>确认</button>
-                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={() => { setEditingWorker(false); }}>取消</button>
+                }}>保存</button>
               </div>
             </div>
           )}
         </dd></div>
 
-        <div className="dp-field dp-field--editable"><dt>长者</dt><dd style={{ position: "relative" }}>
+        <div className="dp-field dp-field--editable"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>长者{elderConfirmed && !mutationsDisabled && !editingElder && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); setElderSearch(""); }}><Edit3 size={12} /></button>}</dt><dd>
           {elderConfirmed ? (
-            <span>{elderDisplay} {!mutationsDisabled && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); setElderSearch(""); }}><Edit3 size={12} /></button>}</span>
+            <span>{elderDisplay}</span>
           ) : (
             <div>
               {elderDisplay && <span style={{ marginRight: 6 }}>{elderDisplay}（语音识别）</span>}

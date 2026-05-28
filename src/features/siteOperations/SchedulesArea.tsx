@@ -731,7 +731,11 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
                   )}
                 </span>
                 {showMap && s.addressSnapshot && (
-                  <div style={{ marginTop: 8 }}>
+                  <div style={{ marginTop: 8, border: "1px solid var(--site-line)", borderRadius: 8, overflow: "hidden" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "var(--site-card)", borderBottom: "1px solid var(--site-line)" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--site-text)" }}>地图位置 · {s.addressSnapshot}</span>
+                      <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
+                    </div>
                     <AddressMap address={s.addressSnapshot} />
                   </div>
                 )}
