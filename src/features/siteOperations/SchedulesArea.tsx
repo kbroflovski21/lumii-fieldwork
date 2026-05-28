@@ -1,6 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2 } from "lucide-react";
+import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
@@ -616,133 +616,84 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
     )
   ) : undefined;
 
+  const editing = adjustMode !== null;
+  const startEditing = () => {
+    setAdjDate(s.serviceDate);
+    setAdjTime(s.timeWindow?.start?.includes("14") ? "afternoon" : s.timeWindow?.start?.includes("16") ? "evening" : s.timeWindow?.start?.includes("10") ? "mid_morning" : "morning");
+    setAdjWorker(s.assignedSocialWorkerId ?? "");
+    setAdjustMode("time");
+  };
+  const handleSaveAll = async () => {
+    try {
+      await siteOperationsApi.updateServiceScheduleOccurrence(s.id, {
+        serviceDate: adjDate,
+        timeWindow: timePresets[adjTime],
+        assignedSocialWorkerId: adjWorker || undefined,
+      });
+      onUpdated();
+    } catch { /* noop */ }
+    setAdjustMode(null);
+  };
+
   return (
     <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`} actions={cancelAction}>
       <div className="dp-card">
-      {/* ── Three Info Cards ── */}
-      <div className="sch-event__cards" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, padding: 20 }}>
-        <div className="sch-event__card">
-          <span className="sch-event__card-label">长者</span>
-          <div className="sch-event__card-main">
-            <div className="sw-avatar" style={{ background: objColor.bg, color: objColor.text, width: 32, height: 32, fontSize: 13 }}>{getInitials(s.serviceObjectName)}</div>
-            <span className="sch-event__card-name">{s.serviceObjectName}</span>
-          </div>
-          {s.riskTags.length > 0 ? (
-            <div className="sch-event__card-risks">{s.riskTags.map(t => <span key={t} className="so-risk-tag">{t}</span>)}</div>
-          ) : null}
-        </div>
-
-        <div className="sch-event__card">
-          <span className="sch-event__card-label">服务人员</span>
-          <div className="sch-event__card-main">
-            <div className="sw-avatar" style={{ background: workerColor.bg, color: workerColor.text, width: 32, height: 32, fontSize: 13 }}>{s.assignedSocialWorkerName ? getInitials(s.assignedSocialWorkerName) : "?"}</div>
-            <span className="sch-event__card-name">{s.assignedSocialWorkerName ?? "待分配"}</span>
-          </div>
-          {!s.assignedSocialWorkerName ? <span className="sch-event__card-sub">尚未分配服务人员</span> : null}
-        </div>
-
-        <div className="sch-event__card">
-          <span className="sch-event__card-label">服务地点</span>
-          <div className="sch-event__card-main">
-            <MapPin size={16} style={{ color: "#6B7280", flexShrink: 0 }} />
-            <span className="sch-event__card-name">{s.mapDisplayPoint?.label ?? s.addressSnapshot}</span>
-          </div>
-          {s.mapDisplayPoint?.label && s.addressSnapshot !== s.mapDisplayPoint.label ? (
-            <span className="sch-event__card-sub">{s.addressSnapshot}</span>
-          ) : null}
-        </div>
-      </div>
-
-      {/* ── Scrollable Body ── */}
-      <div className="dp-card__body">
-        {/* Quick Actions */}
-        {canAdjust && !mutationsDisabled ? (
-          <div className="sch-event__action-bar">
-            <button className={`sch-event__action-btn${adjustMode === "time" ? " sch-event__action-btn--active" : ""}`} onClick={() => setAdjustMode(adjustMode === "time" ? null : "time")} type="button">
-              <Clock size={15} /> 调整时间
-            </button>
-            <button className={`sch-event__action-btn${adjustMode === "worker" ? " sch-event__action-btn--active" : ""}`} onClick={() => setAdjustMode(adjustMode === "worker" ? null : "worker")} type="button">
-              <UserRound size={15} /> 改派人员
-            </button>
-            {s.serviceRecordId ? (
-              <button className="sch-event__action-btn" type="button">
-                <Search size={15} /> 查看记录
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* Inline Forms */}
-        {adjustMode === "time" ? (
-          <div className="sch-event__inline-form">
-            <strong className="sch-event__inline-form-title">调整排期时间</strong>
-            <div className="so-form-card__row">
-              <label className="sw-field"><span>日期</span><input onChange={(e) => setAdjDate(e.target.value)} type="date" value={adjDate} /></label>
-              <label className="sw-field"><span>时间段</span>
-                <select onChange={(e) => setAdjTime(e.target.value)} value={adjTime}>
+        <div className="dp-card__body">
+          {/* 排期详情 */}
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">排期详情</h4>
+              {canAdjust && !mutationsDisabled && !editing && (
+                <button className="dp-section__edit-btn" onClick={startEditing} type="button" title="编辑"><Edit3 size={14} /></button>
+              )}
+            </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>长者</dt><dd><strong>{s.serviceObjectName}</strong>{s.riskTags.length > 0 && s.riskTags.map(t => <span key={t} className="so-risk-tag" style={{ marginLeft: 6 }}><AlertTriangle size={11} /> {t}</span>)}</dd></div>
+              <div className="dp-field"><dt>服务人员</dt><dd>{editing ? (
+                <select value={adjWorker} onChange={e => setAdjWorker(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)", width: "100%" }}>
+                  <option value="">未分配</option>
+                  {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+              ) : <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>}</dd></div>
+              <div className="dp-field"><dt>服务地点</dt><dd><strong>{s.addressSnapshot}</strong></dd></div>
+              <div className="dp-field"><dt>服务日期</dt><dd>{editing ? <input type="date" value={adjDate} onChange={e => setAdjDate(e.target.value)} /> : formatDate(s.serviceDate)}</dd></div>
+              <div className="dp-field"><dt>时间段</dt><dd>{editing ? (
+                <select value={adjTime} onChange={e => setAdjTime(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)", width: "100%" }}>
                   {Object.entries(timePresets).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
-              </label>
-            </div>
-            <div className="sch-event__inline-form-actions">
-              <button className="sw-btn sw-btn--secondary" onClick={() => setAdjustMode(null)} type="button">取消</button>
-              <button className="sw-btn sw-btn--primary" onClick={handleAdjustTime} type="button">保存</button>
-            </div>
+              ) : formatWindow(s)}</dd></div>
+              <div className="dp-field"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
+              <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
+              <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
+              <div className="dp-field"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
+            </dl>
+            {editing && (
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
+                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setAdjustMode(null)} type="button">取消</button>
+                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} onClick={handleSaveAll} type="button">保存</button>
+              </div>
+            )}
           </div>
-        ) : null}
 
-        {adjustMode === "worker" ? (
-          <div className="sch-event__inline-form">
-            <strong className="sch-event__inline-form-title">改派服务人员</strong>
-            <label className="sw-field"><span>服务人员</span>
-              <select onChange={(e) => setAdjWorker(e.target.value)} value={adjWorker}>
-                <option value="">未分配</option>
-                {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-            </label>
-            <div className="sch-event__inline-form-actions">
-              <button className="sw-btn sw-btn--secondary" onClick={() => setAdjustMode(null)} type="button">取消</button>
-              <button className="sw-btn sw-btn--primary" onClick={handleReassign} type="button">保存</button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Schedule Details */}
-        <div className="dp-section" style={{ marginTop: canAdjust && !mutationsDisabled ? 0 : undefined }}>
-          <div className="dp-section__head"><h4 className="dp-section__title">排期详情</h4></div>
-          <dl className="dp-fields">
-            <div className="dp-field"><dt>服务日期</dt><dd>{formatDate(s.serviceDate)}</dd></div>
-            <div className="dp-field"><dt>时间段</dt><dd>{formatWindow(s)}</dd></div>
-            <div className="dp-field"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
-            <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
-            <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
-            <div className="dp-field"><dt>{s.planExceptionApplied ? "计划例外" : "服务人员"}</dt><dd>{s.planExceptionApplied ? <span className="sw-status-badge" data-tone="warning">已受例外影响</span> : (s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>)}</dd></div>
-            <div className="dp-field"><dt>长者</dt><dd>{s.serviceObjectName}</dd></div>
-            <div className="dp-field"><dt>地址</dt><dd>{s.addressSnapshot}</dd></div>
-            <div className="dp-field"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
-          </dl>
-        </div>
-
-        {/* Adjustment History */}
-        {historyItems.length > 0 ? (
-          <div className="dp-section">
-            <div className="dp-section__head"><h4 className="dp-section__title">调整历史 ({historyItems.length})</h4></div>
-            <div className="sch-adj-history">
-              {historyItems.map((h, i) => (
-                <div className="sch-adj-history__item" key={i}>
-                  <div className="sch-adj-history__action">
-                    <strong>{h.action}</strong>
-                    <small>{new Date(h.adjustedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small>
+          {/* 调整历史 */}
+          {historyItems.length > 0 ? (
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">调整历史 ({historyItems.length})</h4></div>
+              <div className="sch-adj-history">
+                {historyItems.map((h, i) => (
+                  <div className="sch-adj-history__item" key={i}>
+                    <div className="sch-adj-history__action">
+                      <strong>{h.action}</strong>
+                      <small>{new Date(h.adjustedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small>
+                    </div>
+                    <span className="sch-adj-history__detail">{h.detail}</span>
+                    <span className="sw-text-muted" style={{ fontSize: 11 }}>{h.operatorName}</span>
                   </div>
-                  <span className="sch-adj-history__detail">{h.detail}</span>
-                  <span className="sw-text-muted" style={{ fontSize: 11 }}>{h.operatorName}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
-
+          ) : null}
+        </div>
       </div>
     </DetailPageShell>
   );
