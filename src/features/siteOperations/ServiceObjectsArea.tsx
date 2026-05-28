@@ -561,76 +561,65 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     setShowScheduleForm(true);
   };
 
+  const headerActions = (
+    <>
+      {showArchiveConfirm ? (
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13, color: "#B54E34" }}>确认归档？</span>
+          <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} type="button">确认归档</button>
+          <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowArchiveConfirm(false)} type="button">取消</button>
+        </span>
+      ) : (
+        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={() => setShowArchiveConfirm(true)} type="button">归档</button>
+      )}
+      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={openAiScheduler} type="button">
+        <CalendarPlus size={14} /> 安排服务
+      </button>
+    </>
+  );
+
   if (viewingRecord) {
     return <RecordDrawer record={viewingRecord} mutationsDisabled={true} onClose={() => setViewingRecord(null)} onUpdated={() => {}} />;
   }
 
   return (
-    <DetailPageShell parentLabel="长者" parentPath="/elders" title={obj.name}>
-      {/* ── Summary Card ── */}
-      <div className="so-modal__summary">
-        <div className="so-modal__summary-main">
-          <div className="sw-avatar sw-avatar--lg" style={{ background: color.bg, color: color.text }}>{getInitials(obj.name)}</div>
-          <div className="so-modal__summary-name">
-            <h3>{obj.name}</h3>
-            <span className="so-modal__summary-demo">{obj.age ? `${obj.age}岁` : ""}{obj.gender === "female" ? " · 女" : obj.gender === "male" ? " · 男" : ""}</span>
-            <span className="sw-status-badge sw-status-badge--inline" data-tone={status.tone}>{status.label}</span>
-          </div>
+    <DetailPageShell parentLabel="长者" parentPath="/elders" title={obj.name} actions={headerActions}>
+      <div className="dp-card">
+        {/* ── Tab Bar ── */}
+        <div className="dp-tabs" role="tablist">
+          {tabs.map(tab => (
+            <button
+              className="dp-tabs__btn"
+              data-active={activeTab === tab.id}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+              {tab.count ? <span className="so-modal__tab-count">{tab.count}</span> : null}
+            </button>
+          ))}
         </div>
 
-        <div className="so-modal__summary-contact">
-          <span className="so-modal__meta-item"><Phone size={13} /> {obj.phone || "—"}</span>
-          <span className="so-modal__meta-divider" />
-          <span className="so-modal__meta-item"><MapPin size={13} /> {obj.address}</span>
-        </div>
-
-        <div className="so-modal__summary-tags">
-          <span className="so-modal__chip">{eligibilityLabel[obj.eligibilityType]}</span>
-          {savedPlans.length > 0 ? <span className="so-modal__chip">{savedPlans.length}个计划</span> : null}
-          {obj.serviceProjects.length > 0 ? <span className="so-modal__chip">{obj.serviceProjects.join(" / ")}</span> : null}
-          {obj.riskTags.length > 0 ? (
-            obj.riskTags.map(t => (
-              <span className="so-modal__risk-chip" key={t}><AlertTriangle size={12} /> {t}</span>
-            ))
-          ) : null}
-        </div>
-      </div>
-
-      {/* ── Tab Bar ── */}
-      <div className="so-modal__tabs" role="tablist">
-        {tabs.map(tab => (
-          <button
-            className="so-modal__tab"
-            data-active={activeTab === tab.id}
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            role="tab"
-            type="button"
-          >
-            {tab.label}
-            {tab.count ? <span className="so-modal__tab-count">{tab.count}</span> : null}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Tab Content ── */}
-      <div className="so-modal__content">
+        {/* ── Tab Content ── */}
+        <div className="dp-card__body">
         {activeTab === "overview" && (
           <>
-            <div className="so-tab-section">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>基础信息</h4>
-                {!editingBasic && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditName(obj.name); setEditPhone(obj.phone ?? ""); setEditIdNumber(obj.idNumber ?? ""); setEditAge(obj.age?.toString() ?? ""); setEditGender(obj.gender ?? "unknown"); setEditAddress(obj.address); setEditEligibility(obj.eligibilityType); setEditProjects(obj.serviceProjects.join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">基础信息</h4>
+                {!editingBasic && <button className="dp-section__edit-btn" disabled={mutationsDisabled} onClick={() => { setEditName(obj.name); setEditPhone(obj.phone ?? ""); setEditIdNumber(obj.idNumber ?? ""); setEditAge(obj.age?.toString() ?? ""); setEditGender(obj.gender ?? "unknown"); setEditAddress(obj.address); setEditEligibility(obj.eligibilityType); setEditProjects(obj.serviceProjects.join("、")); setEditingBasic(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
-              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
-                <div className="so-overview-item"><dt>姓名</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editName} onChange={e => setEditName(e.target.value)} /> : obj.name}</dd></div>
-                <div className="so-overview-item"><dt>电话</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : (obj.phone || "—")}</dd></div>
-                <div className="so-overview-item"><dt>身份证号</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editIdNumber} onChange={e => setEditIdNumber(e.target.value)} maxLength={18} /> : (obj.idNumber || "—")}</dd></div>
-                <div className="so-overview-item"><dt>年龄</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editAge} onChange={e => setEditAge(e.target.value)} type="number" style={{ width: 60 }} /> : (obj.age ? `${obj.age}岁` : "—")}</dd></div>
-                <div className="so-overview-item"><dt>性别</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
-                <div className="so-overview-item"><dt>服务资格</dt><dd>{editingBasic ? <select className="quality-user-modal__inline-input" value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
-                <div className="so-overview-item"><dt>服务套餐</dt><dd>{editingBasic ? <input className="quality-user-modal__inline-input" value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
-                <div className="so-overview-item so-overview-item--full"><dt>地址</dt><dd className="so-address-cell">{editingBasic ? <input className="quality-user-modal__inline-input" value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : (
+              <dl className="dp-fields">
+                <div className="dp-field"><dt>姓名</dt><dd>{editingBasic ? <input value={editName} onChange={e => setEditName(e.target.value)} /> : obj.name}</dd></div>
+                <div className="dp-field"><dt>电话</dt><dd>{editingBasic ? <input value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : (obj.phone || "—")}</dd></div>
+                <div className="dp-field"><dt>身份证号</dt><dd>{editingBasic ? <input value={editIdNumber} onChange={e => setEditIdNumber(e.target.value)} maxLength={18} /> : (obj.idNumber || "—")}</dd></div>
+                <div className="dp-field"><dt>年龄</dt><dd>{editingBasic ? <input value={editAge} onChange={e => setEditAge(e.target.value)} type="number" style={{ width: 60 }} /> : (obj.age ? `${obj.age}岁` : "—")}</dd></div>
+                <div className="dp-field"><dt>性别</dt><dd>{editingBasic ? <select value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
+                <div className="dp-field"><dt>服务资格</dt><dd>{editingBasic ? <select value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
+                <div className="dp-field"><dt>服务套餐</dt><dd>{editingBasic ? <input value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
+                <div className="dp-field dp-field--full"><dt>地址</dt><dd className="so-address-cell">{editingBasic ? <input value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : (
                   <>
                     <span>{obj.address || "—"}</span>
                     {obj.address && (
@@ -641,7 +630,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                   </>
                 )}</dd></div>
                 {showMap && obj.address && (
-                  <div className="so-overview-item so-overview-item--full" style={{ gridColumn: "1 / -1" }}>
+                  <div className="dp-field dp-field--full" style={{ gridColumn: "1 / -1" }}>
                     <div className="so-map-popup">
                       <div className="so-map-popup__header">
                         <span>地图位置 · {obj.address}</span>
@@ -660,14 +649,14 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
               )}
             </div>
 
-            <div className="so-tab-section">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>照护重点</h4>
-                {!editingCare && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} disabled={mutationsDisabled} onClick={() => { setEditRiskTags(obj.riskTags.join("、")); setEditCareNotes(obj.careNotes.join("\n")); setEditingCare(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">照护重点</h4>
+                {!editingCare && <button className="dp-section__edit-btn" disabled={mutationsDisabled} onClick={() => { setEditRiskTags(obj.riskTags.join("、")); setEditCareNotes(obj.careNotes.join("\n")); setEditingCare(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
               {editingCare ? (
                 <div style={{ marginTop: 10 }}>
-                  <label className="sw-field" style={{ marginBottom: 8 }}><span>风险标签</span><input className="quality-user-modal__inline-input" value={editRiskTags} onChange={e => setEditRiskTags(e.target.value)} placeholder="用顿号分隔，如：独居、跌倒风险" style={{ width: "100%" }} /></label>
+                  <label className="sw-field" style={{ marginBottom: 8 }}><span>风险标签</span><input value={editRiskTags} onChange={e => setEditRiskTags(e.target.value)} placeholder="用顿号分隔，如：独居、跌倒风险" style={{ width: "100%" }} /></label>
                   <label className="sw-field"><span>照护备注</span><textarea className="sw-field__textarea" value={editCareNotes} onChange={e => setEditCareNotes(e.target.value)} placeholder="每行一条" rows={3} style={{ width: "100%" }} /></label>
                   <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
                     <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditingCare(false)} type="button">取消</button>
@@ -695,7 +684,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
           <>
             {/* AI Schedule Form */}
             {showScheduleForm ? (
-              <div className="so-tab-section">
+              <div className="dp-section">
                 <div className="so-schedule-form">
                   <div className="so-schedule-form__header">
                     <Sparkles size={16} />
@@ -737,11 +726,11 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                         <h4>{aiResult.plan.isRecurring ? "周期服务计划" : "一次性服务排期"}</h4>
                       </div>
                       <div className="so-plan-summary-card__body">
-                        <dl className="so-overview-grid">
-                          <div className="so-overview-item"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
-                          {aiResult.plan.isRecurring && <div className="so-overview-item"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
-                          <div className="so-overview-item"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
-                          <div className="so-overview-item"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
+                        <dl className="dp-fields">
+                          <div className="dp-field"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
+                          {aiResult.plan.isRecurring && <div className="dp-field"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
+                          <div className="dp-field"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
+                          <div className="dp-field"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
                         </dl>
 
                         <div className="so-plan-field">
@@ -809,8 +798,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
             )}
 
             {/* Existing plans */}
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">当前计划</h4>
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">当前计划</h4></div>
               {savedPlans.length > 0 ? (
                 <div className="so-plans">
                   {savedPlans.map(plan => (
@@ -874,8 +863,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
 
             {/* Schedule occurrences */}
             {savedSchedules.length > 0 && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">近期排期 ({savedSchedules.length}条)</h4>
+              <div className="dp-section">
+                <div className="dp-section__head"><h4 className="dp-section__title">近期排期 ({savedSchedules.length}条)</h4></div>
                 <div className="so-schedules-list">
                   {[...savedSchedules].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || (a.timeWindow?.start ?? "").localeCompare(b.timeWindow?.start ?? "")).slice(0, 20).map(s => {
                     const effectiveStatus = (!s.assignedSocialWorkerId && s.status === "scheduled") ? "unassigned" : s.status;
@@ -904,13 +893,13 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
         )}
 
         {activeTab === "history" && (
-          <div className="so-tab-section">
+          <div className="dp-section">
             <HistoryRecords serviceObjectName={obj.name} serviceProjects={obj.serviceProjects} onViewRecord={setViewingRecord} />
           </div>
         )}
 
         {activeTab === "insights" && (
-          <div className="so-tab-section">
+          <div className="dp-section">
             {hasInsights ? (
               <>
                 {obj.latestInsightSummary ? <p className="so-insight-summary">{obj.latestInsightSummary}</p> : null}
@@ -924,24 +913,8 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
             ) : <p className="sw-text-muted">暂无 AI 洞察数据</p>}
           </div>
         )}
-      </div>
-
-      {/* ── Footer ── */}
-      <div className="so-modal__footer">
-        <div>
-          {showArchiveConfirm ? (
-            <span className="sw-drawer__confirm"><span>确认归档？</span><button className="sw-btn sw-btn--danger" type="button">确认归档</button><button className="sw-btn sw-btn--secondary" onClick={() => setShowArchiveConfirm(false)} type="button">取消</button></span>
-          ) : (
-            <button className="sw-btn sw-btn--danger-ghost" disabled={mutationsDisabled} onClick={() => setShowArchiveConfirm(true)} type="button">归档</button>
-          )}
-        </div>
-        <div className="so-modal__footer-right">
-          <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={openAiScheduler} type="button">
-            <CalendarPlus size={14} /> 安排服务
-          </button>
         </div>
       </div>
-
     </DetailPageShell>
   );
 }
@@ -986,19 +959,19 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
   };
 
   return (
-    <div className="so-tab-section">
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>家属联系人</h4>
-        {!showAdd && !editId && <button style={{ background: "none", border: "none", cursor: "pointer", color: "#0052CC", padding: 2, display: "flex", fontSize: 12, gap: 2, alignItems: "center" }} disabled={mutationsDisabled} onClick={() => { setForm({ name: "", relation: "", phone: "", wechatId: "" }); setShowAdd(true); }} type="button"><Plus size={14} /> 添加</button>}
+    <div className="dp-section">
+      <div className="dp-section__head">
+        <h4 className="dp-section__title">家属联系人</h4>
+        {!showAdd && !editId && <button className="dp-section__edit-btn" style={{ color: "#0052CC", fontSize: 12, gap: 2 }} disabled={mutationsDisabled} onClick={() => { setForm({ name: "", relation: "", phone: "", wechatId: "" }); setShowAdd(true); }} type="button"><Plus size={14} /> 添加</button>}
       </div>
 
       {showAdd && (
         <div style={{ marginTop: 10, padding: 12, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <div className="sw-field"><span>姓名 *</span><input className="quality-user-modal__inline-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="sw-field"><span>关系</span><input className="quality-user-modal__inline-input" placeholder="如：女儿" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
-            <div className="sw-field"><span>电话</span><input className="quality-user-modal__inline-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-            <div className="sw-field"><span>微信号</span><input className="quality-user-modal__inline-input" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
+            <div className="sw-field"><span>姓名 *</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="sw-field"><span>关系</span><input placeholder="如：女儿" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
+            <div className="sw-field"><span>电话</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+            <div className="sw-field"><span>微信号</span><input value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowAdd(false)} type="button">取消</button>
@@ -1013,10 +986,10 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
             {editId === c.id ? (
               <div style={{ flex: 1, padding: 12, background: "#F9FAFB", borderRadius: 8, border: "1px solid #E5E7EB" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                  <div className="sw-field"><span>姓名</span><input className="quality-user-modal__inline-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
-                  <div className="sw-field"><span>关系</span><input className="quality-user-modal__inline-input" value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
-                  <div className="sw-field"><span>电话</span><input className="quality-user-modal__inline-input" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
-                  <div className="sw-field"><span>微信号</span><input className="quality-user-modal__inline-input" value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
+                  <div className="sw-field"><span>姓名</span><input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+                  <div className="sw-field"><span>关系</span><input value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} /></div>
+                  <div className="sw-field"><span>电话</span><input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+                  <div className="sw-field"><span>微信号</span><input value={form.wechatId} onChange={e => setForm(f => ({ ...f, wechatId: e.target.value }))} /></div>
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setEditId(null)} type="button">取消</button>
@@ -1109,21 +1082,19 @@ export function CreateModal({ onClose, onCreated }: { onClose: () => void; onCre
 
   return (
     <DetailPageShell parentLabel="长者" parentPath="/elders" title="新增">
-      <div className="so-modal__content">
-        <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
-          address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
-          projects={projects} onProjectsChange={setProjects}
-          riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
-          familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
-          familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
-          familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
-      </div>
-      {error && <div style={{ margin: "0 16px", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{error}</div>}
-      <div className="so-modal__footer">
-        <div />
-        <div className="so-modal__footer-right">
-          <button className="sw-btn sw-btn--secondary" onClick={onClose} type="button">取消</button>
-          <button className="sw-btn sw-btn--primary" disabled={creating || !name.trim() || !address.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
+      <div className="dp-card">
+        <div className="dp-card__body">
+          <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
+            address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
+            projects={projects} onProjectsChange={setProjects}
+            riskTags={riskTags} onRiskTagsChange={setRiskTags} careNotes={careNotes} onCareNotesChange={setCareNotes}
+            familyName={familyName} onFamilyNameChange={setFamilyName} familyRelation={familyRelation} onFamilyRelationChange={setFamilyRelation}
+            familyPhone={familyPhone} onFamilyPhoneChange={setFamilyPhone}
+            familyWechat={familyWechat} onFamilyWechatChange={setFamilyWechat} />
+          {error && <div style={{ margin: "16px 0 0", padding: 10, background: "#FEE2E2", color: "#B42318", borderRadius: 8, fontSize: 13 }}>{error}</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
+            <button className="sw-btn sw-btn--primary" disabled={creating || !name.trim() || !address.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
+          </div>
         </div>
       </div>
     </DetailPageShell>
