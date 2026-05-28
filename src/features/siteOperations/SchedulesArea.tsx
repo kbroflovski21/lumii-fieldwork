@@ -1,6 +1,8 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
@@ -551,10 +553,12 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   onUpdated: () => void;
 }) {
   const [showCancel, setShowCancel] = useState(false);
-  const [adjustMode, setAdjustMode] = useState<null | "time" | "worker">(null);
-  const [adjDate, setAdjDate] = useState(s.serviceDate);
-  const [adjTime, setAdjTime] = useState(s.timeWindow?.start?.includes("14") ? "afternoon" : "morning");
+  const [editingTime, setEditingTime] = useState(false);
+  const [editingWorker, setEditingWorker] = useState(false);
+  const [adjStartDate, setAdjStartDate] = useState<Date | null>(null);
+  const [adjEndDate, setAdjEndDate] = useState<Date | null>(null);
   const [adjWorker, setAdjWorker] = useState(s.assignedSocialWorkerId ?? "");
+  const [workerSearch, setWorkerSearch] = useState("");
   const [workerOptions, setWorkerOptions] = useState<Array<{ id: string; name: string }>>([]);
   const { currentSite } = useSite();
 
@@ -566,32 +570,49 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
     }).catch(() => {});
   }, [currentSite?.id]);
 
-  const objColor = avatarColor(s.serviceObjectName);
-  const workerColor = s.assignedSocialWorkerName ? avatarColor(s.assignedSocialWorkerName) : { bg: "#F1F5F9", text: "#94A3B8" };
   const canAdjust = s.status !== "completed" && s.status !== "cancelled";
   const tone = scheduleTone(s.status);
 
-  const timePresets: Record<string, { start: string; end: string; label: string }> = {
-    morning: { start: "09:00", end: "11:00", label: "上午 9:00-11:00" },
-    mid_morning: { start: "10:00", end: "12:00", label: "上午 10:00-12:00" },
-    afternoon: { start: "14:00", end: "16:00", label: "下午 14:00-16:00" },
-    evening: { start: "16:00", end: "18:00", label: "傍晚 16:00-18:00" },
+  const startEditTime = () => {
+    const startH = parseInt(s.timeWindow?.start ?? "09", 10);
+    const startM = parseInt((s.timeWindow?.start ?? "09:00").split(":")[1] ?? "0", 10);
+    const endH = parseInt(s.timeWindow?.end ?? "11", 10);
+    const endM = parseInt((s.timeWindow?.end ?? "11:00").split(":")[1] ?? "0", 10);
+    const d = new Date(s.serviceDate + "T00:00:00");
+    const sd = new Date(d); sd.setHours(startH, startM);
+    const ed = new Date(d); ed.setHours(endH, endM);
+    setAdjStartDate(sd);
+    setAdjEndDate(ed);
+    setEditingTime(true);
   };
 
-  const handleAdjustTime = async () => {
+  const handleSaveTime = async () => {
+    if (!adjStartDate || !adjEndDate) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const serviceDate = `${adjStartDate.getFullYear()}-${pad(adjStartDate.getMonth() + 1)}-${pad(adjStartDate.getDate())}`;
+    const timeWindow = {
+      start: `${pad(adjStartDate.getHours())}:${pad(adjStartDate.getMinutes())}`,
+      end: `${pad(adjEndDate.getHours())}:${pad(adjEndDate.getMinutes())}`,
+    };
     try {
-      await siteOperationsApi.updateServiceScheduleOccurrence(s.id, { serviceDate: adjDate, timeWindow: timePresets[adjTime] });
+      await siteOperationsApi.updateServiceScheduleOccurrence(s.id, { serviceDate, timeWindow });
       onUpdated();
     } catch { /* noop */ }
-    setAdjustMode(null);
+    setEditingTime(false);
   };
 
-  const handleReassign = async () => {
+  const startEditWorker = () => {
+    setAdjWorker(s.assignedSocialWorkerId ?? "");
+    setWorkerSearch("");
+    setEditingWorker(true);
+  };
+
+  const handleSaveWorker = async () => {
     try {
       await siteOperationsApi.updateServiceScheduleOccurrence(s.id, { assignedSocialWorkerId: adjWorker || undefined });
       onUpdated();
     } catch { /* noop */ }
-    setAdjustMode(null);
+    setEditingWorker(false);
   };
 
   const handleCancel = async () => {
@@ -616,63 +637,88 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
     )
   ) : undefined;
 
-  const editing = adjustMode !== null;
-  const startEditing = () => {
-    setAdjDate(s.serviceDate);
-    setAdjTime(s.timeWindow?.start?.includes("14") ? "afternoon" : s.timeWindow?.start?.includes("16") ? "evening" : s.timeWindow?.start?.includes("10") ? "mid_morning" : "morning");
-    setAdjWorker(s.assignedSocialWorkerId ?? "");
-    setAdjustMode("time");
-  };
-  const handleSaveAll = async () => {
-    try {
-      await siteOperationsApi.updateServiceScheduleOccurrence(s.id, {
-        serviceDate: adjDate,
-        timeWindow: timePresets[adjTime],
-        assignedSocialWorkerId: adjWorker || undefined,
-      });
-      onUpdated();
-    } catch { /* noop */ }
-    setAdjustMode(null);
-  };
+  const filteredWorkers = workerSearch
+    ? workerOptions.filter(w => w.name.toLowerCase().includes(workerSearch.toLowerCase()))
+    : workerOptions;
 
   return (
     <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`} actions={cancelAction}>
       <div className="dp-card">
         <div className="dp-card__body">
-          {/* 排期详情 */}
           <div className="dp-section">
             <div className="dp-section__head">
               <h4 className="dp-section__title">排期详情</h4>
-              {canAdjust && !mutationsDisabled && !editing && (
-                <button className="dp-section__edit-btn" onClick={startEditing} type="button" title="编辑"><Edit3 size={14} /></button>
-              )}
             </div>
             <dl className="dp-fields">
               <div className="dp-field"><dt>长者</dt><dd><strong>{s.serviceObjectName}</strong>{s.riskTags.length > 0 && s.riskTags.map(t => <span key={t} className="so-risk-tag" style={{ marginLeft: 6 }}><AlertTriangle size={11} /> {t}</span>)}</dd></div>
-              <div className="dp-field"><dt>服务人员</dt><dd>{editing ? (
-                <select value={adjWorker} onChange={e => setAdjWorker(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)", width: "100%" }}>
-                  <option value="">未分配</option>
-                  {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
-              ) : <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>}</dd></div>
+
+              {/* 服务人员 — per-field inline edit with searchable dropdown */}
+              <div className="dp-field"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务人员{canAdjust && !mutationsDisabled && !editingWorker && <button className="dp-section__edit-btn" onClick={startEditWorker} type="button" title="改派"><Edit3 size={12} /></button>}</dt><dd>
+                {editingWorker ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <input placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1px solid var(--site-line)", padding: "0 8px", fontSize: 13 }} />
+                    <select value={adjWorker} onChange={e => setAdjWorker(e.target.value)} size={Math.min(filteredWorkers.length + 1, 6)} style={{ borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: 4, fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)" }}>
+                      <option value="">未分配</option>
+                      {filteredWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11 }} onClick={() => setEditingWorker(false)} type="button">取消</button>
+                      <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11 }} onClick={handleSaveWorker} type="button">保存</button>
+                    </div>
+                  </div>
+                ) : <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>}
+              </dd></div>
+
               <div className="dp-field"><dt>服务地点</dt><dd><strong>{s.addressSnapshot}</strong></dd></div>
-              <div className="dp-field"><dt>服务日期</dt><dd>{editing ? <input type="date" value={adjDate} onChange={e => setAdjDate(e.target.value)} /> : formatDate(s.serviceDate)}</dd></div>
-              <div className="dp-field"><dt>时间段</dt><dd>{editing ? (
-                <select value={adjTime} onChange={e => setAdjTime(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)", width: "100%" }}>
-                  {Object.entries(timePresets).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              ) : formatWindow(s)}</dd></div>
+
+              {/* 服务时间 — merged date+time, per-field inline edit with react-datepicker */}
+              <div className="dp-field dp-field--full"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务时间{canAdjust && !mutationsDisabled && !editingTime && <button className="dp-section__edit-btn" onClick={startEditTime} type="button" title="调整时间"><Edit3 size={12} /></button>}</dt><dd>
+                {editingTime ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                      <label style={{ fontSize: 12, color: "var(--site-muted)" }}>开始
+                        <DatePicker
+                          selected={adjStartDate}
+                          onChange={(d: Date | null) => {
+                            setAdjStartDate(d);
+                            if (d && adjEndDate && d > adjEndDate) {
+                              const end = new Date(d);
+                              end.setHours(d.getHours() + 2);
+                              setAdjEndDate(end);
+                            }
+                          }}
+                          showTimeSelect
+                          timeIntervals={30}
+                          dateFormat="yyyy-MM-dd HH:mm"
+                          timeFormat="HH:mm"
+                          className="dp-datepicker-input"
+                        />
+                      </label>
+                      <label style={{ fontSize: 12, color: "var(--site-muted)" }}>结束
+                        <DatePicker
+                          selected={adjEndDate}
+                          onChange={(d: Date | null) => setAdjEndDate(d)}
+                          showTimeSelect
+                          timeIntervals={30}
+                          dateFormat="yyyy-MM-dd HH:mm"
+                          timeFormat="HH:mm"
+                          className="dp-datepicker-input"
+                        />
+                      </label>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11 }} onClick={() => setEditingTime(false)} type="button">取消</button>
+                      <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11 }} onClick={handleSaveTime} type="button">保存</button>
+                    </div>
+                  </div>
+                ) : `${formatDate(s.serviceDate)} ${formatWindow(s)}`}
+              </dd></div>
+
               <div className="dp-field"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
               <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
               <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
               <div className="dp-field"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
             </dl>
-            {editing && (
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
-                <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setAdjustMode(null)} type="button">取消</button>
-                <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} onClick={handleSaveAll} type="button">保存</button>
-              </div>
-            )}
           </div>
 
           {/* 调整历史 */}

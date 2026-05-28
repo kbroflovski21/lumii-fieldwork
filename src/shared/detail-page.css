@@ -235,6 +235,20 @@
   box-shadow: 0 0 0 3px rgba(235, 100, 32, 0.08);
 }
 
+/* DatePicker input styling */
+.dp-datepicker-input {
+  height: 32px;
+  border-radius: 6px;
+  border: 1.5px solid var(--site-accent, #EB6420);
+  padding: 0 8px;
+  font-size: 13px;
+  font-family: inherit;
+  box-shadow: 0 0 0 3px rgba(235, 100, 32, 0.08);
+  width: 170px;
+  display: block;
+  margin-top: 4px;
+}
+
 @media (max-width: 768px) {
   .detail-page__header {
     padding: 12px 16px;
