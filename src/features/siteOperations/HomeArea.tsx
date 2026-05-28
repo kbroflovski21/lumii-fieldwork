@@ -1,8 +1,11 @@
 import { useState, useMemo } from "react";
 import { X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { SiteOperationsHomeResponse } from "./contracts";
 import type { Resource } from "./useSiteOperationsData";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { GY_AREA_TO_PATH } from "../../router";
 
 type Period = "day" | "week" | "month";
 type SortCol = "name" | "count" | "s" | "a" | "b" | "c" | "d" | "delta";
@@ -64,7 +67,11 @@ function buildMockTrend(_workerId: string, period: Period): TrendPoint[] {
   }));
 }
 
-export function HomeArea({ resource, onRoute }: { resource: Resource<SiteOperationsHomeResponse>; onRoute?: (area: string) => void }) {
+export function HomeArea({ resource: resourceProp, onRoute: onRouteProp }: { resource?: Resource<SiteOperationsHomeResponse>; onRoute?: (area: string) => void } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.home;
+  const navigate = useNavigate();
+  const onRoute = onRouteProp ?? ((area: string) => navigate(GY_AREA_TO_PATH[area] ?? "/"));
   const [period, setPeriod] = useState<Period>("month");
   const [sortCol, setSortCol] = useState<SortCol>("s");
   const [sortDir, setSortDir] = useState<SortDir>("desc");

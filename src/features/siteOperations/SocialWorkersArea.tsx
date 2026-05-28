@@ -11,6 +11,7 @@ import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -71,7 +72,10 @@ function avatarColor(name: string) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function SocialWorkersArea({ resource, onMutate, initialSearch }: { resource: Resource<SocialWorkersResponse>; onMutate?: () => void; initialSearch?: string }) {
+export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutateProp, initialSearch }: { resource?: Resource<SocialWorkersResponse>; onMutate?: () => void; initialSearch?: string } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.socialWorkers;
+  const onMutate = onMutateProp ?? ctxData.refetch;
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");

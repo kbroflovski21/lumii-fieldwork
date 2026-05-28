@@ -7,6 +7,7 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 
 type ScheduleView = "list" | "calendar" | "map";
 
@@ -45,7 +46,10 @@ function avatarColor(name: string) {
 
 type DrawerMode = { kind: "closed" } | { kind: "view"; schedule: ServiceScheduleOccurrence };
 
-export function SchedulesArea({ resource, onMutate }: { resource: Resource<ServiceSchedulesResponse>; onMutate?: () => void }) {
+export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }: { resource?: Resource<ServiceSchedulesResponse>; onMutate?: () => void } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.serviceSchedules;
+  const onMutate = onMutateProp ?? ctxData.refetch;
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");

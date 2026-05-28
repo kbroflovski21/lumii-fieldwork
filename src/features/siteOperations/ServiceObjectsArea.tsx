@@ -18,6 +18,7 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -110,7 +111,10 @@ function formatTime(iso?: string) {
    Page-level components (unchanged)
    ========================================== */
 
-export function ServiceObjectsArea({ resource, onMutate, initialSearch }: { resource: Resource<ServiceObjectsResponse>; onMutate?: () => void; initialSearch?: string }) {
+export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateProp, initialSearch }: { resource?: Resource<ServiceObjectsResponse>; onMutate?: () => void; initialSearch?: string } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.serviceObjects;
+  const onMutate = onMutateProp ?? ctxData.refetch;
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");

@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type {
   SmartBadge,
   SmartBadgeStatus,
@@ -12,6 +13,7 @@ import { siteOperationsApi, authFetch } from "./api";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -60,7 +62,12 @@ const canDisableOrLose = (s: SmartBadgeStatus) =>
 const canRestore = (s: SmartBadgeStatus) =>
   s === "disabled" || s === "lost";
 
-export function SmartBadgesArea({ resource, onOpenRecords, onMutate, initialSearch }: { resource: Resource<SmartBadgesResponse>; onOpenRecords?: () => void; onMutate?: () => void; initialSearch?: string }) {
+export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenRecordsProp, onMutate: onMutateProp, initialSearch }: { resource?: Resource<SmartBadgesResponse>; onOpenRecords?: () => void; onMutate?: () => void; initialSearch?: string } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.smartBadges;
+  const onMutate = onMutateProp ?? ctxData.refetch;
+  const routerNavigate = useNavigate();
+  const onOpenRecords = onOpenRecordsProp ?? (() => routerNavigate("/records"));
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearch ?? "");

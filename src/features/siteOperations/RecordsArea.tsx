@@ -8,6 +8,7 @@ import { CreateModal as CreateElderModal } from "./ServiceObjectsArea";
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
+import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 
 let _clipPlayer: HTMLAudioElement | null = null;
 let _clipTimer: ReturnType<typeof setTimeout> | null = null;
@@ -104,7 +105,10 @@ function avatarColor(name: string) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function RecordsArea({ resource, onMutate }: { resource: Resource<ServiceRecordsResponse>; onMutate?: () => void }) {
+export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: { resource?: Resource<ServiceRecordsResponse>; onMutate?: () => void } = {}) {
+  const ctxData = useSiteOpsData();
+  const resource = resourceProp ?? ctxData.serviceRecords;
+  const onMutate = onMutateProp ?? ctxData.refetch;
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
