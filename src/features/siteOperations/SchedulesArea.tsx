@@ -1,5 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { StatusBadge } from "../../shared/components/StatusBadge";
+import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import DatePicker from "react-datepicker";
@@ -37,18 +38,6 @@ function formatWindow(s: ServiceScheduleOccurrence) {
   return `${s.startTime ?? s.timeWindow?.start ?? ""}-${s.endTime ?? s.timeWindow?.end ?? ""}`;
 }
 
-function getInitials(name: string) { return name.slice(0, 1); }
-
-function avatarColor(name: string) {
-  const colors = [
-    { bg: "#EEF2FF", text: "#4F46E5" }, { bg: "#F0FDF4", text: "#16A34A" },
-    { bg: "#FFF7ED", text: "#EA580C" }, { bg: "#FDF2F8", text: "#DB2777" },
-    { bg: "#ECFEFF", text: "#0891B2" }, { bg: "#F5F3FF", text: "#7C3AED" },
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
 
 type DrawerMode = { kind: "closed" } | { kind: "view"; schedule: ServiceScheduleOccurrence };
 
@@ -221,7 +210,6 @@ function ListView({ schedules, selectedId, onRowClick }: {
           <span role="columnheader">状态</span>
         </div>
         {sorted.map((s) => {
-          const color = avatarColor(s.serviceObjectName);
           return (
             <div className="sw-table__row sch-table__row" data-selected={selectedId === s.id} data-exception={s.planExceptionApplied} data-status={s.status} key={s.id}
               onClick={() => onRowClick(s)} role="row">
@@ -230,7 +218,7 @@ function ListView({ schedules, selectedId, onRowClick }: {
                 <span className="sch-cell-time">{formatWindow(s)}</span>
               </div>
               <div role="cell" className="sw-table__cell-name">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(s.serviceObjectName)}</div>
+                <AvatarInitial name={s.serviceObjectName} size="sm" />
                 <div className="sw-name-group">
                   <span className="sch-obj-name">{s.serviceObjectName}</span>
                   {s.riskTags.length > 0 ? <small className="sch-risk-icon">⚠</small> : null}

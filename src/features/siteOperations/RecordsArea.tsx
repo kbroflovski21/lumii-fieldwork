@@ -1,5 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { StatusBadge } from "../../shared/components/StatusBadge";
+import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
 import { AddressMap } from "../../shared/AddressMap";
@@ -97,17 +98,6 @@ function toBjStr(d: Date) {
   };
 }
 
-function getInitials(name: string) { return name.slice(0, 1); }
-function avatarColor(name: string) {
-  const colors = [
-    { bg: "#EEF2FF", text: "#4F46E5" }, { bg: "#F0FDF4", text: "#16A34A" },
-    { bg: "#FFF7ED", text: "#EA580C" }, { bg: "#FDF2F8", text: "#DB2777" },
-    { bg: "#ECFEFF", text: "#0891B2" }, { bg: "#F5F3FF", text: "#7C3AED" },
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
 
 export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: { resource?: Resource<ServiceRecordsResponse>; onMutate?: () => void } = {}) {
   const ctxData = useSiteOpsData();
@@ -268,7 +258,6 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                           const statusTones: Record<string, string> = { matched: "success", unmatched: "danger", pending_match: "info", processing: "warning" };
                           const bj = toBjStr(new Date(rec.startedAt));
                           const dur = rec.durationSeconds ?? 0;
-                          const workerColor = avatarColor(rec.workerName ?? "?");
                           return (
                             <div className="sw-table__row rec-table__row" key={rec.id}
                               data-selected={selectedRecording?.id === rec.id}
@@ -279,7 +268,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                                 <span className="sch-cell-time">{bj.time} · {Math.floor(dur/60)}分{dur%60}秒</span>
                               </div>
                               <div role="cell" className="sw-table__cell-name">
-                                <div className="sw-avatar" style={{ background: workerColor.bg, color: workerColor.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(rec.workerName ?? "?")}</div>
+                                <AvatarInitial name={rec.workerName ?? "?"} size="sm" />
                                 <span>{rec.workerName ?? <span className="sw-text-muted">未知</span>}</span>
                               </div>
                               <div role="cell">{rec.matchedServiceObjectName ?? <span className="sw-text-muted">—</span>}</div>
@@ -365,7 +354,6 @@ function RecordsList({ records, selectedId, onRowClick }: {
           <span role="columnheader">复核状态</span>
         </div>
         {sorted.map((r) => {
-          const color = avatarColor(r.serviceObjectName ?? "?");
           return (
             <div className="sw-table__row rec-table__row" data-selected={selectedId === r.id} key={r.id}
               data-exception={r.exceptionTags.length > 0}
@@ -375,7 +363,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
                 <span className="sch-cell-time">{r.startTime}-{r.endTime} · {r.durationMinutes}分钟</span>
               </div>
               <div role="cell" className="sw-table__cell-name">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 28, height: 28, fontSize: 12, borderRadius: 8 }}>{getInitials(r.serviceObjectName ?? "?")}</div>
+                <AvatarInitial name={r.serviceObjectName ?? "?"} size="sm" />
                 <span className="sch-obj-name">{r.serviceObjectName ?? r.elderName ?? "待关联"}</span>
                 {!r.serviceObjectId ? <AlertTriangle size={12} className="sch-risk-icon" /> : null}
               </div>
@@ -447,7 +435,6 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
     }
   };
 
-  const color = avatarColor(r.serviceObjectName ?? "?");
   const audioRestricted = data?.operationalState.permission === "restricted";
   const audio = data?.audioAssets.find(a => a.id === r.audioAssetId);
   const transcript = data?.transcripts?.find((t: any) => t.id === r.transcriptId);
@@ -713,10 +700,9 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                     const rawSeconds = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : null);
                     const mins = rawSeconds != null && !isNaN(rawSeconds) ? Math.floor(rawSeconds / 60) : null;
                     const secs = rawSeconds != null && !isNaN(rawSeconds) ? rawSeconds % 60 : null;
-                    const ac = avatarColor(name);
                     return (
                       <div className={`rec-chat__row ${isWorker ? "rec-chat__row--left" : "rec-chat__row--right"}`} key={i}>
-                        {isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
+                        {isWorker ? <AvatarInitial name={name} size="sm" className="rec-chat__avatar" /> : null}
                         <div className={`rec-chat__bubble ${isWorker ? "rec-chat__bubble--worker" : "rec-chat__bubble--object"}`}>
                           <div className="rec-chat__meta">
                             <span className="rec-chat__name" style={{ color: isWorker ? "#4F46E5" : "#059669" }}>{name}</span>
@@ -724,7 +710,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                           </div>
                           <p className="rec-chat__text">{seg.text}</p>
                         </div>
-                        {!isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
+                        {!isWorker ? <AvatarInitial name={name} size="sm" className="rec-chat__avatar" /> : null}
                       </div>
                     );
                   })}
@@ -1011,10 +997,9 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
                     const rawSeconds = seg.startSecond ?? (seg.startMs != null ? Math.floor(seg.startMs / 1000) : null);
                     const mins = rawSeconds != null && !isNaN(rawSeconds) ? Math.floor(rawSeconds / 60) : null;
                     const secs = rawSeconds != null && !isNaN(rawSeconds) ? rawSeconds % 60 : null;
-                    const ac = avatarColor(name);
                     return (
                       <div className={`rec-chat__row ${isWorker ? "rec-chat__row--left" : "rec-chat__row--right"}`} key={i}>
-                        {isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
+                        {isWorker ? <AvatarInitial name={name} size="sm" className="rec-chat__avatar" /> : null}
                         <div className={`rec-chat__bubble ${isWorker ? "rec-chat__bubble--worker" : "rec-chat__bubble--object"}`}>
                           <div className="rec-chat__meta">
                             <span className="rec-chat__name" style={{ color: isWorker ? "#4F46E5" : "#059669" }}>{name}</span>
@@ -1022,7 +1007,7 @@ function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose:
                           </div>
                           <p className="rec-chat__text">{seg.text}</p>
                         </div>
-                        {!isWorker ? <div className="rec-chat__avatar" style={{ background: ac.bg, color: ac.text }}>{getInitials(name)}</div> : null}
+                        {!isWorker ? <AvatarInitial name={name} size="sm" className="rec-chat__avatar" /> : null}
                       </div>
                     );
                   })

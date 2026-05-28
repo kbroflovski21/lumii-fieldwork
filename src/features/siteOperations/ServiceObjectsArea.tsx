@@ -1,5 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { StatusBadge } from "../../shared/components/StatusBadge";
+import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
 import { DetailPageShell } from "../../shared/DetailPageShell";
@@ -90,18 +91,6 @@ function matchStateFilter(obj: ServiceObject, filter: StateFilter): boolean {
   return true;
 }
 
-function getInitials(name: string) { return name.slice(0, 1); }
-
-function avatarColor(name: string) {
-  const colors = [
-    { bg: "#EEF2FF", text: "#4F46E5" }, { bg: "#F0FDF4", text: "#16A34A" },
-    { bg: "#FFF7ED", text: "#EA580C" }, { bg: "#FDF2F8", text: "#DB2777" },
-    { bg: "#ECFEFF", text: "#0891B2" }, { bg: "#F5F3FF", text: "#7C3AED" },
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
 
 function formatTime(iso?: string) {
   if (!iso) return "";
@@ -290,7 +279,6 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
           <span role="columnheader">状态</span>
         </div>
         {filtered.map((obj) => {
-          const color = avatarColor(obj.name);
           const status = compositeStateTone(obj);
           const planLabel = obj.servicePlanSummaries.length > 0
             ? `${obj.servicePlanSummaries[0].serviceProject}·${obj.servicePlanSummaries[0].cadenceLabel}`
@@ -299,7 +287,7 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
             <div className="sw-table__row so-table__row" data-selected={selectedId === obj.id} key={obj.id}
               onClick={() => onRowClick(obj)} role="row">
               <div role="cell" className="sw-table__cell-name">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>{getInitials(obj.name)}</div>
+                <AvatarInitial name={obj.name} />
                 <div className="sw-name-group">
                   <button className="sw-name-link" onClick={(e) => { e.stopPropagation(); onNameClick(obj); }} type="button">{obj.name}</button>
                   <small>{obj.age ? `${obj.age}岁` : ""}{obj.gender === "female" ? " 女" : obj.gender === "male" ? " 男" : ""}</small>
@@ -317,13 +305,12 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
 
       <div className="sw-mobile-list">
         {filtered.map((obj) => {
-          const color = avatarColor(obj.name);
           const status = compositeStateTone(obj);
           const planLabel = obj.servicePlanSummaries.length > 0 ? `${obj.servicePlanSummaries[0].serviceProject}·${obj.servicePlanSummaries[0].cadenceLabel}` : undefined;
           return (
             <button className="sw-mobile-card" key={obj.id} onClick={() => onNameClick(obj)} type="button">
               <div className="sw-mobile-card__top">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>{getInitials(obj.name)}</div>
+                <AvatarInitial name={obj.name} />
                 <div className="sw-mobile-card__info"><strong>{obj.name}</strong><span>{obj.address}</span></div>
                 <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
               </div>
@@ -448,7 +435,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   const [cancelPlanConfirmId, setCancelPlanConfirmId] = useState<string | null>(null);
   const [showMap, setShowMap] = useState(false);
 
-  const color = avatarColor(obj.name);
   const status = compositeStateTone(obj);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useEscClose } from "./useEscClose";
 import { StatusBadge } from "../../shared/components/StatusBadge";
+import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
 import { DetailPageShell } from "../../shared/DetailPageShell";
@@ -57,23 +58,6 @@ function formatSyncTime(iso?: string) {
   return d.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function getInitials(name: string) {
-  return name.slice(0, 1);
-}
-
-function avatarColor(name: string) {
-  const colors = [
-    { bg: "#EEF2FF", text: "#4F46E5" },
-    { bg: "#F0FDF4", text: "#16A34A" },
-    { bg: "#FFF7ED", text: "#EA580C" },
-    { bg: "#FDF2F8", text: "#DB2777" },
-    { bg: "#ECFEFF", text: "#0891B2" },
-    { bg: "#F5F3FF", text: "#7C3AED" },
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
 
 export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutateProp, initialSearch }: { resource?: Resource<SocialWorkersResponse>; onMutate?: () => void; initialSearch?: string } = {}) {
   const ctxData = useSiteOpsData();
@@ -366,7 +350,6 @@ function WorkerContent({
           <span role="columnheader">状态</span>
         </div>
         {filtered.map((worker) => {
-          const color = avatarColor(worker.name);
           return (
             <div
               className="sw-table__row"
@@ -376,9 +359,7 @@ function WorkerContent({
               role="row"
             >
               <div role="cell" className="sw-table__cell-name">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>
-                  {getInitials(worker.name)}
-                </div>
+                <AvatarInitial name={worker.name} />
                 <div className="sw-name-group">
                   <button
                     className="sw-name-link"
@@ -427,7 +408,6 @@ function WorkerContent({
 
       <div className="sw-mobile-list">
         {filtered.map((worker) => {
-          const color = avatarColor(worker.name);
           return (
             <button
               className="sw-mobile-card"
@@ -436,9 +416,7 @@ function WorkerContent({
               type="button"
             >
               <div className="sw-mobile-card__top">
-                <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>
-                  {getInitials(worker.name)}
-                </div>
+                <AvatarInitial name={worker.name} />
                 <div className="sw-mobile-card__info">
                   <strong>{worker.name}</strong>
                   <span>{worker.phone}</span>
@@ -511,8 +489,6 @@ function ViewModal({
   const [editPhone, setEditPhone] = useState(worker.phone);
   const [editQual, setEditQual] = useState((worker.qualificationLabels ?? []).join("、"));
   const [savingBasic, setSavingBasic] = useState(false);
-  const color = avatarColor(worker.name);
-
   const copyText = (text: string) => {
     try {
       const ta = document.createElement("textarea");
