@@ -142,6 +142,95 @@ describe("Service Records API", () => {
     });
   });
 
+  describe("GET /api/service-records list ordering", () => {
+    let extraRecordIds: string[];
+
+    beforeAll(async () => {
+      extraRecordIds = [];
+      // Create records with same date but different start times
+      const records = [
+        { id: `sr-sort-a-${Date.now()}`, serviceDate: "2026-05-20", startTime: "14:00", endTime: "15:00" },
+        { id: `sr-sort-b-${Date.now()}`, serviceDate: "2026-05-20", startTime: "09:00", endTime: "10:00" },
+        { id: `sr-sort-c-${Date.now()}`, serviceDate: "2026-05-20", startTime: "16:30", endTime: "17:30" },
+        { id: `sr-sort-d-${Date.now()}`, serviceDate: "2026-05-21", startTime: "08:00", endTime: "09:00" },
+      ];
+      for (const rec of records) {
+        await prisma.serviceRecord.create({
+          data: {
+            ...rec,
+            durationMinutes: 60,
+            siteId: "site-001",
+            badgeId: "badge-sort-test",
+            serviceProject: "排序测试",
+          },
+        });
+        extraRecordIds.push(rec.id);
+        createdRecordIds.push(rec.id);
+      }
+    });
+
+    it("returns records sorted by serviceDate desc then startTime desc", async () => {
+      const res = await request(app)
+        .get("/api/service-records?siteId=site-001")
+        .set("Authorization", `Bearer ${operatorToken}`);
+      expect(res.status).toBe(200);
+
+      const records = res.body.serviceRecords;
+      // Filter to only our sort test records
+      const sortRecords = records.filter((r: any) => extraRecordIds.includes(r.id));
+      expect(sortRecords.length).toBe(4);
+
+      // Records should be ordered: 2026-05-21 first (newest date), then 2026-05-20 by startTime desc
+      // The 05-21 record should come first
+      expect(sortRecords[0].serviceDate).toBe("2026-05-21");
+
+      // Within the same date (05-20), records should be sorted by startTime descending
+      const sameDateRecords = sortRecords.filter((r: any) => r.serviceDate === "2026-05-20");
+      for (let i = 0; i < sameDateRecords.length - 1; i++) {
+        expect(sameDateRecords[i].startTime >= sameDateRecords[i + 1].startTime).toBe(true);
+      }
+    });
+  });
+
+  describe("service projects in API response", () => {
+    let multiProjectRecordId: string;
+
+    beforeAll(async () => {
+      multiProjectRecordId = `sr-multiproj-${Date.now()}`;
+      await prisma.serviceRecord.create({
+        data: {
+          id: multiProjectRecordId,
+          serviceDate: "2026-05-22",
+          startTime: "10:00",
+          endTime: "11:00",
+          durationMinutes: 60,
+          siteId: "site-001",
+          badgeId: "badge-proj-test",
+          serviceProject: "长护险,助餐服务,日间照料,康复训练,精神慰藉",
+        },
+      });
+      createdRecordIds.push(multiProjectRecordId);
+    });
+
+    it("API returns all service projects regardless of count", async () => {
+      const res = await request(app)
+        .get(`/api/service-records/${multiProjectRecordId}`)
+        .set("Authorization", `Bearer ${operatorToken}`);
+      expect(res.status).toBe(200);
+      // The API should return all projects — frontend handles display truncation
+      expect(res.body.serviceProjects).toEqual(["长护险", "助餐服务", "日间照料", "康复训练", "精神慰藉"]);
+      expect(res.body.serviceProjects.length).toBe(5);
+    });
+
+    it("serviceProject raw string is preserved", async () => {
+      const res = await request(app)
+        .get(`/api/service-records/${multiProjectRecordId}`)
+        .set("Authorization", `Bearer ${operatorToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.serviceProject).toBe("长护险,助餐服务,日间照料,康复训练,精神慰藉");
+    });
+  });
+
   describe("toApi shape", () => {
     it("includes elderName and serviceAddress fields in response", async () => {
       // Set known values first

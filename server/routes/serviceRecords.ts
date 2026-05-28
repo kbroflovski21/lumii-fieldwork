@@ -67,7 +67,7 @@ export function serviceRecordsRoutes() {
   r.get("/service-records", async (req, res) => {
     const siteId = resolveSiteId(req);
     const where = siteId ? { siteId } : {};
-    const records = await prisma.serviceRecord.findMany({ where, orderBy: { serviceDate: "desc" } });
+    const records = await prisma.serviceRecord.findMany({ where, orderBy: [{ serviceDate: "desc" }, { startTime: "desc" }] });
     const audioAssets = await prisma.audioAsset.findMany();
     const transcripts = await prisma.transcript.findMany();
     const serviceObjects = await prisma.serviceObject.findMany({ where, select: { id: true, name: true } });

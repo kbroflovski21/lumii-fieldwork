@@ -177,3 +177,101 @@
 - **Description:** When a service record referenced an unknown elder, operators had to navigate away to create the elder first, then come back to link it.
 - **Root cause:** No in-context elder creation flow existed within the service record edit view.
 - **Fix:** Reused the existing `CreateModal` component for service objects, allowing operators to create a new elder directly from the service record edit flow and automatically link the new elder to the record.
+
+---
+
+# 2026-05-26 ~ 2026-05-28 Bug Fixes
+
+**Date range:** 2026-05-26 to 2026-05-28
+
+---
+
+## Bug 30: AI schedule not generating (staging .env overwritten)
+
+- **Description:** AI schedule generation returned 401 errors on staging. The frontend silently returned on error, making the failure invisible to the user.
+- **Root cause:** A manual rsync deployment overwrote the staging `.env` file, removing `JWT_SECRET` and `LLM_API_KEY`. The server returned 401 (no valid JWT), and the frontend `catch` block silently returned without showing an error.
+- **Fix:** Restored the staging `.env` with the correct `JWT_SECRET` and `LLM_API_KEY`. Created `deploy.sh` script that excludes `.env` files from rsync to prevent future overwrites.
+
+## Bug 31: Service content column overlapping when 5+ projects
+
+- **Description:** When a service record had 5 or more service projects, the tags overflowed the column and overlapped adjacent columns in the record list.
+- **Root cause:** The service project tags were rendered without any limit, causing layout overflow when too many tags were present.
+- **Fix:** Limited the display to a maximum of 2 tags with a "+N" badge for overflow. The full list of projects is shown in a hover tooltip.
+
+## Bug 32: Service record date filter buttons not working
+
+- **Description:** The date filter buttons (today, this week, this month) in the service records list did not filter the records.
+- **Root cause:** The `dateFilter` state variable existed in the component, but the actual filter logic that checks records against the selected date range was never implemented.
+- **Fix:** Added filter logic that uses the `dateFilter` state to filter records by their `serviceDate` before rendering the list.
+
+## Bug 33: Record list sorting wrong within same date
+
+- **Description:** Service records on the same date appeared in random/insertion order instead of being sorted by time.
+- **Root cause:** The Prisma query only ordered by `serviceDate` descending, with no secondary sort key.
+- **Fix:** Added `startTime` descending as a secondary sort key in the service records list query.
+
+## Bug 34: Elder warning icon based on assignmentConfidence instead of serviceObjectId
+
+- **Description:** The warning icon on service records (indicating an elder needs confirmation) was based on `assignmentConfidence` value, which was unreliable.
+- **Root cause:** The original logic used `assignmentConfidence < threshold` to show the warning, but confidence values were inconsistent and didn't reflect whether an elder was actually linked.
+- **Fix:** Changed the warning logic to check whether `serviceObjectId` is null. A null `serviceObjectId` means no elder has been confirmed, which is the actual condition that needs attention.
+
+## Bug 35: Service record time showing UTC instead of CST
+
+- **Description:** Service record `sr-c99f64c4` showed start time as 02:11 instead of the correct 10:11 CST.
+- **Root cause:** The record's `startTime` was stored as UTC (02:11) instead of CST (10:11, UTC+8). The badge captured the time in UTC and it was persisted without timezone conversion.
+- **Fix:** Manually corrected the affected record's time in the database. (Systemic fix for new records handled by the processor's timezone-aware time capture.)
+
+## Bug 36: Worker picker was inline expanding row height
+
+- **Description:** Opening the worker assignment picker in the record detail expanded the row height, pushing other content down and disrupting the layout.
+- **Root cause:** The worker picker dropdown was rendered inline within the table row, causing the row to grow to accommodate the dropdown content.
+- **Fix:** Changed the worker picker to a floating popover using `position: absolute`, so it overlays content instead of expanding the row.
+
+## Bug 37: Create elder modal was custom implementation
+
+- **Description:** The "create new elder" modal in the service record flow was a separate custom implementation, duplicating logic from the existing `ServiceObjectsArea.CreateModal`.
+- **Root cause:** The elder creation flow was added independently without reusing the existing component.
+- **Fix:** Replaced the custom implementation with the existing `ServiceObjectsArea.CreateModal` component for consistency and reduced code duplication.
+
+## Bug 38: Worker picker had "未分配" option
+
+- **Description:** The worker assignment picker included an "未分配" (unassigned) option, which was confusing — clicking it would clear the worker assignment.
+- **Root cause:** The picker was designed with an explicit "unassign" option.
+- **Fix:** Removed the "未分配" option per user request. Worker unassignment is handled through other UI flows.
+
+## Bug 39: Address column truncating too early
+
+- **Description:** The service address column in the record list truncated text too aggressively, hiding useful address information.
+- **Root cause:** A hardcoded `max-width: 140px` was set on the address column, which was too narrow for typical Chinese addresses.
+- **Fix:** Removed the hardcoded `max-width` and let the CSS grid column definition control the width, giving the address column more space.
+
+## Bug 40: Status dropdown chevron arrow missing
+
+- **Description:** The status filter dropdown in the service worker section had no visual indicator that it was a clickable dropdown.
+- **Root cause:** The `<select>` element's default browser chevron was hidden by custom styling, and no replacement was provided.
+- **Fix:** Added an SVG chevron as a CSS `background-image` on the `.sw-filter select` element.
+
+## Bug 41: Status dropdown clipped by container
+
+- **Description:** The status filter dropdown options were clipped by the parent container's overflow, making some options invisible.
+- **Root cause:** The dropdown was positioned with `position: absolute` inside a container with `overflow: hidden`.
+- **Fix:** Changed to `position: fixed` positioning using `getBoundingClientRect()` to calculate screen-relative coordinates, ensuring the dropdown renders above all other content.
+
+## Bug 42: Date filter buttons showing in calendar view
+
+- **Description:** Date filter buttons (today, this week, this month) appeared in the calendar view, where they were meaningless — the calendar always shows the full month.
+- **Root cause:** The date filter controls were rendered regardless of which view (list/map/calendar) was active.
+- **Fix:** Added a `view !== "calendar"` guard so date filter buttons only appear in list and map views. Calendar view bypasses all date filters.
+
+## Bug 43: Schedule list date filter visibility toggling
+
+- **Description:** The date filter in the schedule list was shown in calendar view, then hidden, then added back, then removed again across several iterations.
+- **Root cause:** Inconsistent requirements about when date filters should be visible across different schedule view modes.
+- **Fix:** Final decision: date filter is hidden in calendar view (calendar shows the full month), shown in list and map views.
+
+## Bug 44: Deploy script created to prevent .env overwrite incident
+
+- **Description:** Manual rsync deployments could accidentally overwrite the staging `.env` file, causing service outages (see Bug 30).
+- **Root cause:** No standardized deploy process existed; developers ran ad-hoc rsync commands that could include `.env` files.
+- **Fix:** Created `deploy.sh` in the project root that handles the full deploy pipeline (build, rsync with `.env` exclusion, Prisma push, restart, health check). Documented in `docs/deploy-guide.md`.
