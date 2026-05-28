@@ -390,147 +390,104 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
     { id: "info", label: "设备信息" },
   ];
 
+  const statusActions = badge.status === "pending_activation" && !mutationsDisabled ? (
+    <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} onClick={async () => {
+      try { await siteOperationsApi.updateSmartBadge(badge.id, { status: "available" }); onUpdated(); } catch {}
+    }} type="button">激活此工牌</button>
+  ) : canDisableOrLose(badge.status) && !mutationsDisabled ? (
+    confirmAction === "disable" ? (
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, color: "#B54E34" }}>确认停用？</span>
+        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={() => handleStatusChange("disabled")} type="button">确认停用</button>
+        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setConfirmAction(null)} type="button">取消</button>
+      </span>
+    ) : confirmAction === "lost" ? (
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, color: "#B54E34" }}>确认丢失？</span>
+        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={() => handleStatusChange("lost")} type="button">确认丢失</button>
+        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setConfirmAction(null)} type="button">取消</button>
+      </span>
+    ) : (
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmAction("disable")} type="button">停用</button>
+        <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setConfirmAction("lost")} type="button">标记丢失</button>
+      </div>
+    )
+  ) : canRestore(badge.status) && !mutationsDisabled ? (
+    <button className="sw-btn sw-btn--secondary" style={{ height: 32, fontSize: 12 }} onClick={() => handleStatusChange("available")} type="button"><RefreshCw size={14} /> 恢复为可用</button>
+  ) : undefined;
+
   return (
-    <DetailPageShell parentLabel="设备" parentPath="/badges" title={badge.deviceCode}>
-      {/* Summary Card */}
-      <div className="so-modal__summary">
-        <div className="so-modal__summary-main">
-          <div className="badges-avatar"><Smartphone size={20} /></div>
-          <div className="so-modal__summary-name">
-            <h3>{badge.deviceCode}</h3>
-            <span className="so-modal__summary-demo">{badge.siteName ?? badge.siteId}</span>
-            <span className="sw-status-badge sw-status-badge--inline" data-tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</span>
+    <DetailPageShell parentLabel="设备" parentPath="/badges" title={badge.deviceCode} actions={statusActions}>
+      <div className="dp-card">
+        <div className="dp-card__body">
+          {/* 设备信息 */}
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">设备信息</h4>
+            </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>设备码</dt><dd><span className="badges-code-tag">{badge.deviceCode}</span></dd></div>
+              <div className="dp-field"><dt>所属站点</dt><dd>{badge.siteName ?? badge.siteId}</dd></div>
+              <div className="dp-field"><dt>当前状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</span></dd></div>
+              <div className="dp-field"><dt>激活时间</dt><dd>{badge.activatedAt ? formatSyncTime(badge.activatedAt) : "—"}</dd></div>
+              <div className="dp-field"><dt>电量</dt><dd>{badge.batteryPercent != null ? <span className={badge.batteryPercent < 20 ? "badges-battery--low" : ""}>{badge.batteryPercent}%</span> : "—"}</dd></div>
+              <div className="dp-field"><dt>最近同步</dt><dd>{badge.lastSyncAt ? formatSyncTime(badge.lastSyncAt) : "—"}</dd></div>
+              <div className="dp-field"><dt>最近录音</dt><dd>{badge.lastRecordingAt ? formatSyncTime(badge.lastRecordingAt) : "—"}</dd></div>
+              <div className="dp-field"><dt>服务记录</dt><dd>{badge.recentServiceRecordIds.length > 0 ? `${badge.recentServiceRecordIds.length} 条` : "—"}</dd></div>
+            </dl>
+          </div>
+
+          {/* 服务人员 */}
+          <div className="dp-section">
+            <div className="dp-section__head">
+              <h4 className="dp-section__title">服务人员</h4>
+              {!editingWorker && !mutationsDisabled && canDisableOrLose(badge.status) && (
+                <button className="dp-section__edit-btn" onClick={() => setEditingWorker(true)} type="button" title="编辑"><Edit3 size={14} /></button>
+              )}
+            </div>
+            <dl className="dp-fields">
+              <div className="dp-field"><dt>常用人员</dt><dd>
+                {editingWorker ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)", maxWidth: "100%" }} value={selectedWorker} onChange={e => { setSelectedWorker(e.target.value); setBindError(""); }}>
+                        <option value="">无（站点共享）</option>
+                        {workerOptions.map(w => (
+                          <option key={w.id} value={w.id} disabled={!!w.boundBadge && w.boundBadge !== badge.deviceCode}>
+                            {w.name}{w.boundBadge && w.boundBadge !== badge.deviceCode ? ` (已绑定${w.boundBadge})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
+                        if (selectedWorker) {
+                          const chosen = workerOptions.find(w => w.id === selectedWorker);
+                          if (chosen?.boundBadge && chosen.boundBadge !== badge.deviceCode) {
+                            setBindError(`${chosen.name}已绑定工牌${chosen.boundBadge}，请先解绑后再操作`);
+                            return;
+                          }
+                        }
+                        try {
+                          await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined });
+                          setEditingWorker(false);
+                          setBindError("");
+                        } catch (err: any) {
+                          const msg = err?.message || "绑定失败";
+                          setBindError(msg.includes("已绑定") ? msg : "绑定失败，该人员可能已绑定其他工牌");
+                        }
+                        onUpdated();
+                      }} type="button">确认</button>
+                      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => { setEditingWorker(false); setBindError(""); }} type="button">取消</button>
+                    </div>
+                    {bindError && <div style={{ fontSize: 12, color: "#DC2626" }}>{bindError}</div>}
+                  </div>
+                ) : (badge.preferredWorkerName ?? "站点共享")}
+              </dd></div>
+            </dl>
+            <p style={{ marginTop: 8, fontSize: 12, color: "var(--site-muted)" }}>工牌可被站点内任一服务人员使用，常用人员仅作为推断默认关联</p>
           </div>
         </div>
-        <div className="so-modal__summary-contact">
-          {badge.batteryPercent != null ? (
-            <span className="so-modal__meta-item"><Battery size={13} /> <span className={badge.batteryPercent < 20 ? "badges-battery--low" : ""}>{badge.batteryPercent}%</span></span>
-          ) : null}
-          {badge.lastSyncAt ? (
-            <>
-              <span className="so-modal__meta-divider" />
-              <span className="so-modal__meta-item"><Clock size={13} /> 同步 {formatSyncTime(badge.lastSyncAt)}</span>
-            </>
-          ) : null}
-        </div>
-        <div className="so-modal__summary-tags">
-          {badge.preferredWorkerName ? (
-            <span className="so-modal__chip">{badge.preferredWorkerName}</span>
-          ) : (
-            <span className="so-modal__chip">站点共享</span>
-          )}
-          {badge.recentServiceRecordIds.length > 0 ? (
-            <span className="so-modal__chip">{badge.recentServiceRecordIds.length} 条记录</span>
-          ) : null}
-        </div>
       </div>
-
-      {/* Tab Bar */}
-      <div className="so-modal__tabs" role="tablist">
-        {tabs.map(tab => (
-          <button className="so-modal__tab" data-active={activeTab === tab.id} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">
-            {tab.label}
-            {tab.count ? <span className="so-modal__tab-count">{tab.count}</span> : null}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="so-modal__content">
-        {activeTab === "info" && (
-          <>
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">设备信息</h4>
-              <dl className="so-overview-grid">
-                <div className="so-overview-item"><dt>设备码</dt><dd><span className="badges-code-tag">{badge.deviceCode}</span></dd></div>
-                <div className="so-overview-item"><dt>所属站点</dt><dd>{badge.siteName ?? badge.siteId}</dd></div>
-                <div className="so-overview-item"><dt>当前状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</span></dd></div>
-                <div className="so-overview-item"><dt>激活时间</dt><dd>{badge.activatedAt ? formatSyncTime(badge.activatedAt) : "—"}</dd></div>
-                <div className="so-overview-item"><dt>电量</dt><dd>{badge.batteryPercent != null ? <span className={badge.batteryPercent < 20 ? "badges-battery--low" : ""}>{badge.batteryPercent}%</span> : "—"}</dd></div>
-                <div className="so-overview-item"><dt>最近同步</dt><dd>{badge.lastSyncAt ? formatSyncTime(badge.lastSyncAt) : "—"}</dd></div>
-                <div className="so-overview-item"><dt>最近录音</dt><dd>{badge.lastRecordingAt ? formatSyncTime(badge.lastRecordingAt) : "—"}</dd></div>
-                <div className="so-overview-item"><dt>服务记录</dt><dd>{badge.recentServiceRecordIds.length > 0 ? `${badge.recentServiceRecordIds.length} 条` : "—"}</dd></div>
-              </dl>
-            </div>
-
-            <div className="so-tab-section">
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h4 className="so-tab-section-title" style={{ margin: 0, border: 0, paddingBottom: 0 }}>服务人员</h4>
-                {!editingWorker && !mutationsDisabled && canDisableOrLose(badge.status) && (
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setEditingWorker(true)} type="button" title="编辑"><Edit3 size={14} /></button>
-                )}
-              </div>
-              <dl className="so-overview-grid" style={{ marginTop: 10 }}>
-                <div className="so-overview-item"><dt>常用人员</dt><dd>
-                  {editingWorker ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <select style={{ height: 32, borderRadius: 6, border: "1.5px solid #0052CC", padding: "0 8px", fontSize: 13, boxShadow: "0 0 0 3px rgba(0,82,204,0.1)" }} value={selectedWorker} onChange={e => { setSelectedWorker(e.target.value); setBindError(""); }}>
-                          <option value="">无（站点共享）</option>
-                          {workerOptions.map(w => (
-                            <option key={w.id} value={w.id} disabled={!!w.boundBadge && w.boundBadge !== badge.deviceCode}>
-                              {w.name}{w.boundBadge && w.boundBadge !== badge.deviceCode ? ` (已绑定${w.boundBadge})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={async () => {
-                          if (selectedWorker) {
-                            const chosen = workerOptions.find(w => w.id === selectedWorker);
-                            if (chosen?.boundBadge && chosen.boundBadge !== badge.deviceCode) {
-                              setBindError(`${chosen.name}已绑定工牌${chosen.boundBadge}，请先解绑后再操作`);
-                              return;
-                            }
-                          }
-                          try {
-                            await siteOperationsApi.updateSmartBadge(badge.id, { preferredWorkerId: selectedWorker || undefined });
-                            setEditingWorker(false);
-                            setBindError("");
-                          } catch (err: any) {
-                            const msg = err?.message || "绑定失败";
-                            setBindError(msg.includes("已绑定") ? msg : "绑定失败，该人员可能已绑定其他工牌");
-                          }
-                          onUpdated();
-                        }} type="button">确认</button>
-                        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 11, padding: "0 8px" }} onClick={() => { setEditingWorker(false); setBindError(""); }} type="button">取消</button>
-                      </div>
-                      {bindError && <div style={{ fontSize: 12, color: "#DC2626" }}>{bindError}</div>}
-                    </div>
-                  ) : (badge.preferredWorkerName ?? "站点共享")}
-                </dd></div>
-              </dl>
-              <p className="badges-hint" style={{ marginTop: 4 }}>工牌可被站点内任一服务人员使用，常用人员仅作为推断默认关联</p>
-            </div>
-          </>
-        )}
-
-
-      </div>
-
-      {/* Footer */}
-      <div className="so-modal__footer">
-        <div>
-          {badge.status === "pending_activation" && !mutationsDisabled ? (
-            <button className="sw-btn sw-btn--primary" onClick={async () => {
-              try { await siteOperationsApi.updateSmartBadge(badge.id, { status: "available" }); onUpdated(); } catch {}
-            }} type="button">激活此工牌</button>
-          ) : canDisableOrLose(badge.status) && !mutationsDisabled ? (
-            confirmAction === "disable" ? (
-              <span className="sw-drawer__confirm"><span>确认停用？</span><button className="sw-btn sw-btn--danger" onClick={() => handleStatusChange("disabled")} type="button">确认停用</button><button className="sw-btn sw-btn--secondary" onClick={() => setConfirmAction(null)} type="button">取消</button></span>
-            ) : confirmAction === "lost" ? (
-              <span className="sw-drawer__confirm"><span>确认标记丢失？</span><button className="sw-btn sw-btn--danger" onClick={() => handleStatusChange("lost")} type="button">确认丢失</button><button className="sw-btn sw-btn--secondary" onClick={() => setConfirmAction(null)} type="button">取消</button></span>
-            ) : (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="sw-btn sw-btn--danger-ghost" onClick={() => setConfirmAction("disable")} type="button">停用</button>
-                <button className="sw-btn sw-btn--danger-ghost" onClick={() => setConfirmAction("lost")} type="button">标记丢失</button>
-              </div>
-            )
-          ) : canRestore(badge.status) && !mutationsDisabled ? (
-            <button className="sw-btn sw-btn--secondary" onClick={() => handleStatusChange("available")} type="button"><RefreshCw size={14} /> 恢复为可用</button>
-          ) : <div />}
-        </div>
-        <div className="so-modal__footer-right" />
-      </div>
-
     </DetailPageShell>
   );
 }
