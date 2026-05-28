@@ -604,8 +604,21 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
 
   const historyItems = ((s as any).adjustmentHistory ?? []) as Array<{ action: string; detail: string; operatorName: string; adjustedAt: string }>;
 
+  const cancelAction = canAdjust && !mutationsDisabled ? (
+    showCancel ? (
+      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, color: "#B54E34" }}>确认取消？</span>
+        <button className="sw-btn sw-btn--danger" style={{ height: 28, fontSize: 12 }} onClick={handleCancel} type="button">确认取消</button>
+        <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowCancel(false)} type="button">返回</button>
+      </span>
+    ) : (
+      <button className="sw-btn sw-btn--danger-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setShowCancel(true)} type="button"><Ban size={14} /> 取消排期</button>
+    )
+  ) : undefined;
+
   return (
-    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`}>
+    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`} actions={cancelAction}>
+      <div className="dp-card">
       {/* ── Status Banner ── */}
       <div className="sch-event__banner" data-tone={tone}>
         <span className="sw-status-badge" data-tone={tone} style={{ marginBottom: 6 }}>{statusText[s.status] ?? s.status}</span>
@@ -653,7 +666,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
       </div>
 
       {/* ── Scrollable Body ── */}
-      <div className="so-modal__content">
+      <div className="dp-card__body">
         {/* Quick Actions */}
         {canAdjust && !mutationsDisabled ? (
           <div className="sch-event__action-bar">
@@ -707,25 +720,25 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
         ) : null}
 
         {/* Schedule Details */}
-        <div className="so-tab-section" style={{ marginTop: canAdjust && !mutationsDisabled ? 0 : undefined }}>
-          <h4 className="so-tab-section-title">排期详情</h4>
-          <dl className="so-overview-grid">
-            <div className="so-overview-item"><dt>服务日期</dt><dd>{formatDate(s.serviceDate)}</dd></div>
-            <div className="so-overview-item"><dt>时间段</dt><dd>{formatWindow(s)}</dd></div>
-            <div className="so-overview-item"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
-            <div className="so-overview-item"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
-            <div className="so-overview-item"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
-            <div className="so-overview-item"><dt>{s.planExceptionApplied ? "计划例外" : "服务人员"}</dt><dd>{s.planExceptionApplied ? <span className="sw-status-badge" data-tone="warning">已受例外影响</span> : (s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>)}</dd></div>
-            <div className="so-overview-item"><dt>长者</dt><dd>{s.serviceObjectName}</dd></div>
-            <div className="so-overview-item"><dt>地址</dt><dd>{s.addressSnapshot}</dd></div>
-            <div className="so-overview-item"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
+        <div className="dp-section" style={{ marginTop: canAdjust && !mutationsDisabled ? 0 : undefined }}>
+          <div className="dp-section__head"><h4 className="dp-section__title">排期详情</h4></div>
+          <dl className="dp-fields">
+            <div className="dp-field"><dt>服务日期</dt><dd>{formatDate(s.serviceDate)}</dd></div>
+            <div className="dp-field"><dt>时间段</dt><dd>{formatWindow(s)}</dd></div>
+            <div className="dp-field"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
+            <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
+            <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
+            <div className="dp-field"><dt>{s.planExceptionApplied ? "计划例外" : "服务人员"}</dt><dd>{s.planExceptionApplied ? <span className="sw-status-badge" data-tone="warning">已受例外影响</span> : (s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>)}</dd></div>
+            <div className="dp-field"><dt>长者</dt><dd>{s.serviceObjectName}</dd></div>
+            <div className="dp-field"><dt>地址</dt><dd>{s.addressSnapshot}</dd></div>
+            <div className="dp-field"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
           </dl>
         </div>
 
         {/* Adjustment History */}
         {historyItems.length > 0 ? (
-          <div className="so-tab-section">
-            <h4 className="so-tab-section-title">调整历史 ({historyItems.length})</h4>
+          <div className="dp-section">
+            <div className="dp-section__head"><h4 className="dp-section__title">调整历史 ({historyItems.length})</h4></div>
             <div className="sch-adj-history">
               {historyItems.map((h, i) => (
                 <div className="sch-adj-history__item" key={i}>
@@ -742,18 +755,6 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
         ) : null}
       </div>
 
-      {/* ── Footer ── */}
-      <div className="so-modal__footer">
-        <div>
-          {canAdjust && !mutationsDisabled ? (
-            showCancel ? (
-              <span className="sw-drawer__confirm"><span>确认取消？</span><button className="sw-btn sw-btn--danger" onClick={handleCancel} type="button">确认取消</button><button className="sw-btn sw-btn--secondary" onClick={() => setShowCancel(false)} type="button">返回</button></span>
-            ) : (
-              <button className="sw-btn sw-btn--danger-ghost" onClick={() => setShowCancel(true)} type="button"><Ban size={14} /> 取消排期</button>
-            )
-          ) : <div />}
-        </div>
-        <div className="so-modal__footer-right" />
       </div>
     </DetailPageShell>
   );
