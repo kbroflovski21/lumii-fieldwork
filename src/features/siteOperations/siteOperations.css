@@ -1906,9 +1906,9 @@ body {
 .sw-page__inner {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: 100%;
-  padding: 24px;
+  padding: 16px;
 }
 
 .sw-header {
@@ -1929,7 +1929,13 @@ body {
 .sw-header__desc {
   color: var(--site-muted);
   font-size: 13px;
-  margin: 4px 0 0;
+  margin: 0;
+}
+
+.sw-header__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 
 /* Table container */

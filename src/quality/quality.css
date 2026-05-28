@@ -196,7 +196,7 @@
 .quality-content {
   flex: 1;
   overflow: auto;
-  padding: 24px;
+  padding: 16px;
 }
 
 .quality-content--sop {
@@ -430,7 +430,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+}
+.quality-records__header > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .quality-records__title {
@@ -443,7 +448,7 @@
 .quality-records__subtitle {
   font-size: 13px;
   color: var(--quality-text-muted);
-  margin-top: 2px;
+  margin: 0;
 }
 
 /* Records toolbar */
