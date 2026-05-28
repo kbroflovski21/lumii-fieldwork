@@ -7843,7 +7843,15 @@ button.site-operations-sidebar__profile-card:hover { background: #F1F5F9; color:
   .site-operations-sidebar {
     display: none;
   }
+  .site-operations-main--layout {
+    grid-column: 1;
+  }
   .site-operations-body[data-copilot-open="true"] {
     grid-template-columns: 1fr !important;
+  }
+  .site-operations-header {
+    padding: 0 12px;
+    height: 48px;
+    gap: 8px;
   }
 }
