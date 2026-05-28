@@ -173,48 +173,8 @@ export function SiteOperationsLayout() {
 
   return (
     <div className="site-operations-root">
-      <div
-        className="site-operations-layout"
-        data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}
-        data-copilot-open={copilotOpen}
-      >
-        {/* Sidebar */}
-        <nav className="site-operations-sidebar" aria-label="站点运营导航">
-          <div className="site-operations-sidebar__items">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.id === activeArea;
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  className="site-operations-sidebar__item"
-                  data-active={isActive}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon size={20} />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="site-operations-sidebar__footer">
-            <button
-              className="site-operations-sidebar__toggle"
-              onClick={toggleSidebar}
-              type="button"
-              title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
-            >
-              {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
-            <ProfileMenu />
-          </div>
-        </nav>
-
-        {/* Main content */}
-        <main className="site-operations-main site-operations-main--layout">
-          {/* Header */}
-          <header className="site-operations-header">
+      {/* Header — full width, above sidebar+main */}
+      <header className="site-operations-header">
             {currentSite && sites.length > 0 && (
               <div className="so-site-picker" ref={siteDropRef}>
                 <button
@@ -278,9 +238,39 @@ export function SiteOperationsLayout() {
                 panelOpen={copilotOpen}
               />
             </div>
-          </header>
+      </header>
 
-          {/* Route content */}
+      {/* Sidebar + Main body */}
+      <div
+        className="site-operations-body"
+        data-sidebar={sidebarCollapsed ? "collapsed" : "expanded"}
+        data-copilot-open={copilotOpen}
+      >
+        {/* Sidebar */}
+        <nav className="site-operations-sidebar" aria-label="站点运营导航">
+          <div className="site-operations-sidebar__items">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.id === activeArea;
+              return (
+                <Link key={item.id} to={item.path} className="site-operations-sidebar__item" data-active={isActive} title={sidebarCollapsed ? item.label : undefined}>
+                  <Icon size={20} />
+                  {!sidebarCollapsed && <span>{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+          <div className="site-operations-sidebar__footer">
+            <ProfileMenu />
+          </div>
+          {/* Floating collapse toggle on divider */}
+          <button className="site-operations-sidebar__divider-toggle" onClick={toggleSidebar} type="button" title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}>
+            {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+          </button>
+        </nav>
+
+        {/* Main content */}
+        <main className="site-operations-main site-operations-main--layout">
           <div className="site-operations-content">
             <SiteOpsDataContext.Provider value={data}>
               <Outlet />
@@ -313,7 +303,7 @@ export function SiteOperationsLayout() {
             <Bot size={24} color="#FFFCF8" />
           </button>
         )}
-      </div>
+      </div> {/* end site-operations-body */}
 
       {/* Mobile bottom nav */}
       <nav className="site-operations-mobile-nav" aria-label="移动端导航">
