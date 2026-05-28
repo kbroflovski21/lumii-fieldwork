@@ -4,6 +4,7 @@ import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRoun
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { DetailPageShell } from "../../shared/DetailPageShell";
+import { AddressMap } from "../../shared/AddressMap";
 import type { ServiceScheduleOccurrence, ServiceSchedulesResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
@@ -60,8 +61,8 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
   const [searchQuery, setSearchQuery] = useState("");
   type DatePreset = "" | "today" | "week" | "month";
-  const [dateFilter, setDateFilter] = useState<DatePreset>("today");
-  const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<DatePreset>("");
+  const [statusFilters, setStatusFilters] = useState<string[]>(["unassigned", "scheduled", "in_progress"]);
   const statusRef = useRef<HTMLDivElement>(null);
   const [statusDropOpen, setStatusDropOpen] = useState(false);
 
@@ -553,6 +554,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
   onUpdated: () => void;
 }) {
   const [showCancel, setShowCancel] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [editingTime, setEditingTime] = useState(false);
   const [editingWorker, setEditingWorker] = useState(false);
   const [adjStartDate, setAdjStartDate] = useState<Date | null>(null);
@@ -650,6 +652,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
               <h4 className="dp-section__title">排期详情</h4>
             </div>
             <dl className="dp-fields">
+              {/* 长者 */}
               <div className="dp-field"><dt>长者</dt><dd><strong>{s.serviceObjectName}</strong>{s.riskTags.length > 0 && s.riskTags.map(t => <span key={t} className="so-risk-tag" style={{ marginLeft: 6 }}><AlertTriangle size={11} /> {t}</span>)}</dd></div>
 
               {/* 服务人员 — per-field inline edit with searchable dropdown */}
@@ -668,8 +671,6 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
                   </div>
                 ) : <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>}
               </dd></div>
-
-              <div className="dp-field"><dt>服务地点</dt><dd><strong>{s.addressSnapshot}</strong></dd></div>
 
               {/* 服务时间 — merged date+time, per-field inline edit with react-datepicker */}
               <div className="dp-field dp-field--full"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务时间{canAdjust && !mutationsDisabled && !editingTime && <button className="dp-section__edit-btn" onClick={startEditTime} type="button" title="调整时间"><Edit3 size={12} /></button>}</dt><dd>
@@ -714,9 +715,31 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
                 ) : `${formatDate(s.serviceDate)} ${formatWindow(s)}`}
               </dd></div>
 
+              {/* 服务项目 */}
               <div className="dp-field"><dt>服务项目</dt><dd><span className="sw-tag">{s.serviceProject}</span></dd></div>
+              {/* 来源 */}
               <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
+              {/* 状态 */}
               <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
+
+              {/* 服务地点 — with map toggle */}
+              <div className="dp-field dp-field--full"><dt>服务地点</dt><dd>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <strong>{s.addressSnapshot}</strong>
+                  {s.addressSnapshot && (
+                    <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setShowMap(!showMap)} type="button" title="查看地图">
+                      <MapPin size={14} />
+                    </button>
+                  )}
+                </span>
+                {showMap && s.addressSnapshot && (
+                  <div style={{ marginTop: 8 }}>
+                    <AddressMap address={s.addressSnapshot} />
+                  </div>
+                )}
+              </dd></div>
+
+              {/* 备注/关联记录 */}
               <div className="dp-field"><dt>{s.serviceRecordId ? "关联记录" : "备注"}</dt><dd>{s.serviceRecordId ?? s.notes ?? "—"}</dd></div>
             </dl>
           </div>
