@@ -304,97 +304,16 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   ];
 
   return (
-    <div className="quality-page" data-copilot-open={copilotOpen}>
-      {/* Header — row 1, spans all columns */}
-      <header className="quality-header">
-        <div className="quality-header__logo">
-          <IconShield size={18} stroke="white" />
+    <div className="quality-page-content">
+      {view === "sop" ? (
+        <SupervisorContent />
+      ) : (
+        <div className="quality-content">
+          {view === "dashboard" && <DashboardView />}
+          {view === "sites" && <SitesView initialSearch={searchFilter} />}
+          {view === "users" && <UsersView initialSearch={searchFilter} />}
+          {view === "feishu" && <FeishuView />}
         </div>
-        <div>
-          <h1 className="quality-header__title">金色年华 · 集团管理</h1>
-          <div className="quality-header__status">
-            <span className="quality-header__dot" />
-            运行中 · 4 个站点 · 本周 168 单
-          </div>
-        </div>
-        <div className="quality-header__actions">
-          <HeaderCopilotInput
-            onSend={(msg) => { sendWithContext(msg); setCopilotOpen(true); }}
-            onOpenPanel={() => setCopilotOpen(true)}
-            commands={ADMIN_COMMANDS}
-            panelOpen={copilotOpen}
-          />
-        </div>
-      </header>
-
-      {/* Left Icon Rail — row 2, col 1 */}
-      <div className="quality-rail">
-        {navItems.map((n) => (
-          <button
-            key={n.key}
-            onClick={() => handleSelectView(n.key)}
-            title={n.label}
-            className="quality-rail__btn"
-            data-active={view === n.key}
-          >
-            {n.icon}
-          </button>
-        ))}
-        <ProfileMenu />
-      </div>
-
-      {/* Main content — row 2, col 2 */}
-      <div className="quality-main">
-        {view === "sop" ? (
-          <SupervisorContent />
-        ) : (
-          <div className="quality-content">
-            {view === "dashboard" && <DashboardView />}
-            {view === "sites" && <SitesView initialSearch={searchFilter} />}
-            {view === "users" && <UsersView initialSearch={searchFilter} />}
-            {view === "feishu" && <FeishuView />}
-          </div>
-        )}
-      </div>
-
-      {/* CopilotPanel — row 2, col 3 */}
-      <CopilotPanel
-        isOpen={copilotOpen}
-        onClose={() => setCopilotOpen(false)}
-        messages={messages}
-        connected={connected}
-        wip={wip}
-        endRef={endRef}
-        onSend={sendWithContext}
-        onNavigate={handleAdminNavigate}
-        onCardAction={sendCardAction}
-        title="AI 助手"
-        commands={ADMIN_COMMANDS}
-      />
-      {/* Mobile bottom nav */}
-      <nav className="quality-mobile-nav">
-        {navItems.map((n) => (
-          <button
-            key={n.key}
-            className="quality-mobile-nav__btn"
-            data-active={view === n.key}
-            onClick={() => handleSelectView(n.key)}
-            type="button"
-          >
-            {n.icon}
-            <span>{n.label}</span>
-          </button>
-        ))}
-      </nav>
-      {!copilotOpen && (
-        <button
-          className="copilot-mobile-fab"
-          onClick={() => setCopilotOpen(true)}
-          type="button"
-          aria-label="打开 AI 助手"
-        >
-          <Bot size={24} color="#FFFCF8" />
-        </button>
       )}
 
     </div>

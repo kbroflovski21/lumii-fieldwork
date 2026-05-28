@@ -78,7 +78,7 @@ export function SiteOperationsLayout() {
   const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
   const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
     agentId: "lumii-goldenyears",
-    sessionId: `copilot:${currentSite?.id ?? "home"}`,
+    sessionId: "copilot",
     siteId: currentSite?.id,
     getToken,
   });
