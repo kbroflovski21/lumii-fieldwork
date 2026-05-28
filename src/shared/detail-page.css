@@ -235,6 +235,32 @@
   box-shadow: 0 0 0 3px rgba(235, 100, 32, 0.08);
 }
 
+/* Floating popover for inline edit controls */
+.dp-field-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 4px;
+  background: var(--site-card, #FFFCF8);
+  border: 1px solid var(--site-line, #DDD5CC);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dp-field-popover__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.dp-field--editable {
+  position: relative;
+}
+
 /* DatePicker input styling */
 .dp-datepicker-input {
   height: 32px;

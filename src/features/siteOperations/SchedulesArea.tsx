@@ -655,64 +655,62 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
               {/* 长者 */}
               <div className="dp-field"><dt>长者</dt><dd><strong>{s.serviceObjectName}</strong>{s.riskTags.length > 0 && s.riskTags.map(t => <span key={t} className="so-risk-tag" style={{ marginLeft: 6 }}><AlertTriangle size={11} /> {t}</span>)}</dd></div>
 
-              {/* 服务人员 — per-field inline edit with searchable dropdown */}
-              <div className="dp-field"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务人员{canAdjust && !mutationsDisabled && !editingWorker && <button className="dp-section__edit-btn" onClick={startEditWorker} type="button" title="改派"><Edit3 size={12} /></button>}</dt><dd>
-                {editingWorker ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {/* 服务人员 — floating popover edit */}
+              <div className="dp-field dp-field--editable"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务人员{canAdjust && !mutationsDisabled && !editingWorker && <button className="dp-section__edit-btn" onClick={startEditWorker} type="button" title="改派"><Edit3 size={12} /></button>}</dt><dd>
+                <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>
+                {editingWorker && (
+                  <div className="dp-field-popover">
                     <input placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} style={{ height: 32, borderRadius: 6, border: "1px solid var(--site-line)", padding: "0 8px", fontSize: 13 }} />
-                    <select value={adjWorker} onChange={e => setAdjWorker(e.target.value)} size={Math.min(filteredWorkers.length + 1, 6)} style={{ borderRadius: 6, border: "1.5px solid var(--site-accent)", padding: 4, fontSize: 13, boxShadow: "0 0 0 3px rgba(235,100,32,0.08)" }}>
+                    <select value={adjWorker} onChange={e => setAdjWorker(e.target.value)} size={Math.min(filteredWorkers.length + 1, 6)} style={{ borderRadius: 6, border: "1px solid var(--site-line)", padding: 4, fontSize: 13 }}>
                       <option value="">未分配</option>
                       {filteredWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                     </select>
-                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <div className="dp-field-popover__actions">
                       <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11 }} onClick={() => setEditingWorker(false)} type="button">取消</button>
                       <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11 }} onClick={handleSaveWorker} type="button">保存</button>
                     </div>
                   </div>
-                ) : <strong>{s.assignedSocialWorkerName ?? <span className="sw-text-muted">待分配</span>}</strong>}
+                )}
               </dd></div>
 
-              {/* 服务时间 — merged date+time, per-field inline edit with react-datepicker */}
-              <div className="dp-field"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务时间{canAdjust && !mutationsDisabled && !editingTime && <button className="dp-section__edit-btn" onClick={startEditTime} type="button" title="调整时间"><Edit3 size={12} /></button>}</dt><dd>
-                {editingTime ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              {/* 服务时间 — floating popover edit with react-datepicker */}
+              <div className="dp-field dp-field--editable"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务时间{canAdjust && !mutationsDisabled && !editingTime && <button className="dp-section__edit-btn" onClick={startEditTime} type="button" title="调整时间"><Edit3 size={12} /></button>}</dt><dd>
+                {`${formatDate(s.serviceDate)} ${formatWindow(s)}`}
+                {editingTime && (
+                  <div className="dp-field-popover" style={{ minWidth: 340 }}>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                       <label style={{ fontSize: 12, color: "var(--site-muted)" }}>开始
                         <DatePicker
                           selected={adjStartDate}
                           onChange={(d: Date | null) => {
                             setAdjStartDate(d);
                             if (d && adjEndDate && d > adjEndDate) {
-                              const end = new Date(d);
-                              end.setHours(d.getHours() + 2);
-                              setAdjEndDate(end);
+                              const end = new Date(d); end.setHours(d.getHours() + 2); setAdjEndDate(end);
                             }
                           }}
-                          showTimeSelect
-                          timeIntervals={30}
-                          dateFormat="yyyy-MM-dd HH:mm"
-                          timeFormat="HH:mm"
+                          showTimeSelect timeIntervals={30}
+                          dateFormat="yyyy-MM-dd HH:mm" timeFormat="HH:mm"
                           className="dp-datepicker-input"
+                          popperPlacement="bottom-start"
                         />
                       </label>
                       <label style={{ fontSize: 12, color: "var(--site-muted)" }}>结束
                         <DatePicker
                           selected={adjEndDate}
                           onChange={(d: Date | null) => setAdjEndDate(d)}
-                          showTimeSelect
-                          timeIntervals={30}
-                          dateFormat="yyyy-MM-dd HH:mm"
-                          timeFormat="HH:mm"
+                          showTimeSelect timeIntervals={30}
+                          dateFormat="yyyy-MM-dd HH:mm" timeFormat="HH:mm"
                           className="dp-datepicker-input"
+                          popperPlacement="bottom-start"
                         />
                       </label>
                     </div>
-                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <div className="dp-field-popover__actions">
                       <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11 }} onClick={() => setEditingTime(false)} type="button">取消</button>
                       <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11 }} onClick={handleSaveTime} type="button">保存</button>
                     </div>
                   </div>
-                ) : `${formatDate(s.serviceDate)} ${formatWindow(s)}`}
+                )}
               </dd></div>
 
               {/* 服务项目 */}
@@ -722,8 +720,8 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
               {/* 状态 */}
               <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
 
-              {/* 服务地点 — with map toggle */}
-              <div className="dp-field dp-field--full"><dt>服务地点</dt><dd>
+              {/* 服务地点 — with floating map */}
+              <div className="dp-field dp-field--editable"><dt>服务地点</dt><dd>
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <strong>{s.addressSnapshot}</strong>
                   {s.addressSnapshot && (
@@ -733,7 +731,11 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
                   )}
                 </span>
                 {showMap && s.addressSnapshot && (
-                  <div style={{ marginTop: 8 }}>
+                  <div className="dp-field-popover" style={{ minWidth: 320, right: 0, left: "auto" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--site-text)" }}>{s.addressSnapshot}</span>
+                      <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
+                    </div>
                     <AddressMap address={s.addressSnapshot} />
                   </div>
                 )}
