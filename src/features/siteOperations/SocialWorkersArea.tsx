@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
 import { DetailPageShell } from "../../shared/DetailPageShell";
@@ -415,9 +416,9 @@ function WorkerContent({
                 <span>{worker.praiseSummary.praiseCount}</span>
               </div>
               <div role="cell">
-                <span className="sw-status-badge" data-tone={statusTone(worker.status)}>
+                <StatusBadge tone={statusTone(worker.status)}>
                   {statusText[worker.status] ?? worker.status}
-                </span>
+                </StatusBadge>
               </div>
             </div>
           );
@@ -442,9 +443,9 @@ function WorkerContent({
                   <strong>{worker.name}</strong>
                   <span>{worker.phone}</span>
                 </div>
-                <span className="sw-status-badge" data-tone={statusTone(worker.status)}>
+                <StatusBadge tone={statusTone(worker.status)}>
                   {statusText[worker.status] ?? worker.status}
-                </span>
+                </StatusBadge>
               </div>
               <div className="sw-mobile-card__meta">
                 <span>{(worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).join("、") : "无资质"}</span>
@@ -596,7 +597,7 @@ function ViewModal({
                 <dl className="dp-fields">
                   <div className="dp-field"><dt>姓名</dt><dd>{editingBasic ? <input value={editName} onChange={e => setEditName(e.target.value)} /> : worker.name}</dd></div>
                   <div className="dp-field"><dt>电话</dt><dd>{editingBasic ? <input value={editPhone} onChange={e => setEditPhone(e.target.value)} /> : worker.phone}</dd></div>
-                  <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span></dd></div>
+                  <div className="dp-field"><dt>状态</dt><dd><StatusBadge tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</StatusBadge></dd></div>
                   <div className="dp-field dp-field--full"><dt>资质</dt><dd>{editingBasic ? <input value={editQual} onChange={e => setEditQual(e.target.value)} placeholder="用顿号分隔" /> : ((worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).join("、") : "—")}</dd></div>
                 </dl>
                 {editingBasic && (
@@ -637,7 +638,7 @@ function ViewModal({
                   </dd></div>
                   {!showBadgeSelect && worker.preferredBadge && (
                     <>
-                      <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(worker.preferredBadge.status)}>{statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}</span></dd></div>
+                      <div className="dp-field"><dt>状态</dt><dd><StatusBadge tone={badgeStatusTone(worker.preferredBadge.status)}>{statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}</StatusBadge></dd></div>
                       <div className="dp-field"><dt>最近同步</dt><dd>{worker.preferredBadge.lastSyncAt ? formatSyncTime(worker.preferredBadge.lastSyncAt) : "—"}</dd></div>
                     </>
                   )}

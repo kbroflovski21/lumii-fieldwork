@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
 import { DetailPageShell } from "../../shared/DetailPageShell";
@@ -308,7 +309,7 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
               <div role="cell"><span className="sw-tag">{eligibilityLabel[obj.eligibilityType] ?? obj.eligibilityType}</span></div>
               <div role="cell">{planLabel ?? <span className="sw-text-muted">—</span>}</div>
               <div role="cell">{subscriptionLabel[obj.familySubscriptionSummary] ?? <span className="sw-text-muted">—</span>}</div>
-              <div role="cell"><span className="sw-status-badge" data-tone={status.tone}>{status.label}</span></div>
+              <div role="cell"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></div>
             </div>
           );
         })}
@@ -324,7 +325,7 @@ function ObjectContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutat
               <div className="sw-mobile-card__top">
                 <div className="sw-avatar" style={{ background: color.bg, color: color.text }}>{getInitials(obj.name)}</div>
                 <div className="sw-mobile-card__info"><strong>{obj.name}</strong><span>{obj.address}</span></div>
-                <span className="sw-status-badge" data-tone={status.tone}>{status.label}</span>
+                <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
               </div>
               <div className="sw-mobile-card__meta">
                 <span>{eligibilityLabel[obj.eligibilityType]}</span>
@@ -807,9 +808,9 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                       {/* Row 1: cadence + time + status */}
                       <div className="so-plan-card__row1">
                         <span className="so-plan-card__rule">{plan.cadenceLabel} · {plan.preferredTimeWindow?.start ?? ""}-{plan.preferredTimeWindow?.end ?? ""}</span>
-                        <span className="sw-status-badge" data-tone={plan.status === "active" ? "success" : plan.status === "paused" ? "warning" : "muted"}>
+                        <StatusBadge tone={plan.status === "active" ? "success" : plan.status === "paused" ? "warning" : "muted"}>
                           {plan.status === "active" ? "进行中" : plan.status === "paused" ? "已暂停" : "已停用"}
-                        </span>
+                        </StatusBadge>
                       </div>
                       {/* Row 2: worker + SOP tags */}
                       <div className="so-plan-card__row2">
@@ -875,9 +876,9 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                       <div className="so-schedule-row" key={s.id}>
                         <span>{s.serviceDate} {dow} {timeStr}</span>
                         <span>{s.assignedSocialWorkerName ?? ""}</span>
-                        <span className="sw-status-badge" data-tone={effectiveStatus === "completed" ? "success" : effectiveStatus === "cancelled" ? "muted" : effectiveStatus === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
+                        <StatusBadge tone={effectiveStatus === "completed" ? "success" : effectiveStatus === "cancelled" ? "muted" : effectiveStatus === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
                           {statusText[effectiveStatus] ?? effectiveStatus}
-                        </span>
+                        </StatusBadge>
                       </div>
                     );
                   })}
@@ -1003,9 +1004,9 @@ function FamilySection({ obj, mutationsDisabled, onUpdated }: { obj: ServiceObje
                   <span>{c.relation} · {c.phone}{c.wechatId ? ` · 微信: ${c.wechatId}` : ""}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <span className="sw-status-badge" data-tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
+                  <StatusBadge tone={c.subscriptionStatus === "none" ? "muted" : c.subscriptionStatus === "exception_only" ? "warning" : "success"}>
                     {subscriptionLabel[c.subscriptionStatus]}
-                  </span>
+                  </StatusBadge>
                   <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }}
                     disabled={mutationsDisabled}
                     onClick={() => { setForm({ name: c.name, relation: c.relation, phone: c.phone, wechatId: c.wechatId ?? "" }); setEditId(c.id); }}
@@ -1222,10 +1223,10 @@ function HistoryRecords({ serviceObjectName, serviceProjects, onViewRecord }: {
               <span>{rec.startTime}-{rec.endTime} · {rec.socialWorkerName} · {bizDone}/{bizItems.length}项</span>
             </div>
             <div className="so-history__right">
-              {hasAbnormal && <span className="sw-status-badge" data-tone="warning" style={{ fontSize: 10, padding: "2px 6px" }}>有异常</span>}
-              <span className="sw-status-badge" data-tone={rec.reviewStatus === "confirmed" ? "success" : "warning"} style={{ fontSize: 10, padding: "2px 6px" }}>
+              {hasAbnormal && <StatusBadge tone="warning" style={{ fontSize: 10, padding: "2px 6px" }}>有异常</StatusBadge>}
+              <StatusBadge tone={rec.reviewStatus === "confirmed" ? "success" : "warning"} style={{ fontSize: 10, padding: "2px 6px" }}>
                 {rec.reviewStatus === "confirmed" ? "已确认" : "待复核"}
-              </span>
+              </StatusBadge>
               <button className="so-history__view-btn" onClick={() => onViewRecord(rec)} type="button">
                 <FileText size={12} /> 查看记录
               </button>

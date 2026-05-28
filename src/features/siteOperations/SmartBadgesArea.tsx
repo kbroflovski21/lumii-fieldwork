@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -292,9 +293,9 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
             </div>
             <div role="cell">{badge.siteName ?? badge.siteId}</div>
             <div role="cell">
-              <span className="sw-status-badge" data-tone={badgeStatusTone(badge.status)}>
+              <StatusBadge tone={badgeStatusTone(badge.status)}>
                 {statusText[badge.status] ?? badge.status}
-              </span>
+              </StatusBadge>
             </div>
             <div role="cell">
               {badge.batteryPercent != null ? (
@@ -323,9 +324,9 @@ function BadgeContent({ filtered, loading, error, isEmpty, isFilterEmpty, mutati
           <button className="sw-mobile-card" key={badge.id} onClick={() => onCodeClick(badge)} type="button">
             <div className="sw-mobile-card__top">
               <span className="badges-code-tag">{badge.deviceCode}</span>
-              <span className="sw-status-badge" data-tone={badgeStatusTone(badge.status)}>
+              <StatusBadge tone={badgeStatusTone(badge.status)}>
                 {statusText[badge.status] ?? badge.status}
-              </span>
+              </StatusBadge>
             </div>
             <div className="sw-mobile-card__info"><span>{badge.siteName ?? badge.siteId}</span></div>
             <div className="sw-mobile-card__meta">
@@ -427,7 +428,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
             <dl className="dp-fields">
               <div className="dp-field"><dt>设备码</dt><dd><span className="badges-code-tag">{badge.deviceCode}</span></dd></div>
               <div className="dp-field"><dt>所属站点</dt><dd>{badge.siteName ?? badge.siteId}</dd></div>
-              <div className="dp-field"><dt>当前状态</dt><dd><span className="sw-status-badge" data-tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</span></dd></div>
+              <div className="dp-field"><dt>当前状态</dt><dd><StatusBadge tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</StatusBadge></dd></div>
               <div className="dp-field"><dt>激活时间</dt><dd>{badge.activatedAt ? formatSyncTime(badge.activatedAt) : "—"}</dd></div>
               <div className="dp-field"><dt>电量</dt><dd>{badge.batteryPercent != null ? <span className={badge.batteryPercent < 20 ? "badges-battery--low" : ""}>{badge.batteryPercent}%</span> : "—"}</dd></div>
               <div className="dp-field"><dt>最近同步</dt><dd>{badge.lastSyncAt ? formatSyncTime(badge.lastSyncAt) : "—"}</dd></div>

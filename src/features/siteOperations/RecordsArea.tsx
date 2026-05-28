@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
 import { AddressMap } from "../../shared/AddressMap";
@@ -284,7 +285,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                               <div role="cell">{rec.matchedServiceObjectName ?? <span className="sw-text-muted">—</span>}</div>
                               <div role="cell"><span className="badges-code-tag">{rec.badgeId}</span></div>
                               <div role="cell">{Math.floor(dur/60)}分{dur%60}秒</div>
-                              <div role="cell"><span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span></div>
+                              <div role="cell"><StatusBadge tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</StatusBadge></div>
                             </div>
                           );
                         })}
@@ -302,7 +303,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                             <button className="sw-mobile-card" key={rec.id} onClick={() => navigate(`/recordings/${rec.id}`)} type="button">
                               <div className="sw-mobile-card__top">
                                 <span className="sch-cell-date">{bj.date} {bj.time}</span>
-                                <span className="sw-status-badge" data-tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</span>
+                                <StatusBadge tone={statusTones[rec.status] ?? "warning"}>{statusLabels[rec.status] ?? rec.status}</StatusBadge>
                               </div>
                               <div className="sw-mobile-card__info"><span>{rec.workerName ?? "未知"}</span></div>
                               <div className="sw-mobile-card__meta">
@@ -392,7 +393,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
                 })()}
               </div>
               <div role="cell"><span className="badges-code-tag">{r.badgeId.replace("badge-", "FW-")}</span></div>
-              <div role="cell"><span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus] ?? r.reviewStatus}</span></div>
+              <div role="cell"><StatusBadge tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus] ?? r.reviewStatus}</StatusBadge></div>
             </div>
           );
         })}
@@ -403,13 +404,13 @@ function RecordsList({ records, selectedId, onRowClick }: {
           <button className="sw-mobile-card" key={r.id} onClick={() => onRowClick(r)} type="button">
             <div className="sw-mobile-card__top">
               <span className="sch-cell-date">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime}</span>
-              <span className="sw-status-badge" data-tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus]}</span>
+              <StatusBadge tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus]}</StatusBadge>
             </div>
             <div className="sw-mobile-card__info"><strong>{r.serviceObjectName} · {r.serviceProjects?.join("、") || r.serviceProject || "未标注"}</strong></div>
             <div className="sw-mobile-card__meta">
               <span>{r.socialWorkerName ?? "待确认"}</span>
               <span>{r.durationMinutes}分钟</span>
-              <span className="sw-status-badge" data-tone={exportTone(r.exportStatus)} style={{ fontSize: 10, padding: "1px 5px" }}>{statusText[r.exportStatus]}</span>
+              <StatusBadge tone={exportTone(r.exportStatus)} style={{ fontSize: 10, padding: "1px 5px" }}>{statusText[r.exportStatus]}</StatusBadge>
             </div>
           </button>
         ))}

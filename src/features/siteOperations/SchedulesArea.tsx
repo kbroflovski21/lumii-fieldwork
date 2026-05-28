@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, List, Calendar, MapPin, Shield, Clock, UserRound, AlertTriangle, Ban, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import DatePicker from "react-datepicker";
@@ -238,7 +239,7 @@ function ListView({ schedules, selectedId, onRowClick }: {
               <div role="cell">{s.assignedSocialWorkerName ?? <span className="sw-text-muted">未分配</span>}</div>
               <div role="cell"><span className="sw-tag">{s.serviceProject}</span></div>
               <div role="cell" className="so-cell-address">{s.addressSnapshot}</div>
-              <div role="cell"><span className="sw-status-badge" data-tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</span></div>
+              <div role="cell"><StatusBadge tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</StatusBadge></div>
             </div>
           );
         })}
@@ -249,7 +250,7 @@ function ListView({ schedules, selectedId, onRowClick }: {
           <button className="sw-mobile-card" key={s.id} onClick={() => onRowClick(s)} type="button">
             <div className="sw-mobile-card__top">
               <span className="sch-cell-date">{formatDate(s.serviceDate)}</span>
-              <span className="sw-status-badge" data-tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</span>
+              <StatusBadge tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</StatusBadge>
             </div>
             <div className="sw-mobile-card__info"><strong>{s.serviceObjectName} · {s.serviceProject}</strong></div>
             <div className="sw-mobile-card__meta">
@@ -538,7 +539,7 @@ function MapView({ schedules, onSelect }: { schedules: ServiceScheduleOccurrence
             {items.map(s => (
               <button className="sch-map__item" key={s.id} onClick={() => onSelect(s)} type="button">
                 <span>{s.serviceObjectName} · {s.serviceProject} · {formatDate(s.serviceDate)}</span>
-                <span className="sw-status-badge" data-tone={scheduleTone(s.status)} style={{ fontSize: 11, padding: "2px 6px" }}>{statusText[s.status]}</span>
+                <StatusBadge tone={scheduleTone(s.status)} style={{ fontSize: 11, padding: "2px 6px" }}>{statusText[s.status]}</StatusBadge>
               </button>
             ))}
           </div>
@@ -718,7 +719,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
               {/* 来源 */}
               <div className="dp-field"><dt>来源</dt><dd>{s.source === "service_plan" ? "周期计划" : "按次服务"}</dd></div>
               {/* 状态 */}
-              <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
+              <div className="dp-field"><dt>状态</dt><dd><StatusBadge tone={tone}>{statusText[s.status] ?? s.status}</StatusBadge></dd></div>
 
               {/* 服务地点 — with inline expanding map */}
               <div className="dp-field dp-field--full"><dt>服务地点</dt><dd>
