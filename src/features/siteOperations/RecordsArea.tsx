@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Download, Shield, AlertTriangle, Edit3, FileText, Headphones, MessageSquare, CheckCircle, Clock, Check, XCircle, MinusCircle, ChevronRight as ChevronRightIcon, Play, Square, MapPin } from "lucide-react";
+import { AddressMap } from "../../shared/AddressMap";
 import type { ServiceRecord, ServiceItem, ServiceRecordsResponse, WorkAreaOperationalState } from "./contracts";
 import { statusText } from "./contracts";
 import { authFetch } from "./api";
@@ -512,69 +513,31 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
     return () => { stopClip(); };
   }, []);
 
+  const reviewAction = showReviewConfirm ? (
+    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setShowReviewConfirm(false)} type="button">取消</button>
+      <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} onClick={handleConfirmReview} disabled={reviewing} type="button">{reviewing ? "提交中..." : "确认通过"}</button>
+    </span>
+  ) : canReview ? (
+    <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} onClick={() => setShowReviewConfirm(true)} type="button"><CheckCircle size={14} /> 复核通过</button>
+  ) : (
+    <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#16A34A" }}><Check size={12} /> 已复核</span>
+  );
+
   return (
-    <DetailPageShell parentLabel="服务记录" parentPath="/records" title={title}>
-      {/* ── Header Banner ── */}
-      <div className="rec-modal__header" data-tone={tone}>
-        <div className="rec-modal__header-top">
-          <div className="sw-avatar" style={{ background: color.bg, color: color.text, width: 36, height: 36, fontSize: 14 }}>{getInitials(r.serviceObjectName ?? "?")}</div>
-          <div className="rec-modal__header-info">
-            <h2 className="rec-modal__title">{r.serviceProjects?.join("、") || r.serviceProject || "服务"} · {r.serviceObjectName ?? "待关联"}</h2>
-            <p className="rec-modal__subtitle">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime} · {r.durationMinutes}分钟 · {r.socialWorkerName ?? "待确认"} · <span className="badges-code-tag" style={{ fontSize: 11 }}>{r.badgeId.replace("badge-", "FW-")}</span></p>
-          </div>
+    <DetailPageShell parentLabel="服务记录" parentPath="/records" title={title} actions={reviewAction}>
+      <div className="dp-card">
+        {/* ── Tab Bar ── */}
+        <div className="dp-tabs" role="tablist">
+          {tabs.map(tab => (
+            <button className="dp-tabs__btn" data-active={activeTab === tab.id} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <div className="rec-modal__header-bottom">
-          <div className="rec-modal__header-tags">
-            {(r.sopGroups && r.sopGroups.length > 0) ? r.sopGroups.map((g: any) => {
-              const gi = g.items ?? [];
-              const gc = gi.filter((i: any) => i.status === "completed").length;
-              const ga = gi.filter((i: any) => i.status === "abnormal").length;
-              return (
-                <span className="rec-modal__header-tag" data-ok={gc === gi.length && ga === 0} key={g.sopName}>
-                  {g.sopName} {ga > 0 ? "⚠" : "✓"} {gc}/{gi.length}
-                </span>
-              );
-            }) : (
-              <>
-                <span className="rec-modal__header-tag" data-ok={procCompleted === processItems.length && procAbnormal === 0}>
-                  流程 {procAbnormal > 0 ? "⚠" : "✓"} {procCompleted}/{processItems.length}
-                </span>
-                <span className="rec-modal__header-tag" data-ok={bizAbnormal === 0}>
-                  服务 {businessItems.length}项{bizAbnormal > 0 ? `(${bizAbnormal}异常)` : ""}
-                </span>
-              </>
-            )}
-          </div>
-          <div className="rec-modal__review-action">
-            {showReviewConfirm ? (
-              <span className="rec-modal__review-confirm">
-                <span>确认标记为已复核？</span>
-                <button className="sw-btn sw-btn--secondary" onClick={() => setShowReviewConfirm(false)} type="button" style={{ height: 28, fontSize: 12, padding: "0 10px" }}>取消</button>
-                <button className="rec-modal__review-confirm-btn" onClick={handleConfirmReview} disabled={reviewing} type="button">{reviewing ? "提交中..." : "确认通过"}</button>
-              </span>
-            ) : canReview ? (
-              <button className="rec-modal__review-btn" onClick={() => setShowReviewConfirm(true)} type="button">
-                <CheckCircle size={14} /> 复核通过
-              </button>
-            ) : (
-              <span className="rec-modal__reviewed-badge"><Check size={12} /> 已复核</span>
-            )}
-            <span className="sw-status-badge sw-status-badge--inline" data-tone={tone}>{statusText[r.reviewStatus] ?? r.reviewStatus}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Tab Bar ── */}
-      <div className="so-modal__tabs" role="tablist">
-        {tabs.map(tab => (
-          <button className="so-modal__tab" data-active={activeTab === tab.id} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Tab Content ── */}
-      <div className="so-modal__content">
+        {/* ── Tab Content ── */}
+        <div className="dp-card__body">
         {activeTab === "sop" && (
           <>
             {/* Service summary */}
@@ -587,8 +550,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
                 } catch { summaryText = r.structuredSummary; }
               }
               return (
-                <div className="so-tab-section">
-                  <h4 className="so-tab-section-title">服务摘要</h4>
+                <div className="dp-section">
+                  <div className="dp-section__head"><h4 className="dp-section__title">服务摘要</h4></div>
                   <p style={{ color: "#374151", fontSize: 13, lineHeight: 1.6, margin: 0, background: "#F9FAFB", padding: "10px 14px", borderRadius: 8, border: "1px solid #E5E7EB" }}>{summaryText}</p>
                 </div>
               );
@@ -601,8 +564,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               const gAbnormal = gItems.filter((i: any) => i.status === "abnormal").length;
               const isExpanded = collapsedGroups[group.sopName] === true;
               return (
-                <div className="so-tab-section" key={group.sopName}>
-                  <h4 className="so-tab-section-title" style={{ cursor: "pointer", userSelect: "none" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] })); }}>
+                <div className="dp-section" key={group.sopName}>
+                  <h4 className="dp-section__title" style={{ cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center" }} onClick={() => { stopClip(); setCollapsedGroups(prev => ({ ...prev, [group.sopName]: !prev[group.sopName] })); }}>
                     <ChevronRightIcon size={14} style={{ transform: isExpanded ? "rotate(90deg)" : "none", transition: "transform 0.15s", marginRight: 4, flexShrink: 0 }} />
                     {group.sopName}
                     <span className="rec-si-stats">
@@ -624,8 +587,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
 
             {/* 已做服务项目 — 一级目录，点开显示二级子项 */}
             {completedGroups.length > 0 && (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">已做服务项目</h4>
+              <div className="dp-section">
+                <div className="dp-section__head"><h4 className="dp-section__title">已做服务项目</h4></div>
                 {completedGroups.map((group: any) => {
                   const gItems = group.items ?? [];
                   const gCompleted = gItems.filter((i: any) => i.status === "completed").length;
@@ -676,8 +639,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
               }
               if (allDiffItems.length === 0) return null;
               return (
-                <div className="so-tab-section">
-                  <h4 className="so-tab-section-title">服务排期差异</h4>
+                <div className="dp-section">
+                  <div className="dp-section__head"><h4 className="dp-section__title">服务排期差异</h4></div>
                   <div className="rec-diff-table">
                     <div className="rec-diff-table__head">
                       <span>服务项目</span>
@@ -700,8 +663,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
 
         {activeTab === "audio" && (
           <>
-            <div className="so-tab-section">
-              <h4 className="so-tab-section-title">完整录音</h4>
+            <div className="dp-section">
+              <div className="dp-section__head"><h4 className="dp-section__title">完整录音</h4></div>
               {audio && !audioRestricted ? (
                 <>
                   <div className="rec-audio-player">
@@ -717,8 +680,8 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
             </div>
 
             {transcript && transcript.segments && transcript.segments.length > 0 ? (
-              <div className="so-tab-section">
-                <h4 className="so-tab-section-title">
+              <div className="dp-section">
+                <h4 className="dp-section__title" style={{ display: "flex", alignItems: "center" }}>
                   完整对话记录 ({transcript.segments.length}条)
                   <button className="rec-download-btn" onClick={() => {
                     const text = transcript.segments.map((seg: any) => {
@@ -768,6 +731,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
         {activeTab === "basic" && (
           <BasicInfoSection record={r} mutationsDisabled={mutationsDisabled} onUpdated={onUpdated} />
         )}
+        </div>
       </div>
     </DetailPageShell>
   );
@@ -889,23 +853,23 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
   const elderDisplay = r.serviceObjectName ?? r.elderName ?? "";
 
   return (
-    <div className="so-tab-section">
-      <h4 className="so-tab-section-title">基本信息</h4>
-      <dl className="so-overview-grid">
-        <div className="so-overview-item"><dt>服务日期</dt><dd>{r.serviceDate} {dow}</dd></div>
-        <div className="so-overview-item"><dt>服务时间</dt><dd>{r.startTime} – {r.endTime} ({r.durationMinutes}分钟)</dd></div>
+    <div className="dp-section">
+      <div className="dp-section__head"><h4 className="dp-section__title">基本信息</h4></div>
+      <dl className="dp-fields">
+        <div className="dp-field"><dt>服务日期</dt><dd>{r.serviceDate} {dow}</dd></div>
+        <div className="dp-field"><dt>服务时间</dt><dd>{r.startTime} – {r.endTime} ({r.durationMinutes}分钟)</dd></div>
 
-        <div className="so-overview-item"><dt>服务人员</dt><dd style={{ position: "relative" }}>
-          <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); setWorkerSearch(""); }}><Edit3 size={12} /></button>}</span>
+        <div className="dp-field dp-field--editable"><dt>服务人员</dt><dd style={{ position: "relative" }}>
+          <span>{r.socialWorkerName ?? <span style={{ color: "#94A3B8" }}>未分配</span>} {!mutationsDisabled && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedWorkerId(r.socialWorkerId ?? ""); setEditingWorker(true); setWorkerSearch(""); }}><Edit3 size={12} /></button>}</span>
           {editingWorker && (
-            <div className="rec-float-picker" ref={workerDropRef}>
-              <input className="rec-float-picker__input" autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} />
-              <div className="rec-float-picker__list">
+            <div className="dp-field-popover" ref={workerDropRef}>
+              <input autoFocus placeholder="搜索服务人员..." value={workerSearch} onChange={e => setWorkerSearch(e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid #E2E8F0", borderRadius: 6, fontSize: 13, outline: "none" }} />
+              <div style={{ maxHeight: 180, overflowY: "auto" }}>
                 {workers.filter(w => !workerSearch || w.name.includes(workerSearch)).map(w => (
-                  <div key={w.id} className={`rec-float-picker__item${w.id === selectedWorkerId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedWorkerId(w.id)}>{w.name}</div>
+                  <div key={w.id} style={{ padding: "6px 8px", cursor: "pointer", borderRadius: 4, fontSize: 13, background: w.id === selectedWorkerId ? "#EEF2FF" : undefined, fontWeight: w.id === selectedWorkerId ? 600 : undefined }} onClick={() => setSelectedWorkerId(w.id)}>{w.name}</div>
                 ))}
               </div>
-              <div className="rec-float-picker__actions">
+              <div className="dp-field-popover__actions">
                 <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
                   const w = workers.find(w => w.id === selectedWorkerId);
                   await updateField({ socialWorkerId: selectedWorkerId || null, socialWorkerName: w?.name ?? null });
@@ -917,9 +881,9 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
           )}
         </dd></div>
 
-        <div className="so-overview-item"><dt>长者</dt><dd style={{ position: "relative" }}>
+        <div className="dp-field dp-field--editable"><dt>长者</dt><dd style={{ position: "relative" }}>
           {elderConfirmed ? (
-            <span>{elderDisplay} {!mutationsDisabled && <button className="so-map-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); setElderSearch(""); }}><Edit3 size={12} /></button>}</span>
+            <span>{elderDisplay} {!mutationsDisabled && <button className="dp-section__edit-btn" type="button" onClick={() => { setSelectedElderId(r.serviceObjectId ?? ""); setEditingElder(true); setElderSearch(""); }}><Edit3 size={12} /></button>}</span>
           ) : (
             <div>
               {elderDisplay && <span style={{ marginRight: 6 }}>{elderDisplay}（语音识别）</span>}
@@ -933,14 +897,14 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
             </div>
           )}
           {editingElder && (
-            <div className="rec-float-picker" ref={elderDropRef}>
-              <input className="rec-float-picker__input" autoFocus placeholder="搜索长者..." value={elderSearch} onChange={e => setElderSearch(e.target.value)} />
-              <div className="rec-float-picker__list">
+            <div className="dp-field-popover" ref={elderDropRef}>
+              <input autoFocus placeholder="搜索长者..." value={elderSearch} onChange={e => setElderSearch(e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid #E2E8F0", borderRadius: 6, fontSize: 13, outline: "none" }} />
+              <div style={{ maxHeight: 180, overflowY: "auto" }}>
                 {elders.filter(o => !elderSearch || o.name.includes(elderSearch)).map(o => (
-                  <div key={o.id} className={`rec-float-picker__item${o.id === selectedElderId ? " rec-float-picker__item--active" : ""}`} onClick={() => setSelectedElderId(o.id)}>{o.name}</div>
+                  <div key={o.id} style={{ padding: "6px 8px", cursor: "pointer", borderRadius: 4, fontSize: 13, background: o.id === selectedElderId ? "#EEF2FF" : undefined, fontWeight: o.id === selectedElderId ? 600 : undefined }} onClick={() => setSelectedElderId(o.id)}>{o.name}</div>
                 ))}
               </div>
-              <div className="rec-float-picker__actions">
+              <div className="dp-field-popover__actions">
                 <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 11, padding: "0 10px" }} onClick={async () => {
                   const el = elders.find(o => o.id === selectedElderId);
                   if (el) await updateField({ serviceObjectId: el.id, serviceObjectName: el.name });
@@ -953,9 +917,9 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
           )}
         </dd></div>
 
-        <div className="so-overview-item"><dt>服务地址</dt><dd className="so-address-cell">
+        <div className="dp-field"><dt>服务地址</dt><dd className="so-address-cell">
           <span>{r.serviceAddress || "—"}</span>
-          {r.serviceAddress && <button className="so-map-btn" type="button" onClick={() => setShowMap(!showMap)} title="查看地图"><MapPin size={14} /></button>}
+          {r.serviceAddress && <button className="dp-section__edit-btn" type="button" onClick={() => setShowMap(!showMap)} title="查看地图"><MapPin size={14} /></button>}
         </dd></div>
       </dl>
 
@@ -965,7 +929,7 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
             <span>地图位置 · {r.serviceAddress}</span>
             <button onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
           </div>
-          <RecordAddressMap address={r.serviceAddress} />
+          <AddressMap address={r.serviceAddress} />
         </div>
       )}
 
@@ -990,42 +954,6 @@ function BasicInfoSection({ record: r, mutationsDisabled, onUpdated }: { record:
 }
 
 
-
-function RecordAddressMap({ address }: { address: string }) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link");
-      link.id = "leaflet-css"; link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-    let map: any;
-    setTimeout(() => {
-      import("leaflet").then(async (L) => {
-        if (!mapRef.current) return;
-        const defaultCenter: [number, number] = [30.27, 120.13];
-        map = L.map(mapRef.current, { zoomControl: true }).setView(defaultCenter, 14);
-        L.tileLayer("https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}", { subdomains: ["1", "2", "3", "4"], attribution: "&copy; 高德地图" }).addTo(map);
-        const icon = L.divIcon({ html: '<div style="background:#0052CC;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3)">📍</div>', className: "", iconSize: [28, 28], iconAnchor: [14, 28] });
-        try {
-          const res = await fetch(`https://restapi.amap.com/v3/geocode/geo?key=d8d4c4762c1646338864da06e3e2e574&address=${encodeURIComponent(address)}`);
-          const data = await res.json();
-          if (data.geocodes?.[0]?.location) {
-            const [lng, lat] = data.geocodes[0].location.split(",").map(Number);
-            map.setView([lat, lng], 16);
-            L.marker([lat, lng], { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
-            return;
-          }
-        } catch {}
-        L.marker(defaultCenter, { icon }).addTo(map).bindPopup(`<b>${address}</b>`).openPopup();
-      });
-    }, 100);
-    return () => { if (map) map.remove(); };
-  }, [address]);
-  return <div ref={mapRef} className="so-map-popup__frame" />;
-}
 
 function RecordingDrawer({ recording: rec, onClose }: { recording: any; onClose: () => void }) {
   const dur = rec.durationSeconds ?? 0;
