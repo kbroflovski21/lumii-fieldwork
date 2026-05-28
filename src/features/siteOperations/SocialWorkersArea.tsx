@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Phone, Award, Edit3, Shield, ThumbsUp } from "lucide-react";
+import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   SocialWorker,
   SocialWorkerStatus,
@@ -149,87 +150,79 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
 
   return (
     <>
-      <section aria-label="服务人员" className="sw-page">
-        <div className="sw-page__inner">
-          <header className="sw-header">
-            <div className="sw-header__title-group">
-              <h2 className="sw-header__title">服务人员</h2>
-              <p className="sw-header__desc">管理站点人员目录、联系方式和常用工牌关系</p>
-            </div>
-            <button
-              className="sw-btn sw-btn--primary"
-              disabled={mutationsDisabled}
-              onClick={() => setDrawer({ kind: "create" })}
-              type="button"
-            >
-              <Plus size={15} />
-              新增人员
-            </button>
-          </header>
-
-          <div className="sw-table-container">
-            <div className="sw-toolbar">
-              <label className="sw-search">
-                <Search size={16} />
-                <input
-                  aria-label="搜索服务人员"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索姓名或电话..."
-                  value={searchQuery}
-                />
-              </label>
-              <div className="sw-toolbar__filters">
-                <FilterDropdown
-                  onChange={(v) => setStatusFilter(v as StatusFilter)}
-                  options={statusFilterOptions}
-                  value={statusFilter}
-                />
-                <FilterDropdown
-                  onChange={(v) => setBadgeFilter(v as BadgeFilter)}
-                  options={badgeFilterOptions}
-                  value={badgeFilter}
-                />
+      {drawer.kind !== "closed" ? (
+        <WorkerDrawer
+          drawer={drawer}
+          mutationsDisabled={mutationsDisabled}
+          onClose={closeDrawer}
+          onEdit={(worker) => setDrawer({ kind: "edit", worker })}
+          onView={(worker) => setDrawer({ kind: "view", worker })}
+          onWorkerCreated={handleWorkerCreated}
+          onWorkerUpdated={handleWorkerUpdated}
+          onWorkerRefresh={handleWorkerRefresh}
+        />
+      ) : (
+        <section aria-label="服务人员" className="sw-page">
+          <div className="sw-page__inner">
+            <header className="sw-header">
+              <div className="sw-header__title-group">
+                <h2 className="sw-header__title">服务人员</h2>
+                <p className="sw-header__desc">管理站点人员目录、联系方式和常用工牌关系</p>
               </div>
+              <button
+                className="sw-btn sw-btn--primary"
+                disabled={mutationsDisabled}
+                onClick={() => setDrawer({ kind: "create" })}
+                type="button"
+              >
+                <Plus size={15} />
+                新增人员
+              </button>
+            </header>
+
+            <div className="sw-table-container">
+              <div className="sw-toolbar">
+                <label className="sw-search">
+                  <Search size={16} />
+                  <input
+                    aria-label="搜索服务人员"
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜索姓名或电话..."
+                    value={searchQuery}
+                  />
+                </label>
+                <div className="sw-toolbar__filters">
+                  <FilterDropdown
+                    onChange={(v) => setStatusFilter(v as StatusFilter)}
+                    options={statusFilterOptions}
+                    value={statusFilter}
+                  />
+                  <FilterDropdown
+                    onChange={(v) => setBadgeFilter(v as BadgeFilter)}
+                    options={badgeFilterOptions}
+                    value={badgeFilter}
+                  />
+                </div>
+              </div>
+
+              {operationalState ? <OperationalBanner state={operationalState} /> : null}
+
+              <WorkerContent
+                filtered={filtered}
+                loading={isLoading}
+                error={resource.status === "error" ? resource.error : undefined}
+                isEmpty={resource.status === "success" && workers.length === 0}
+                isFilterEmpty={resource.status === "success" && workers.length > 0 && filtered.length === 0}
+                mutationsDisabled={mutationsDisabled}
+                onCreateClick={() => setDrawer({ kind: "create" })}
+                onRowClick={openDrawer}
+                onNameClick={openDrawer}
+                selectedId={selectedId}
+              />
             </div>
-
-            {operationalState ? <OperationalBanner state={operationalState} /> : null}
-
-            <WorkerContent
-              filtered={filtered}
-              loading={isLoading}
-              error={resource.status === "error" ? resource.error : undefined}
-              isEmpty={resource.status === "success" && workers.length === 0}
-              isFilterEmpty={resource.status === "success" && workers.length > 0 && filtered.length === 0}
-              mutationsDisabled={mutationsDisabled}
-              onCreateClick={() => setDrawer({ kind: "create" })}
-              onRowClick={openDrawer}
-              onNameClick={openDrawer}
-              selectedId={selectedId}
-            />
           </div>
-        </div>
-
-        {drawer.kind !== "closed" ? (
-          <>
-            <button
-              aria-label="关闭抽屉遮罩"
-              className="sw-scrim"
-              onClick={closeDrawer}
-              type="button"
-            />
-            <WorkerDrawer
-              drawer={drawer}
-              mutationsDisabled={mutationsDisabled}
-              onClose={closeDrawer}
-              onEdit={(worker) => setDrawer({ kind: "edit", worker })}
-              onView={(worker) => setDrawer({ kind: "view", worker })}
-              onWorkerCreated={handleWorkerCreated}
-              onWorkerUpdated={handleWorkerUpdated}
-              onWorkerRefresh={handleWorkerRefresh}
-            />
-          </>
-        ) : null}
-      </section>
+        </section>
+      )}
     </>
   );
 }
@@ -568,7 +561,7 @@ function ViewModal({
   ];
 
   return (
-    <div className="so-modal so-modal--view" role="dialog" aria-label="服务人员详情">
+    <DetailPageShell parentLabel="服务人员" parentPath="/workers" title={worker.name}>
       {/* Summary Card */}
       <div className="so-modal__summary">
         <div className="so-modal__summary-main">
@@ -577,9 +570,6 @@ function ViewModal({
             <h3>{worker.name}</h3>
             <span className="so-modal__summary-demo">服务人员</span>
             <span className="sw-status-badge sw-status-badge--inline" data-tone={statusTone(worker.status)}>{statusText[worker.status] ?? worker.status}</span>
-          </div>
-          <div className="so-modal__summary-actions">
-            <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
           </div>
         </div>
         <div className="so-modal__summary-contact">
@@ -731,7 +721,7 @@ function ViewModal({
         </div>
         <div />
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
 
@@ -766,11 +756,7 @@ function EditModal({
   };
 
   return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="编辑服务人员">
-      <div className="so-modal__form-header">
-        <h3>编辑服务人员</h3>
-        <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-      </div>
+    <DetailPageShell parentLabel="服务人员" parentPath="/workers" title={`${worker.name} · 编辑`}>
       <div className="so-modal__content">
         <div className="so-form-cards">
           <div className="so-form-card">
@@ -800,7 +786,7 @@ function EditModal({
           <button className="sw-btn sw-btn--primary" disabled={saving} onClick={handleSave} type="button">{saving ? "保存中..." : "保存"}</button>
         </div>
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
 
@@ -825,11 +811,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   };
 
   return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="新增服务人员">
-      <div className="so-modal__form-header">
-        <h3>新增服务人员</h3>
-        <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-      </div>
+    <DetailPageShell parentLabel="服务人员" parentPath="/workers" title="新增">
       <div className="so-modal__content">
         <div className="so-form-cards">
           <div className="so-form-card">
@@ -849,6 +831,6 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
           <button className="sw-btn sw-btn--primary" disabled={creating || !name.trim() || !phone.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
         </div>
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
