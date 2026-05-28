@@ -1,6 +1,7 @@
 import { useEscClose } from "./useEscClose";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Search, X, ChevronDown, Plus, UserRound, Shield, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   ServiceObject,
   ServiceObjectState,
@@ -192,61 +193,58 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
 
   return (
     <>
-      <section aria-label="长者" className="sw-page">
-        <div className="sw-page__inner">
-          <header className="sw-header">
-            <div className="sw-header__title-group">
-              <h2 className="sw-header__title">长者</h2>
-              <p className="sw-header__desc">管理长者档案、服务计划、照护重点和家属订阅</p>
-            </div>
-            <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={openCreateDrawer} type="button">
-              <Plus size={15} /> 新增长者
-            </button>
-          </header>
-
-          <div className="sw-table-container">
-            <div className="sw-toolbar">
-              <label className="sw-search">
-                <Search size={16} />
-                <input aria-label="搜索长者" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索姓名或地址..." value={searchQuery} />
-              </label>
-              <div className="sw-toolbar__filters">
-                <FilterDropdown onChange={(v) => setEligibilityFilter(v as EligibilityFilter)} options={eligibilityFilterOptions} value={eligibilityFilter} />
-                <FilterDropdown onChange={(v) => setStateFilter(v as StateFilter)} options={stateFilterOptions} value={stateFilter} />
-                <FilterDropdown onChange={(v) => setRiskFilter(v as RiskFilter)} options={riskFilterOptions} value={riskFilter} />
+      {drawer.kind !== "closed" ? (
+        <ObjectDrawer
+          drawer={drawer}
+          mutationsDisabled={mutationsDisabled}
+          onClose={closeDrawer}
+          onCreated={handleCreated}
+          onUpdated={handleObjectRefresh}
+        />
+      ) : (
+        <section aria-label="长者" className="sw-page">
+          <div className="sw-page__inner">
+            <header className="sw-header">
+              <div className="sw-header__title-group">
+                <h2 className="sw-header__title">长者</h2>
+                <p className="sw-header__desc">管理长者档案、服务计划、照护重点和家属订阅</p>
               </div>
+              <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={openCreateDrawer} type="button">
+                <Plus size={15} /> 新增长者
+              </button>
+            </header>
+
+            <div className="sw-table-container">
+              <div className="sw-toolbar">
+                <label className="sw-search">
+                  <Search size={16} />
+                  <input aria-label="搜索长者" onChange={(e) => setSearchQuery(e.target.value)} placeholder="搜索姓名或地址..." value={searchQuery} />
+                </label>
+                <div className="sw-toolbar__filters">
+                  <FilterDropdown onChange={(v) => setEligibilityFilter(v as EligibilityFilter)} options={eligibilityFilterOptions} value={eligibilityFilter} />
+                  <FilterDropdown onChange={(v) => setStateFilter(v as StateFilter)} options={stateFilterOptions} value={stateFilter} />
+                  <FilterDropdown onChange={(v) => setRiskFilter(v as RiskFilter)} options={riskFilterOptions} value={riskFilter} />
+                </div>
+              </div>
+
+              {operationalState ? <OperationalBanner state={operationalState} /> : null}
+
+              <ObjectContent
+                filtered={filtered}
+                loading={isLoading}
+                error={resource.status === "error" ? resource.error : undefined}
+                isEmpty={resource.status === "success" && objects.length === 0}
+                isFilterEmpty={resource.status === "success" && objects.length > 0 && filtered.length === 0}
+                mutationsDisabled={mutationsDisabled}
+                onCreateClick={openCreateDrawer}
+                onRowClick={openDrawer}
+                onNameClick={openDrawer}
+                selectedId={selectedId}
+              />
             </div>
-
-            {operationalState ? <OperationalBanner state={operationalState} /> : null}
-
-            <ObjectContent
-              filtered={filtered}
-              loading={isLoading}
-              error={resource.status === "error" ? resource.error : undefined}
-              isEmpty={resource.status === "success" && objects.length === 0}
-              isFilterEmpty={resource.status === "success" && objects.length > 0 && filtered.length === 0}
-              mutationsDisabled={mutationsDisabled}
-              onCreateClick={openCreateDrawer}
-              onRowClick={openDrawer}
-              onNameClick={openDrawer}
-              selectedId={selectedId}
-            />
           </div>
-        </div>
-
-        {drawer.kind !== "closed" ? (
-          <>
-            <button aria-label="关闭遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
-            <ObjectDrawer
-              drawer={drawer}
-              mutationsDisabled={mutationsDisabled}
-              onClose={closeDrawer}
-              onCreated={handleCreated}
-              onUpdated={handleObjectRefresh}
-            />
-          </>
-        ) : null}
-      </section>
+        </section>
+      )}
     </>
   );
 }
@@ -568,7 +566,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   }
 
   return (
-    <div className="so-modal so-modal--view" role="dialog" aria-label="长者详情">
+    <DetailPageShell parentLabel="长者" parentPath="/elders" title={obj.name}>
       {/* ── Summary Card ── */}
       <div className="so-modal__summary">
         <div className="so-modal__summary-main">
@@ -577,9 +575,6 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
             <h3>{obj.name}</h3>
             <span className="so-modal__summary-demo">{obj.age ? `${obj.age}岁` : ""}{obj.gender === "female" ? " · 女" : obj.gender === "male" ? " · 男" : ""}</span>
             <span className="sw-status-badge sw-status-badge--inline" data-tone={status.tone}>{status.label}</span>
-          </div>
-          <div className="so-modal__summary-actions">
-            <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
           </div>
         </div>
 
@@ -947,7 +942,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
         </div>
       </div>
 
-    </div>
+    </DetailPageShell>
   );
 }
 
@@ -1113,11 +1108,7 @@ export function CreateModal({ onClose, onCreated }: { onClose: () => void; onCre
   };
 
   return (
-    <div className="so-modal so-modal--form" role="dialog" aria-label="新增长者">
-      <div className="so-modal__form-header">
-        <h3>新增长者</h3>
-        <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
-      </div>
+    <DetailPageShell parentLabel="长者" parentPath="/elders" title="新增">
       <div className="so-modal__content">
         <FormFields name={name} onNameChange={setName} phone={phone} onPhoneChange={setPhone} idNumber={idNumber} onIdNumberChange={setIdNumber} age={age} onAgeChange={setAge} gender={gender} onGenderChange={setGender}
           address={address} onAddressChange={setAddress} eligibility={eligibility} onEligibilityChange={setEligibility}
@@ -1135,7 +1126,7 @@ export function CreateModal({ onClose, onCreated }: { onClose: () => void; onCre
           <button className="sw-btn sw-btn--primary" disabled={creating || !name.trim() || !address.trim()} onClick={handleCreate} type="button">{creating ? "创建中..." : "创建"}</button>
         </div>
       </div>
-    </div>
+    </DetailPageShell>
   );
 }
 
