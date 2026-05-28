@@ -7045,7 +7045,7 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
 .copilot-panel {
   position: relative;
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 1;
   border-left: 1px solid var(--site-line);
   background: var(--site-card-strong);
   display: grid;
@@ -7723,7 +7723,8 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   background: #FFFCF8;
   border-right: 1px solid var(--site-line);
   padding: 12px 8px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   grid-row: 1;
   grid-column: 1;
 }
@@ -7779,10 +7780,6 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   font-size: 11px; color: #94A3B8;
 }
 /* Floating divider toggle — circle on sidebar right edge */
-.site-operations-sidebar {
-  position: relative;
-  overflow: visible;
-}
 .site-operations-sidebar__divider-toggle {
   position: absolute;
   right: -12px; top: 50%;
