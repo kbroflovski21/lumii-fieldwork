@@ -14,6 +14,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
+import { DetailPageShell } from "../../shared/DetailPageShell";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -135,82 +136,84 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   const isLoading = resource.status === "loading" || resource.status === "idle";
   useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 
-  return (
-    <>
-      <section aria-label="设备" className="sw-page">
-        <div className="sw-page__inner">
-          <header className="sw-header">
-            <div className="sw-header__title-group">
-              <h2 className="sw-header__title">设备</h2>
-              <p className="sw-header__desc">管理站点智能工牌激活、监控和维护</p>
-            </div>
-            <button
-              className="sw-btn sw-btn--primary"
-              disabled={mutationsDisabled}
-              onClick={() => setDrawer({ kind: "activate" })}
-              type="button"
-            >
-              <Plus size={15} />
-              激活工牌
-            </button>
-          </header>
-
-          <div className="sw-table-container">
-            <div className="sw-toolbar">
-              <label className="sw-search">
-                <Search size={16} />
-                <input
-                  aria-label="搜索设备"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索设备码..."
-                  value={searchQuery}
-                />
-              </label>
-              <div className="sw-toolbar__filters">
-                <FilterDropdown onChange={(v) => setStatusFilter(v as StatusFilter)} options={statusFilterOptions} value={statusFilter} />
-                <FilterDropdown onChange={(v) => setPreferredFilter(v as PreferredFilter)} options={preferredFilterOptions} value={preferredFilter} />
-              </div>
-            </div>
-
-            {operationalState ? <OperationalBanner state={operationalState} /> : null}
-
-            <BadgeContent
-              filtered={filtered}
-              loading={isLoading}
-              error={resource.status === "error" ? resource.error : undefined}
-              isEmpty={resource.status === "success" && badges.length === 0}
-              isFilterEmpty={resource.status === "success" && badges.length > 0 && filtered.length === 0}
-              mutationsDisabled={mutationsDisabled}
-              onActivateClick={() => setDrawer({ kind: "activate" })}
-              onRowClick={openDrawer}
-              onCodeClick={openDrawer}
-              selectedId={selectedId}
-            />
+  const listContent = (
+    <section aria-label="设备" className="sw-page">
+      <div className="sw-page__inner">
+        <header className="sw-header">
+          <div className="sw-header__title-group">
+            <h2 className="sw-header__title">设备</h2>
+            <p className="sw-header__desc">管理站点智能工牌激活、监控和维护</p>
           </div>
-        </div>
+          <button
+            className="sw-btn sw-btn--primary"
+            disabled={mutationsDisabled}
+            onClick={() => setDrawer({ kind: "activate" })}
+            type="button"
+          >
+            <Plus size={15} />
+            激活工牌
+          </button>
+        </header>
 
-        {drawer.kind !== "closed" ? (
-          <>
-            <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
-            {drawer.kind === "view" ? (
-              <ViewDrawer
-                badge={drawer.badge}
-                mutationsDisabled={mutationsDisabled}
-                onClose={closeDrawer}
-                onUpdated={handleBadgeRefresh}
-                onOpenRecords={onOpenRecords}
+        <div className="sw-table-container">
+          <div className="sw-toolbar">
+            <label className="sw-search">
+              <Search size={16} />
+              <input
+                aria-label="搜索设备"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索设备码..."
+                value={searchQuery}
               />
-            ) : (
-              <ActivateDrawer
-                onClose={closeDrawer}
-                onActivated={handleBadgeActivated}
-              />
-            )}
-          </>
-        ) : null}
-      </section>
-    </>
+            </label>
+            <div className="sw-toolbar__filters">
+              <FilterDropdown onChange={(v) => setStatusFilter(v as StatusFilter)} options={statusFilterOptions} value={statusFilter} />
+              <FilterDropdown onChange={(v) => setPreferredFilter(v as PreferredFilter)} options={preferredFilterOptions} value={preferredFilter} />
+            </div>
+          </div>
+
+          {operationalState ? <OperationalBanner state={operationalState} /> : null}
+
+          <BadgeContent
+            filtered={filtered}
+            loading={isLoading}
+            error={resource.status === "error" ? resource.error : undefined}
+            isEmpty={resource.status === "success" && badges.length === 0}
+            isFilterEmpty={resource.status === "success" && badges.length > 0 && filtered.length === 0}
+            mutationsDisabled={mutationsDisabled}
+            onActivateClick={() => setDrawer({ kind: "activate" })}
+            onRowClick={openDrawer}
+            onCodeClick={openDrawer}
+            selectedId={selectedId}
+          />
+        </div>
+      </div>
+    </section>
   );
+
+  if (drawer.kind === "view") {
+    return (
+      <ViewDrawer
+        badge={drawer.badge}
+        mutationsDisabled={mutationsDisabled}
+        onClose={closeDrawer}
+        onUpdated={handleBadgeRefresh}
+        onOpenRecords={onOpenRecords}
+      />
+    );
+  }
+
+  if (drawer.kind === "activate") {
+    return (
+      <>
+        {listContent}
+        <button aria-label="关闭抽屉遮罩" className="sw-scrim" onClick={closeDrawer} type="button" />
+        <ActivateDrawer onClose={closeDrawer} onActivated={handleBadgeActivated} />
+      </>
+    );
+  }
+
+  return listContent;
 }
 
 function FilterDropdown({ onChange, options, value }: {
@@ -388,7 +391,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
   ];
 
   return (
-    <div className="so-modal so-modal--view" role="dialog" aria-label="设备详情">
+    <DetailPageShell parentLabel="设备" parentPath="/badges" title={badge.deviceCode}>
       {/* Summary Card */}
       <div className="so-modal__summary">
         <div className="so-modal__summary-main">
@@ -397,9 +400,6 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
             <h3>{badge.deviceCode}</h3>
             <span className="so-modal__summary-demo">{badge.siteName ?? badge.siteId}</span>
             <span className="sw-status-badge sw-status-badge--inline" data-tone={badgeStatusTone(badge.status)}>{statusText[badge.status] ?? badge.status}</span>
-          </div>
-          <div className="so-modal__summary-actions">
-            <button aria-label="关闭" className="so-modal__close" onClick={onClose} type="button"><X size={18} /></button>
           </div>
         </div>
         <div className="so-modal__summary-contact">
@@ -531,7 +531,7 @@ function ViewDrawer({ badge, mutationsDisabled, onClose, onUpdated, onOpenRecord
         <div className="so-modal__footer-right" />
       </div>
 
-    </div>
+    </DetailPageShell>
   );
 }
 
