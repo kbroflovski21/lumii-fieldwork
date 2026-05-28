@@ -262,8 +262,10 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   activeView?: View; onSelectView?: (v: string) => void; onNavigate?: (area: string, params: Record<string, string>) => void;
 } = {}) {
   const { user } = useAuth();
+  const { id: routeId } = useParams();
   const [viewFallback, setViewFallback] = useState<View>("dashboard");
   const view = viewProp ?? viewFallback;
+  const showingDetail = !!routeId && (view === "sites" || view === "users");
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -306,9 +308,14 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   ];
 
   return (
-    <div className="quality-page" style={{ display: "flex", flexDirection: "column", flex: 1, height: "auto", overflow: "hidden" }}>
+    <div className="quality-page" style={{ display: "flex", flexDirection: "column", flex: 1, height: showingDetail ? "100%" : "auto", overflow: "hidden" }}>
       {view === "sop" ? (
         <SupervisorContent />
+      ) : showingDetail ? (
+        <>
+          {view === "sites" && <SitesView />}
+          {view === "users" && <UsersView />}
+        </>
       ) : (
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
@@ -1604,6 +1611,8 @@ function FeishuView() {
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+
+  useEscClose(useCallback(() => { if (editUser) setEditUser(null); }, [editUser]));
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
