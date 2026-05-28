@@ -7,6 +7,7 @@ import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import { useAgentChat } from "../features/siteOperations/useAgentChat";
 import { ADMIN_COMMANDS, HeaderCopilotInput } from "../features/siteOperations/CommandInput";
 import { ProfileMenu } from "../shared/ProfileMenu";
+import { DetailPageShell } from "../shared/DetailPageShell";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import "./quality.css";
 
@@ -809,59 +810,61 @@ function SitesView() {
     <>
       {toast && <div className="quality-toast">{toast}</div>}
 
-      <div className="quality-records__header">
-        <div>
-          <div className="quality-records__title">站点管理</div>
-          <div className="quality-records__subtitle">管理服务站点及运营人员分配</div>
-        </div>
-        <button className="quality-users__add-btn" onClick={() => navigate("/admin/sites/new")}>新增站点</button>
-      </div>
-
-      <div className="quality-table-wrap">
-        <div className="quality-toolbar">
-          <div className="quality-toolbar__search-wrap">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索站点名称、地址、联系人..." className="quality-toolbar__search" />
+      {routeId ? (
+        routeId === "new"
+          ? <SiteCreateModal token={token!} onClose={() => navigate("/admin/sites")}
+              onCreated={() => { fetchSites(); showToast("站点创建成功"); navigate("/admin/sites"); }} />
+          : detailSite
+            ? <SiteDetailModal site={detailSite} token={token!} onClose={closeSite}
+                onSaved={() => { fetchSites(); showToast("站点信息已更新"); }}
+                onDelete={s => setConfirmAction({ site: s })}
+                initialEditing={editingSite} />
+            : <div style={{ padding: 24, color: "var(--quality-text-muted)" }}>加载中...</div>
+      ) : (
+        <>
+          <div className="quality-records__header">
+            <div>
+              <div className="quality-records__title">站点管理</div>
+              <div className="quality-records__subtitle">管理服务站点及运营人员分配</div>
+            </div>
+            <button className="quality-users__add-btn" onClick={() => navigate("/admin/sites/new")}>新增站点</button>
           </div>
-          <div className="quality-toolbar__spacer" />
-        </div>
-        {loading ? (
-          <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
-        ) : (
-          <table className="quality-records-table">
-            <thead><tr>{["站点名称", "地址", "联系人", "联系电话", "运营人员", "操作"].map(h => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {filteredSites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
-              {filteredSites.map(s => (
-                <tr key={s.id} onClick={() => openSite(s)} style={{ cursor: "pointer" }}>
-                  <td><a className="quality-users__link" onClick={e => { e.preventDefault(); openSite(s); }} href="#">{s.name}</a></td>
-                  <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.address || "—"}</td>
-                  <td>{s.contactName || "—"}</td>
-                  <td>{s.contactPhone || "—"}</td>
-                  <td>{s.operators.length > 0 ? s.operators.map(o => o.name).join("、") : <span style={{ color: "var(--quality-text-muted)" }}>未分配</span>}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); window.open(`/site-operations?siteId=${s.id}`, "_blank"); }}>进入站点</button>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); openSiteEdit(s); }}>编辑</button>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setConfirmAction({ site: s }); }}>删除</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
 
-      {detailSite && (
-        <SiteDetailModal site={detailSite} token={token!} onClose={closeSite}
-          onSaved={() => { fetchSites(); showToast("站点信息已更新"); }}
-          onDelete={s => setConfirmAction({ site: s })}
-          initialEditing={editingSite} />
-      )}
-
-      {showCreate && (
-        <SiteCreateModal token={token!} onClose={() => navigate("/admin/sites")}
-          onCreated={() => { fetchSites(); showToast("站点创建成功"); navigate("/admin/sites"); }} />
+          <div className="quality-table-wrap">
+            <div className="quality-toolbar">
+              <div className="quality-toolbar__search-wrap">
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索站点名称、地址、联系人..." className="quality-toolbar__search" />
+              </div>
+              <div className="quality-toolbar__spacer" />
+            </div>
+            {loading ? (
+              <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
+            ) : (
+              <table className="quality-records-table">
+                <thead><tr>{["站点名称", "地址", "联系人", "联系电话", "运营人员", "操作"].map(h => <th key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {filteredSites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
+                  {filteredSites.map(s => (
+                    <tr key={s.id} onClick={() => openSite(s)} style={{ cursor: "pointer" }}>
+                      <td><a className="quality-users__link" onClick={e => { e.preventDefault(); openSite(s); }} href="#">{s.name}</a></td>
+                      <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.address || "—"}</td>
+                      <td>{s.contactName || "—"}</td>
+                      <td>{s.contactPhone || "—"}</td>
+                      <td>{s.operators.length > 0 ? s.operators.map(o => o.name).join("、") : <span style={{ color: "var(--quality-text-muted)" }}>未分配</span>}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); window.open(`/site-operations?siteId=${s.id}`, "_blank"); }}>进入站点</button>
+                          <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); openSiteEdit(s); }}>编辑</button>
+                          <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setConfirmAction({ site: s }); }}>删除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
       )}
 
       {confirmAction && (
@@ -949,18 +952,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
   const handleCancel = () => { setName(site.name); setAddress(site.address); setContactName(site.contactName); setContactPhone(site.contactPhone); setSelectedOps(new Set(site.operators.map(o => o.id))); setEditing(false); setError(""); };
 
   return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="quality-user-modal" role="dialog" aria-label={site.name}>
-        <div className="quality-user-modal__header">
-          <div>
-            <div className="quality-user-modal__title">{site.name}</div>
-            <div className="quality-user-modal__tags">
-              <span className="so-modal__chip">{site.operators.length} 名运营人员</span>
-            </div>
-          </div>
-          <CloseBtn onClick={onClose} />
-        </div>
+    <DetailPageShell parentLabel="站点管理" parentPath="/admin/sites" title={site.name}>
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
           <div style={{ marginBottom: 20 }}>
@@ -1007,8 +999,7 @@ function SiteDetailModal({ site, token, onClose, onSaved, onDelete, initialEditi
           </div>
           <div />
         </div>
-      </div>
-    </>
+    </DetailPageShell>
   );
 }
 
@@ -1032,13 +1023,7 @@ function SiteCreateModal({ token, onClose, onCreated }: { token: string; onClose
   };
 
   return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="quality-user-modal" role="dialog" aria-label="新增站点">
-        <div className="quality-user-modal__header">
-          <div className="quality-user-modal__title">新增站点</div>
-          <CloseBtn onClick={onClose} />
-        </div>
+    <DetailPageShell parentLabel="站点管理" parentPath="/admin/sites" title="新增">
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
           <div className="so-form-cards">
@@ -1063,8 +1048,7 @@ function SiteCreateModal({ token, onClose, onCreated }: { token: string; onClose
             <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "创建中..." : "创建站点"}</button>
           </div>
         </div>
-      </div>
-    </>
+    </DetailPageShell>
   );
 }
 
@@ -1267,90 +1251,90 @@ function UsersView() {
     <>
       {toast && <div className="quality-toast">{toast}</div>}
 
-      <div className="quality-records__header">
-        <div>
-          <div className="quality-records__title">用户管理</div>
-          <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
-        </div>
-        <button className="quality-users__add-btn" onClick={() => navigate("/admin/users/new")}>新增用户</button>
-      </div>
-
-      <div className="quality-table-wrap">
-        <div className="quality-toolbar">
-          <div className="quality-toolbar__search-wrap">
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索用户名、姓名..." className="quality-toolbar__search" />
+      {routeId ? (
+        routeId === "new"
+          ? <CreateUserModal
+              token={token!}
+              onClose={() => navigate("/admin/users")}
+              onCreated={() => { fetchUsers(); showToast("用户创建成功"); navigate("/admin/users"); }}
+            />
+          : detailUser
+            ? <UserDetailModal
+                user={detailUser}
+                token={token!}
+                onClose={closeDetail}
+                onSaved={() => { fetchUsers(); showToast("用户信息已更新"); }}
+                onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
+                onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
+                initialEditing={initialEditing}
+              />
+            : <div style={{ padding: 24, color: "var(--quality-text-muted)" }}>加载中...</div>
+      ) : (
+        <>
+          <div className="quality-records__header">
+            <div>
+              <div className="quality-records__title">用户管理</div>
+              <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
+            </div>
+            <button className="quality-users__add-btn" onClick={() => navigate("/admin/users/new")}>新增用户</button>
           </div>
-          <div className="quality-toolbar__spacer" />
-          <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-            <option value="">全部角色</option>
-            <option value="集团管理">集团管理</option>
-            <option value="站点运营">站点运营</option>
-          </select>
-        </div>
-        {loading ? (
-          <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
-        ) : (
-          <table className="quality-records-table">
-            <thead>
-              <tr>
-                {["用户名", "姓名", "手机号", "角色", "状态", "操作"].map(h => (
-                  <th key={h}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.length === 0 && (
-                <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
-              )}
-              {filteredUsers.map(u => (
-                <tr key={u.id} onClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
-                  <td>
-                    <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openDetail(u); }} href="#">
-                      {u.username}
-                    </a>
-                  </td>
-                  <td className="quality-records-table__worker">{u.name}</td>
-                  <td>{u.phone || "—"}</td>
-                  <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
-                  <td>
-                    <span className={`quality-status-badge quality-status-badge--${u.status === "active" ? "normal" : "anomaly"}`}>
-                      {u.status === "active" ? "正常" : "已禁用"}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openDetail(u, true); }}>编辑</button>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setResetTarget(u); }}>重置密码</button>
-                      <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
 
-      {/* ── User Detail Modal (inline edit) ── */}
-      {detailUser && (
-        <UserDetailModal
-          user={detailUser}
-          token={token!}
-          onClose={closeDetail}
-          onSaved={() => { fetchUsers(); showToast("用户信息已更新"); }}
-          onToggle={(u) => setConfirmAction({ type: "toggle", user: u })}
-          onDelete={(u) => setConfirmAction({ type: "delete", user: u })}
-          initialEditing={initialEditing}
-        />
-      )}
-
-      {/* ── Create User Modal ── */}
-      {routeId === "new" && (
-        <CreateUserModal
-          token={token!}
-          onClose={() => navigate("/admin/users")}
-          onCreated={() => { fetchUsers(); showToast("用户创建成功"); navigate("/admin/users"); }}
-        />
+          <div className="quality-table-wrap">
+            <div className="quality-toolbar">
+              <div className="quality-toolbar__search-wrap">
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索用户名、姓名..." className="quality-toolbar__search" />
+              </div>
+              <div className="quality-toolbar__spacer" />
+              <select className="quality-toolbar__select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+                <option value="">全部角色</option>
+                <option value="集团管理">集团管理</option>
+                <option value="站点运营">站点运营</option>
+              </select>
+            </div>
+            {loading ? (
+              <p style={{ padding: 20, color: "var(--quality-text-muted)" }}>加载中...</p>
+            ) : (
+              <table className="quality-records-table">
+                <thead>
+                  <tr>
+                    {["用户名", "姓名", "手机号", "角色", "状态", "操作"].map(h => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={6} className="quality-records-table__empty">暂无用户</td></tr>
+                  )}
+                  {filteredUsers.map(u => (
+                    <tr key={u.id} onClick={() => openDetail(u)} style={{ cursor: "pointer" }}>
+                      <td>
+                        <a className="quality-users__link" onClick={(e) => { e.preventDefault(); openDetail(u); }} href="#">
+                          {u.username}
+                        </a>
+                      </td>
+                      <td className="quality-records-table__worker">{u.name}</td>
+                      <td>{u.phone || "—"}</td>
+                      <td>{QUALITY_ROLE_LABELS[u.role] ?? u.role}</td>
+                      <td>
+                        <span className={`quality-status-badge quality-status-badge--${u.status === "active" ? "normal" : "anomaly"}`}>
+                          {u.status === "active" ? "正常" : "已禁用"}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); openDetail(u, true); }}>编辑</button>
+                          <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setResetTarget(u); }}>重置密码</button>
+                          <button className="quality-users__action-btn" onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "delete", user: u }); }}>删除</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Reset Password Modal ── */}
@@ -1430,19 +1414,7 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
   const handleCancel = () => { setName(user.name); setPhone(user.phone); setEditing(false); setError(""); };
 
   return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="quality-user-modal" role="dialog" aria-label={user.name}>
-        <div className="quality-user-modal__header">
-          <div>
-            <div className="quality-user-modal__title">{user.name}<span className="quality-user-modal__sub">{user.username}</span></div>
-            <div className="quality-user-modal__tags">
-              <span className="so-modal__chip">{QUALITY_ROLE_LABELS[user.role] ?? user.role}</span>
-              <span className={`so-modal__chip ${user.status !== "active" ? "so-modal__chip--danger" : ""}`}>{user.status === "active" ? "正常" : "已禁用"}</span>
-            </div>
-          </div>
-          <CloseBtn onClick={onClose} />
-        </div>
+    <DetailPageShell parentLabel="用户管理" parentPath="/admin/users" title={user.name}>
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -1471,8 +1443,7 @@ function UserDetailModal({ user, token, onClose, onSaved, onToggle, onDelete, in
           </div>
           <div />
         </div>
-      </div>
-    </>
+    </DetailPageShell>
   );
 }
 
@@ -1497,13 +1468,7 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
   };
 
   return (
-    <>
-      <div className="sw-scrim" onClick={onClose} />
-      <div className="quality-user-modal" role="dialog" aria-label="新增用户">
-        <div className="quality-user-modal__header">
-          <div className="quality-user-modal__title">新增用户</div>
-          <CloseBtn onClick={onClose} />
-        </div>
+    <DetailPageShell parentLabel="用户管理" parentPath="/admin/users" title="新增">
         <div className="quality-user-modal__body">
           {error && <div className="quality-modal__error">{error}</div>}
           <div className="so-form-cards">
@@ -1537,8 +1502,7 @@ function CreateUserModal({ token, onClose, onCreated }: { token: string; onClose
             <button className="sw-btn sw-btn--primary" disabled={submitting} onClick={handleSubmit} type="button">{submitting ? "创建中..." : "创建用户"}</button>
           </div>
         </div>
-      </div>
-    </>
+    </DetailPageShell>
   );
 }
 
