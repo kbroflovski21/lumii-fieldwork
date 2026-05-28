@@ -264,7 +264,10 @@ export function SiteOperationsLayout() {
             {sidebarCollapsed ? (
               <ProfileMenu />
             ) : (
-              <div className="site-operations-sidebar__profile-card">
+              <div className="site-operations-sidebar__profile-card" onClick={(e) => {
+                const avatar = e.currentTarget.querySelector('.so-shell__avatar') as HTMLButtonElement | null;
+                if (avatar && e.target !== avatar) avatar.click();
+              }}>
                 <ProfileMenu />
                 <div className="site-operations-sidebar__profile-info">
                   <span className="site-operations-sidebar__profile-name">{user?.name ?? "用户"}</span>

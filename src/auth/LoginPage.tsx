@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import "./login.css";
 
 export function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +21,11 @@ export function LoginPage() {
     setSubmitting(true);
     const result = await login(username, password);
     setSubmitting(false);
-    if (!result.ok) setError(result.error ?? "登录失败");
+    if (result.ok) {
+      navigate("/");
+    } else {
+      setError(result.error ?? "登录失败");
+    }
   }, [username, password, login]);
 
   return (
