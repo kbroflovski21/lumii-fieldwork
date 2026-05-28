@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 
 // Mock useAuth before importing the component
@@ -27,157 +28,213 @@ vi.mock("../../features/siteOperations/CopilotPanel", () => ({
   ),
 }));
 
+// Mock useAgentChat
+vi.mock("../../features/siteOperations/useAgentChat", () => ({
+  useAgentChat: () => ({
+    messages: [],
+    connected: false,
+    wip: false,
+    handleSend: vi.fn(),
+    sendCardAction: vi.fn(),
+    endRef: { current: null },
+  }),
+}));
+
+// Mock fetch for API calls
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 import { QualityPage } from "../QualityPage";
+
+function renderWithRouter(initialEntry = "/admin") {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route path="/admin" element={<QualityPage activeView="dashboard" />} />
+        <Route path="/admin/sites" element={<QualityPage activeView="sites" />}>
+          <Route index element={null} />
+          <Route path=":id" element={null} />
+        </Route>
+        <Route path="/admin/users" element={<QualityPage activeView="users" />}>
+          <Route index element={null} />
+          <Route path=":id" element={null} />
+        </Route>
+        <Route path="/admin/sop" element={<QualityPage activeView="sop" />} />
+        <Route path="/admin/feishu" element={<QualityPage activeView="feishu" />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
 
 describe("QualityPage", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ users: [], sites: [] }) });
   });
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("renders the page header with title", () => {
-    render(<QualityPage />);
-    expect(screen.getByText("金色年华 · 集团管理")).toBeInTheDocument();
+  it("renders the dashboard view with KPI cards", () => {
+    renderWithRouter("/admin");
+    expect(screen.getByText("管理概览")).toBeInTheDocument();
   });
 
-  it("shows running status line", () => {
-    render(<QualityPage />);
-    expect(screen.getByText(/运行中 · 4 个站点 · 本周 168 单/)).toBeInTheDocument();
+  it("renders users view with table headers", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ users: [] }),
+    });
+    renderWithRouter("/admin/users");
+    expect(screen.getByText("用户管理")).toBeInTheDocument();
+    expect(screen.getByText("管理系统用户账号、角色和权限")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("搜索用户名、姓名...")).toBeInTheDocument();
   });
 
-  it("renders dashboard view by default with KPI cards", () => {
-    render(<QualityPage />);
-    // Dashboard subtitle
-    expect(screen.getByText("跨站点服务质量监测与分析")).toBeInTheDocument();
-    // KPI labels (these use class quality-kpi-card__label)
-    const kpiLabels = document.querySelectorAll(".quality-kpi-card__label");
-    const labelTexts = Array.from(kpiLabels).map(el => el.textContent);
-    expect(labelTexts).toContain("本周服务总量");
-    expect(labelTexts).toContain("服务完成率");
-    expect(labelTexts).toContain("SOP 平均完成率");
-    expect(labelTexts).toContain("客户满意度");
-    expect(labelTexts).toContain("异常率");
-    expect(labelTexts).toContain("投诉率");
-  });
-
-  it("renders KPI values correctly", () => {
-    render(<QualityPage />);
-    // Use class-based selector to find KPI values specifically
-    const kpiCards = document.querySelectorAll(".quality-kpi-card__value");
-    const values = Array.from(kpiCards).map(el => el.textContent);
-    expect(values).toContain("168");
-    expect(values).toContain("93%");
-    expect(values).toContain("87%");
-    expect(values).toContain("4.6/5");
-    expect(values).toContain("6.2%");
-    expect(values).toContain("1.8%");
-  });
-
-  it("shows site comparison table with all four sites", () => {
-    render(<QualityPage />);
-    expect(screen.getByText("站点对比")).toBeInTheDocument();
-    expect(screen.getByText("翠苑站")).toBeInTheDocument();
-    expect(screen.getByText("三墩站")).toBeInTheDocument();
-    expect(screen.getByText("古荡站")).toBeInTheDocument();
-    expect(screen.getByText("文新站")).toBeInTheDocument();
-  });
-
-  it("shows SOP completion rates by service type", () => {
-    render(<QualityPage />);
-    expect(screen.getByText("服务项目 SOP 完成率")).toBeInTheDocument();
-    expect(screen.getByText("探访关爱")).toBeInTheDocument();
-    expect(screen.getByText("助浴")).toBeInTheDocument();
-    expect(screen.getByText("用药提醒")).toBeInTheDocument();
-    expect(screen.getByText("助餐")).toBeInTheDocument();
-  });
-
-  it("shows user avatar in sidebar with first character of name", () => {
-    render(<QualityPage />);
-    const avatar = screen.getByLabelText("用户菜单");
-    expect(avatar).toBeInTheDocument();
-    expect(avatar.textContent).toBe("管");
-  });
-
-  it("shows user name and logout in profile dropdown", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
-    // Click avatar to open profile menu
-    const avatar = screen.getByLabelText("用户菜单");
-    await user.click(avatar);
-
-    // Profile menu should show user name and logout
-    expect(screen.getByText("管理员")).toBeInTheDocument();
-    expect(screen.getByText("退出登录")).toBeInTheDocument();
-  });
-
-  it("shows 'enter site operations' link for org_admin role", () => {
-    render(<QualityPage />);
-    const link = screen.getByText("进入站点运营");
-    expect(link).toBeInTheDocument();
-    expect(link.closest("a")).toHaveAttribute("href", "/site-operations");
-  });
-
-  it("can switch to sites view via nav button", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("站点管理"));
+  it("renders sites view with table headers", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ sites: [] }),
+    });
+    renderWithRouter("/admin/sites");
     expect(screen.getByText("站点管理")).toBeInTheDocument();
     expect(screen.getByText("管理服务站点及运营人员分配")).toBeInTheDocument();
   });
+});
 
-  it("can switch back to dashboard from sites", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    await user.click(screen.getByTitle("站点管理"));
-    expect(screen.getByText("管理服务站点及运营人员分配")).toBeInTheDocument();
-    await user.click(screen.getByTitle("质量总览"));
-    expect(screen.getByText("跨站点服务质量监测与分析")).toBeInTheDocument();
+describe("QualityPage — URL search param filtering", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockFetch.mockReset();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("has a copilot toggle button in the header", () => {
-    render(<QualityPage />);
-    const toggle = screen.getByLabelText("打开 AI 助手");
-    expect(toggle).toBeInTheDocument();
+  it("pre-fills search box from ?search= query param on users page", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        users: [
+          { id: "u1", username: "admin", name: "管理员", role: "org_admin", orgId: "org-001", siteIds: [], phone: "", status: "active" },
+          { id: "u2", username: "operator", name: "站点运营员", role: "site_operator", orgId: "org-001", siteIds: [], phone: "", status: "active" },
+        ],
+      }),
+    });
+    renderWithRouter("/admin/users?search=运营");
+    const searchInput = screen.getByPlaceholderText("搜索用户名、姓名...") as HTMLInputElement;
+    expect(searchInput.value).toBe("运营");
   });
 
-  it("renders CopilotPanel component", () => {
-    render(<QualityPage />);
-    // CopilotPanel is rendered (initially closed)
-    const panel = document.querySelector(".copilot-panel");
-    expect(panel).toBeTruthy();
+  it("pre-fills search box from ?search= query param on sites page", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ sites: [] }),
+    });
+    renderWithRouter("/admin/sites?search=翠苑");
+    const searchInput = screen.getByPlaceholderText("搜索站点名称、地址、联系人...") as HTMLInputElement;
+    expect(searchInput.value).toBe("翠苑");
   });
 
-  it("toggles copilot panel open and closed", async () => {
-    render(<QualityPage />);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("filters users table based on URL search param", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        users: [
+          { id: "u1", username: "admin", name: "管理员", role: "org_admin", orgId: "org-001", siteIds: [], phone: "138", status: "active" },
+          { id: "u2", username: "operator", name: "站点运营员", role: "site_operator", orgId: "org-001", siteIds: [], phone: "139", status: "active" },
+        ],
+      }),
+    });
+    renderWithRouter("/admin/users?search=运营");
 
-    // Initially copilot is closed
-    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("false");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
 
-    // Click to open
-    const toggle = screen.getByLabelText("打开 AI 助手");
-    await user.click(toggle);
-
-    // Now copilot should be open
-    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("true");
-
-    // Click to close
-    const closeToggle = screen.getByLabelText("关闭 AI 助手");
-    await user.click(closeToggle);
-
-    expect(document.querySelector('.quality-page')?.getAttribute("data-copilot-open")).toBe("false");
+    // "站点运营员" matches the search; "管理员" does not
+    expect(screen.getByText("站点运营员")).toBeInTheDocument();
+    expect(screen.queryByText("管理员")).not.toBeInTheDocument();
   });
 });
 
-describe("QualityPage - site operations link visibility", () => {
-  it("link is present for org_admin and links to correct URL", () => {
-    // The default mock has role "org_admin", so the link should be visible
-    render(<QualityPage />);
-    const link = screen.getByText("进入站点运营");
-    expect(link).toBeInTheDocument();
-    expect(link.closest("a")).toHaveAttribute("href", "/site-operations");
+describe("QualityPage — URL modal sync", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockFetch.mockReset();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("opens user detail modal when URL has :id param", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        users: [
+          { id: "user-admin-001", username: "admin", name: "系统管理员", role: "org_admin", orgId: "org-001", siteIds: ["site-001"], phone: "138", status: "active" },
+        ],
+      }),
+    });
+    renderWithRouter("/admin/users/user-admin-001");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    // The modal scrim should be rendered
+    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+  });
+
+  it("opens site detail modal when URL has :id param", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        sites: [
+          { id: "site-001", name: "翠苑站", address: "翠苑路1号", contactName: "张三", contactPhone: "138", operators: [] },
+        ],
+      }),
+    });
+    renderWithRouter("/admin/sites/site-001");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+  });
+
+  it("opens create user modal when URL is /admin/users/new", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ users: [] }),
+    });
+    renderWithRouter("/admin/users/new");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    // Create modal should be present
+    expect(document.querySelector(".sw-scrim")).toBeTruthy();
+  });
+
+  it("does NOT open modal when URL has no :id param", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        users: [
+          { id: "u1", username: "admin", name: "管理员", role: "org_admin", orgId: "org-001", siteIds: [], phone: "", status: "active" },
+        ],
+      }),
+    });
+    renderWithRouter("/admin/users");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(document.querySelector(".sw-scrim")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import { AuthGuard } from "./components/AuthGuard";
 import { SiteOperationsLayout } from "./layouts/SiteOperationsLayout";
 import { QualityLayout } from "./layouts/QualityLayout";
@@ -95,8 +95,35 @@ export const router = createBrowserRouter([
         ],
       },
       {
-        path: "admin/*",
+        path: "admin",
         element: <QualityLayout />,
+        children: [
+          { index: true, element: null },
+          {
+            path: "sop",
+            element: null,
+          },
+          {
+            path: "sites",
+            element: <Outlet />,
+            children: [
+              { index: true, element: null },
+              { path: ":id", element: null },
+            ],
+          },
+          {
+            path: "users",
+            element: <Outlet />,
+            children: [
+              { index: true, element: null },
+              { path: ":id", element: null },
+            ],
+          },
+          {
+            path: "feishu",
+            element: null,
+          },
+        ],
       },
     ],
   },

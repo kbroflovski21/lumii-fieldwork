@@ -2,29 +2,24 @@
 
 .so-shell__profile {
   margin-top: auto;
-  padding: 12px 0;
   display: flex;
-  justify-content: center;
   position: relative;
 }
 
 .so-shell__avatar {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: none;
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
   padding: 0;
-}
-.so-shell__avatar:hover {
-  transform: scale(1.1);
+  flex-shrink: 0;
 }
 
 .so-shell__menu-backdrop {

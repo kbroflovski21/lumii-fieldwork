@@ -143,7 +143,7 @@
 }
 
 .sv-page-header {
-  padding: 28px 32px 0;
+  padding: 24px 24px 0;
   flex-shrink: 0;
 }
 
@@ -168,7 +168,7 @@
   overflow: hidden;
   border-radius: 12px;
   border: 1px solid var(--sv-line, #DDD5CC);
-  margin: 16px 32px 28px;
+  margin: 16px 24px 24px;
   background: var(--sv-surface, #FFFCF8);
 }
 

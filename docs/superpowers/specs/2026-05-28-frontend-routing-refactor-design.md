@@ -35,9 +35,15 @@
 |-----|-----------|-------------|
 | `/admin` | QualityPage dashboard view | 质量总览 |
 | `/admin/sop` | SOP management view | 规范管理 |
-| `/admin/sites` | Sites management view | 站点管理 |
-| `/admin/users` | Users management view | 用户管理 |
+| `/admin/sites` | Sites management view | 站点列表 |
+| `/admin/sites/new` | Sites management + create modal | 新建站点 |
+| `/admin/sites/:id` | Sites management + detail modal | 站点详情 |
+| `/admin/users` | Users management view | 用户列表 |
+| `/admin/users/new` | Users management + create modal | 新建用户 |
+| `/admin/users/:id` | Users management + detail modal | 用户详情 |
 | `/admin/feishu` | Feishu management view | 飞书管理 |
+
+All admin list views support `?search=` query parameter for URL-based filtering (e.g., `/admin/users?search=运营员`).
 
 ### Other
 
@@ -82,11 +88,19 @@
 
       {/* Org Admin */}
       <Route path="admin" element={<QualityLayout />}>
-        <Route index element={<DashboardView />} />
-        <Route path="sop" element={<SopView />} />
-        <Route path="sites" element={<SitesView />} />
-        <Route path="users" element={<UsersView />} />
-        <Route path="feishu" element={<FeishuView />} />
+        <Route index element={null} />
+        <Route path="sop" element={null} />
+        <Route path="sites" element={<Outlet />}>
+          <Route index element={null} />
+          <Route path="new" element={null} />
+          <Route path=":id" element={null} />
+        </Route>
+        <Route path="users" element={<Outlet />}>
+          <Route index element={null} />
+          <Route path="new" element={null} />
+          <Route path=":id" element={null} />
+        </Route>
+        <Route path="feishu" element={null} />
       </Route>
     </Route>
 

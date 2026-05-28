@@ -275,3 +275,47 @@
 - **Description:** Manual rsync deployments could accidentally overwrite the staging `.env` file, causing service outages (see Bug 30).
 - **Root cause:** No standardized deploy process existed; developers ran ad-hoc rsync commands that could include `.env` files.
 - **Fix:** Created `deploy.sh` in the project root that handles the full deploy pipeline (build, rsync with `.env` exclusion, Prisma push, restart, health check). Documented in `docs/deploy-guide.md`.
+
+---
+
+# 2026-05-28 Bug Fixes
+
+**Date:** 2026-05-28
+
+---
+
+## Bug 45: Org admin content area — CSS variables missing after routing refactor
+
+- **Description:** After the frontend routing refactor, the org admin (QualityPage) content area lost all background colors, border colors, and styling — everything appeared transparent with oversized margins.
+- **Root cause:** The QualityPage root element was changed from `className="quality-page"` to `className="quality-content"`. All child components reference CSS custom properties (`--quality-surface`, `--quality-line`, `--quality-text`, etc.) that are defined on the `.quality-page` selector. Without that class in the DOM, the variables resolved to `undefined` → transparent. Additionally, nested `.quality-content` divs caused double padding (`28px 32px` × 2).
+- **Fix:** Restored `className="quality-page"` on the root element with inline style `display:flex; flex-direction:column; flex:1; height:auto; overflow:hidden` to override the grid layout (no longer needed since QualityLayout handles the outer grid). Removed the nested `.quality-content` wrapper.
+
+## Bug 46: Profile menu cannot be dismissed — page becomes unclickable
+
+- **Description:** After opening the profile menu in the sidebar, clicking elsewhere on the page did not close the menu; instead the page became unresponsive to clicks.
+- **Root cause:** The old implementation wrapped the profile card in a `<div onClick>` that toggled the menu. When the backdrop's `onClick` fired to close the menu, the event bubbled up to the wrapping div and immediately re-opened it (click-through race condition).
+- **Fix:** Refactored `ProfileMenu` to render the entire profile card (avatar + name + role) as a single `<button>` element. The menu dismissal uses a `createPortal`-based full-screen backdrop with `background: rgba(0,0,0,0.01)` for reliable click capture. No wrapping `<div onClick>` exists anymore.
+
+## Bug 47: Profile card not spanning full sidebar width
+
+- **Description:** The profile card at the bottom of the sidebar was centered (small circle avatar only) instead of spanning the full sidebar width like the navigation items above it. Hover effect also did not cover the full width.
+- **Root cause:** `.so-shell__profile` had `justify-content: center` and `padding: 12px 0`. The collapsed-mode avatar was rendered as a `<button className="so-shell__avatar">` (circular element) rather than a full-width button. The footer had `align-items: center`.
+- **Fix:** Unified both expanded and collapsed modes to use the same `<button className="site-operations-sidebar__profile-card">` wrapping. In collapsed mode, only the avatar child renders (no text). Profile card CSS now matches nav item styling: `padding: 10px 12px; gap: 10px; border-radius: 8px; width: 100%` with `background: #F1F5F9` on hover. Removed centering from footer and profile wrapper.
+
+## Bug 48: Org admin content padding larger than site operations
+
+- **Description:** The org admin page content area had visibly larger margins/padding than the site operations page, making them look inconsistent.
+- **Root cause:** `.quality-content` CSS used `padding: 28px 32px` while site operations area components use `padding: 24px` (via `.sw-page__inner`). The SOP page (SupervisorContent) also used `padding: 28px 32px 0` for header and `margin: 16px 32px 28px` for body.
+- **Fix:** Changed `.quality-content` padding to `24px`. Changed `.sv-page-header` padding to `24px 24px 0` and `.sv-content-body` margin to `16px 24px 24px`.
+
+## Bug 49: Org admin modals do not update URL with object ID
+
+- **Description:** Clicking a list item in the org admin pages (站点管理, 用户管理) opened a detail modal but the URL stayed at `/admin/sites` or `/admin/users` without appending the object ID. This meant modals were not deep-linkable and browser back/forward did not work.
+- **Root cause:** The admin views (SitesView, UsersView) used local React state (`useState`) for modal open/close instead of URL-based navigation. The router config used a wildcard `admin/*` route with no child `:id` routes.
+- **Fix:** Added explicit child routes with `:id` params in `router.tsx` (`/admin/sites/:id`, `/admin/sites/new`, `/admin/users/:id`, `/admin/users/new`). Refactored SitesView and UsersView to use `useParams()` + `useNavigate()` for modal open/close, mirroring the site operations pattern. Modal open calls `navigate('/admin/users/${id}')`, close calls `navigate('/admin/users')`.
+
+## Bug 50: Org admin search query param not triggering filter
+
+- **Description:** Navigating directly to `/admin/users?search=站点运营员` did not pre-fill the search box or filter the list. The search functionality was purely local state-driven.
+- **Root cause:** SitesView and UsersView initialized search from an `initialSearch` prop (passed from parent component state) rather than reading the URL `?search=` query parameter. The URL search param was only used for copilot navigation, not for the views themselves.
+- **Fix:** Replaced local `useState` search with `useSearchParams()` from react-router-dom. Search reads from `searchParams.get("search")` and writes back via `setSearchParams()` with `{ replace: true }`. This enables URL-based search filtering consistent with the site operations pattern.

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { Bot, Shield, FileText, MapPin, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
@@ -128,6 +128,7 @@ export function QualityLayout() {
         <main className="site-operations-main site-operations-main--layout">
           <div className="site-operations-content">
             <QualityPage activeView={activeView} onSelectView={handleSelectView} onNavigate={handleCopilotNavigate} />
+            <Outlet />
           </div>
         </main>
 

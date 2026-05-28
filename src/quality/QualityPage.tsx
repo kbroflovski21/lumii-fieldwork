@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Bot, Edit3, ChevronDown } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
@@ -304,18 +305,17 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   ];
 
   return (
-    <div className="quality-content" style={{ flex: 1, overflow: "auto" }}>
+    <div className="quality-page" style={{ display: "flex", flexDirection: "column", flex: 1, height: "auto", overflow: "hidden" }}>
       {view === "sop" ? (
         <SupervisorContent />
       ) : (
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
-          {view === "sites" && <SitesView initialSearch={searchFilter} />}
-          {view === "users" && <UsersView initialSearch={searchFilter} />}
+          {view === "sites" && <SitesView />}
+          {view === "users" && <UsersView />}
           {view === "feishu" && <FeishuView />}
         </div>
       )}
-
     </div>
   );
 }
@@ -731,18 +731,22 @@ interface SiteData {
   operators: Array<{ id: string; username: string; name: string; role: string }>;
 }
 
-function SitesView({ initialSearch }: { initialSearch?: string }) {
+function SitesView() {
   const { token } = useAuth();
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sites, setSites] = useState<SiteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
   const [detailSite, setDetailSite] = useState<SiteData | null>(null);
   const [editingSite, setEditingSite] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ site: SiteData } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
-  const [search, setSearch] = useState(initialSearch ?? "");
-  useEffect(() => { if (initialSearch) setSearch(initialSearch); }, [initialSearch]);
+  const search = searchParams.get("search") ?? "";
+  const setSearch = useCallback((v: string) => {
+    setSearchParams(prev => { if (v) prev.set("search", v); else prev.delete("search"); return prev; }, { replace: true });
+  }, [setSearchParams]);
 
   const showToast = useCallback((msg: string) => { setToast(msg); setTimeout(() => setToast(""), 2000); }, []);
 
@@ -755,6 +759,22 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
   }, [token]);
 
   useEffect(() => { fetchSites(); }, [fetchSites]);
+
+  const openSite = useCallback((s: SiteData) => { setEditingSite(false); navigate(`/admin/sites/${s.id}`); }, [navigate]);
+  const openSiteEdit = useCallback((s: SiteData) => { setEditingSite(true); navigate(`/admin/sites/${s.id}`); }, [navigate]);
+  const closeSite = useCallback(() => { setDetailSite(null); setEditingSite(false); navigate("/admin/sites"); }, [navigate]);
+
+  // Sync URL → modal state
+  useEffect(() => {
+    if (routeId === "new") {
+      setDetailSite(null);
+    } else if (routeId) {
+      const s = sites.find(x => x.id === routeId);
+      if (s) setDetailSite(s);
+    } else {
+      setDetailSite(null); setEditingSite(false);
+    }
+  }, [routeId, sites]);
 
   // Sync detailSite with refreshed sites data
   useEffect(() => {
@@ -770,12 +790,14 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
     try {
       await fetch(`/api/admin/sites/${confirmAction.site.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       showToast("站点已删除");
-      if (detailSite?.id === confirmAction.site.id) setDetailSite(null);
+      if (detailSite?.id === confirmAction.site.id) closeSite();
       fetchSites();
     } catch { /* ignore */ }
     setConfirmAction(null);
     setConfirmSubmitting(false);
   };
+
+  const showCreate = routeId === "new";
 
   const filteredSites = sites.filter(s => {
     if (!search.trim()) return true;
@@ -792,7 +814,7 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
           <div className="quality-records__title">站点管理</div>
           <div className="quality-records__subtitle">管理服务站点及运营人员分配</div>
         </div>
-        <button className="quality-users__add-btn" onClick={() => setShowCreate(true)}>新增站点</button>
+        <button className="quality-users__add-btn" onClick={() => navigate("/admin/sites/new")}>新增站点</button>
       </div>
 
       <div className="quality-table-wrap">
@@ -810,8 +832,8 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
             <tbody>
               {filteredSites.length === 0 && <tr><td colSpan={6} className="quality-records-table__empty">暂无站点</td></tr>}
               {filteredSites.map(s => (
-                <tr key={s.id} onClick={() => { setEditingSite(false); setDetailSite(s); }} style={{ cursor: "pointer" }}>
-                  <td><a className="quality-users__link" onClick={e => { e.preventDefault(); setEditingSite(false); setDetailSite(s); }} href="#">{s.name}</a></td>
+                <tr key={s.id} onClick={() => openSite(s)} style={{ cursor: "pointer" }}>
+                  <td><a className="quality-users__link" onClick={e => { e.preventDefault(); openSite(s); }} href="#">{s.name}</a></td>
                   <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.address || "—"}</td>
                   <td>{s.contactName || "—"}</td>
                   <td>{s.contactPhone || "—"}</td>
@@ -819,7 +841,7 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); window.open(`/site-operations?siteId=${s.id}`, "_blank"); }}>进入站点</button>
-                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setEditingSite(true); setDetailSite(s); }}>编辑</button>
+                      <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); openSiteEdit(s); }}>编辑</button>
                       <button className="quality-users__action-btn" onClick={e => { e.stopPropagation(); setConfirmAction({ site: s }); }}>删除</button>
                     </div>
                   </td>
@@ -831,15 +853,15 @@ function SitesView({ initialSearch }: { initialSearch?: string }) {
       </div>
 
       {detailSite && (
-        <SiteDetailModal site={detailSite} token={token!} onClose={() => { setDetailSite(null); setEditingSite(false); }}
+        <SiteDetailModal site={detailSite} token={token!} onClose={closeSite}
           onSaved={() => { fetchSites(); showToast("站点信息已更新"); }}
           onDelete={s => setConfirmAction({ site: s })}
           initialEditing={editingSite} />
       )}
 
       {showCreate && (
-        <SiteCreateModal token={token!} onClose={() => setShowCreate(false)}
-          onCreated={() => { fetchSites(); showToast("站点创建成功"); setShowCreate(false); }} />
+        <SiteCreateModal token={token!} onClose={() => navigate("/admin/sites")}
+          onCreated={() => { fetchSites(); showToast("站点创建成功"); navigate("/admin/sites"); }} />
       )}
 
       {confirmAction && (
@@ -1145,20 +1167,24 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
   careworker: "护理员",
 };
 
-function UsersView({ initialSearch }: { initialSearch?: string }) {
+function UsersView() {
   const { token } = useAuth();
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<QualityUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
 
   const [detailUser, setDetailUser] = useState<QualityUser | null>(null);
   const [initialEditing, setInitialEditing] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: "delete" | "toggle"; user: QualityUser } | null>(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const [resetTarget, setResetTarget] = useState<QualityUser | null>(null);
-  const [search, setSearch] = useState(initialSearch ?? "");
-  useEffect(() => { if (initialSearch) setSearch(initialSearch); }, [initialSearch]);
+  const search = searchParams.get("search") ?? "";
+  const setSearch = useCallback((v: string) => {
+    setSearchParams(prev => { if (v) prev.set("search", v); else prev.delete("search"); return prev; }, { replace: true });
+  }, [setSearchParams]);
   const [roleFilter, setRoleFilter] = useState("");
 
   const showToast = useCallback((msg: string) => {
@@ -1179,6 +1205,21 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  const openDetail = useCallback((u: QualityUser, editMode = false) => { setInitialEditing(editMode); navigate(`/admin/users/${u.id}`); }, [navigate]);
+  const closeDetail = useCallback(() => { setDetailUser(null); setInitialEditing(false); navigate("/admin/users"); }, [navigate]);
+
+  // Sync URL → modal state
+  useEffect(() => {
+    if (routeId === "new") {
+      setDetailUser(null);
+    } else if (routeId) {
+      const u = users.find(x => x.id === routeId);
+      if (u) setDetailUser(u);
+    } else {
+      setDetailUser(null); setInitialEditing(false);
+    }
+  }, [routeId, users]);
+
   // Sync detailUser with refreshed users data
   useEffect(() => {
     if (detailUser) {
@@ -1186,9 +1227,6 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
       if (fresh && fresh !== detailUser) setDetailUser(fresh);
     }
   }, [users]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const openDetail = (u: QualityUser, editMode = false) => { setInitialEditing(editMode); setDetailUser(u); };
-  const closeDetail = () => { setDetailUser(null); setInitialEditing(false); };
 
   const handleConfirm = async () => {
     if (!confirmAction) return;
@@ -1234,7 +1272,7 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
           <div className="quality-records__title">用户管理</div>
           <div className="quality-records__subtitle">管理系统用户账号、角色和权限</div>
         </div>
-        <button className="quality-users__add-btn" onClick={() => setShowCreate(true)}>新增用户</button>
+        <button className="quality-users__add-btn" onClick={() => navigate("/admin/users/new")}>新增用户</button>
       </div>
 
       <div className="quality-table-wrap">
@@ -1307,11 +1345,11 @@ function UsersView({ initialSearch }: { initialSearch?: string }) {
       )}
 
       {/* ── Create User Modal ── */}
-      {showCreate && (
+      {routeId === "new" && (
         <CreateUserModal
           token={token!}
-          onClose={() => setShowCreate(false)}
-          onCreated={() => { fetchUsers(); showToast("用户创建成功"); setShowCreate(false); }}
+          onClose={() => navigate("/admin/users")}
+          onCreated={() => { fetchUsers(); showToast("用户创建成功"); navigate("/admin/users"); }}
         />
       )}
 
