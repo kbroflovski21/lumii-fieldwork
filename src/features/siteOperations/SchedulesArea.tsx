@@ -720,8 +720,8 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
               {/* 状态 */}
               <div className="dp-field"><dt>状态</dt><dd><span className="sw-status-badge" data-tone={tone}>{statusText[s.status] ?? s.status}</span></dd></div>
 
-              {/* 服务地点 — with floating map */}
-              <div className="dp-field dp-field--editable"><dt>服务地点</dt><dd>
+              {/* 服务地点 — with inline expanding map */}
+              <div className="dp-field dp-field--full"><dt>服务地点</dt><dd>
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <strong>{s.addressSnapshot}</strong>
                   {s.addressSnapshot && (
@@ -731,11 +731,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
                   )}
                 </span>
                 {showMap && s.addressSnapshot && (
-                  <div className="dp-field-popover" style={{ minWidth: 320, right: 0, left: "auto" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--site-text)" }}>{s.addressSnapshot}</span>
-                      <button style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 2, display: "flex" }} onClick={() => setShowMap(false)} type="button"><X size={14} /></button>
-                    </div>
+                  <div style={{ marginTop: 8 }}>
                     <AddressMap address={s.addressSnapshot} />
                   </div>
                 )}
