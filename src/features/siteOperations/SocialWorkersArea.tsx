@@ -4,6 +4,7 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
+import { useCopyToClipboard } from "../../shared/hooks/useCopyToClipboard";
 import { Search, X, Plus, UserRound, Phone, Award, Edit3, ThumbsUp } from "lucide-react";
 import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
@@ -386,28 +387,12 @@ function ViewModal({
   const [selectedBadge, setSelectedBadge] = useState(worker.preferredBadge?.badgeId ?? "");
   const [resetPwdResult, setResetPwdResult] = useState<string | null>(null);
   const [resetPwdLoading, setResetPwdLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copy: copyText, copied } = useCopyToClipboard();
   const [editingBasic, setEditingBasic] = useState(false);
   const [editName, setEditName] = useState(worker.name);
   const [editPhone, setEditPhone] = useState(worker.phone);
   const [editQual, setEditQual] = useState((worker.qualificationLabels ?? []).join("、"));
   const [savingBasic, setSavingBasic] = useState(false);
-  const copyText = (text: string) => {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    } catch {
-      navigator.clipboard?.writeText(text);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   const handleSaveBasic = async () => {
     setSavingBasic(true);
