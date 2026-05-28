@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { formatDateShort, formatTime, toBjStr } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -76,27 +77,6 @@ const exceptionTypeLabel: Record<string, string> = {
   late_arrival: "迟到", early_leave: "早退", service_incomplete: "服务不完整", safety_risk: "安全风险", other: "其他"
 };
 
-function formatDate(d: string) {
-  const date = new Date(`${d}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return d;
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function formatTime(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function toBjStr(d: Date) {
-  const bj = new Date(d.getTime() + 8 * 3600000);
-  return {
-    date: `${bj.getUTCMonth()+1}/${bj.getUTCDate()}`,
-    time: `${bj.getUTCHours().toString().padStart(2,"0")}:${bj.getUTCMinutes().toString().padStart(2,"0")}`,
-    full: bj.toISOString().replace("T"," ").slice(0,16),
-  };
-}
 
 
 export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: { resource?: Resource<ServiceRecordsResponse>; onMutate?: () => void } = {}) {
@@ -359,7 +339,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
               data-exception={r.exceptionTags.length > 0}
               onClick={() => onRowClick(r)} role="row">
               <div role="cell" className="sch-cell-datetime">
-                <span className="sch-cell-date">{formatDate(r.serviceDate)}</span>
+                <span className="sch-cell-date">{formatDateShort(r.serviceDate)}</span>
                 <span className="sch-cell-time">{r.startTime}-{r.endTime} · {r.durationMinutes}分钟</span>
               </div>
               <div role="cell" className="sw-table__cell-name">
@@ -391,7 +371,7 @@ function RecordsList({ records, selectedId, onRowClick }: {
         {sorted.map((r) => (
           <button className="sw-mobile-card" key={r.id} onClick={() => onRowClick(r)} type="button">
             <div className="sw-mobile-card__top">
-              <span className="sch-cell-date">{formatDate(r.serviceDate)} {r.startTime}-{r.endTime}</span>
+              <span className="sch-cell-date">{formatDateShort(r.serviceDate)} {r.startTime}-{r.endTime}</span>
               <StatusBadge tone={reviewTone(r.reviewStatus)}>{statusText[r.reviewStatus]}</StatusBadge>
             </div>
             <div className="sw-mobile-card__info"><strong>{r.serviceObjectName} · {r.serviceProjects?.join("、") || r.serviceProject || "未标注"}</strong></div>
@@ -500,7 +480,7 @@ export function RecordDrawer({ record: r, data, mutationsDisabled, onClose, onUp
   const sopTabs = [
   ];
 
-  const title = `${r.serviceObjectName ?? "待关联"} · ${formatDate(r.serviceDate)}`;
+  const title = `${r.serviceObjectName ?? "待关联"} · ${formatDateShort(r.serviceDate)}`;
 
   useEffect(() => {
     return () => { stopClip(); };

@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { useState, useCallback, useEffect } from "react";
 import { Search, X, ChevronDown, Plus, Smartphone, Battery, Clock, Shield, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
@@ -49,13 +50,6 @@ function badgeStatusTone(status: SmartBadgeStatus): string {
   if (status === "offline" || status === "low_battery" || status === "sync_delayed") return "warning";
   if (status === "lost") return "danger";
   return "muted";
-}
-
-function formatSyncTime(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 const canDisableOrLose = (s: SmartBadgeStatus) =>

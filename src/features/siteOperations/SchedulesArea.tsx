@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { formatDateWithDay, formatWindow } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -25,19 +26,6 @@ function scheduleTone(status: string): string {
   if (status === "unassigned") return "warning";
   return "muted";
 }
-
-function formatDate(d: string) {
-  const date = new Date(`${d}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return d;
-  const days = ["日", "一", "二", "三", "四", "五", "六"];
-  return `${date.getMonth() + 1}/${date.getDate()} 周${days[date.getDay()]}`;
-}
-
-function formatWindow(s: ServiceScheduleOccurrence) {
-  if (s.timeWindow?.label) return s.timeWindow.label;
-  return `${s.startTime ?? s.timeWindow?.start ?? ""}-${s.endTime ?? s.timeWindow?.end ?? ""}`;
-}
-
 
 type DrawerMode = { kind: "closed" } | { kind: "view"; schedule: ServiceScheduleOccurrence };
 
@@ -214,7 +202,7 @@ function ListView({ schedules, selectedId, onRowClick }: {
             <div className="sw-table__row sch-table__row" data-selected={selectedId === s.id} data-exception={s.planExceptionApplied} data-status={s.status} key={s.id}
               onClick={() => onRowClick(s)} role="row">
               <div role="cell" className="sch-cell-datetime">
-                <span className="sch-cell-date">{formatDate(s.serviceDate)}</span>
+                <span className="sch-cell-date">{formatDateWithDay(s.serviceDate)}</span>
                 <span className="sch-cell-time">{formatWindow(s)}</span>
               </div>
               <div role="cell" className="sw-table__cell-name">
@@ -237,7 +225,7 @@ function ListView({ schedules, selectedId, onRowClick }: {
         {schedules.map((s) => (
           <button className="sw-mobile-card" key={s.id} onClick={() => onRowClick(s)} type="button">
             <div className="sw-mobile-card__top">
-              <span className="sch-cell-date">{formatDate(s.serviceDate)}</span>
+              <span className="sch-cell-date">{formatDateWithDay(s.serviceDate)}</span>
               <StatusBadge tone={scheduleTone(s.status)}>{statusText[s.status] ?? s.status}</StatusBadge>
             </div>
             <div className="sw-mobile-card__info"><strong>{s.serviceObjectName} · {s.serviceProject}</strong></div>
@@ -289,8 +277,8 @@ function CalendarView({ schedules, onSelect }: { schedules: ServiceScheduleOccur
     setBaseDate(d);
   };
 
-  const title = mode === "day" ? formatDate(fmtKey(baseDate))
-    : mode === "week" ? `${formatDate(fmtKey(days[0]))} — ${formatDate(fmtKey(days[days.length - 1]))}`
+  const title = mode === "day" ? formatDateWithDay(fmtKey(baseDate))
+    : mode === "week" ? `${formatDateWithDay(fmtKey(days[0]))} — ${formatDateWithDay(fmtKey(days[days.length - 1]))}`
     : `${baseDate.getFullYear()}年${baseDate.getMonth() + 1}月`;
 
   const getSlotTop = (s: ServiceScheduleOccurrence) => {
@@ -458,7 +446,7 @@ function MapView({ schedules, onSelect }: { schedules: ServiceScheduleOccurrence
           const popupHtml = loc.items.map(s =>
             `<div style="cursor:pointer;padding:5px 0;border-bottom:1px solid #eee;font-size:13px" data-schedule-id="${s.id}">
               <strong>${s.serviceObjectName}</strong> · ${s.serviceProject}<br/>
-              <small style="color:#6B7280">${formatDate(s.serviceDate)} · ${formatWindow(s)} · ${s.assignedSocialWorkerName ?? "未分配"}</small>
+              <small style="color:#6B7280">${formatDateWithDay(s.serviceDate)} · ${formatWindow(s)} · ${s.assignedSocialWorkerName ?? "未分配"}</small>
             </div>`
           ).join("");
           marker.bindPopup(`<div style="min-width:220px;padding:2px">${popupHtml}</div>`);
@@ -526,7 +514,7 @@ function MapView({ schedules, onSelect }: { schedules: ServiceScheduleOccurrence
             </div>
             {items.map(s => (
               <button className="sch-map__item" key={s.id} onClick={() => onSelect(s)} type="button">
-                <span>{s.serviceObjectName} · {s.serviceProject} · {formatDate(s.serviceDate)}</span>
+                <span>{s.serviceObjectName} · {s.serviceProject} · {formatDateWithDay(s.serviceDate)}</span>
                 <StatusBadge tone={scheduleTone(s.status)} style={{ fontSize: 11, padding: "2px 6px" }}>{statusText[s.status]}</StatusBadge>
               </button>
             ))}
@@ -633,7 +621,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
     : workerOptions;
 
   return (
-    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDate(s.serviceDate)}`} actions={cancelAction}>
+    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDateWithDay(s.serviceDate)}`} actions={cancelAction}>
       <div className="dp-card">
         <div className="dp-card__body">
           <div className="dp-section">
@@ -664,7 +652,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
 
               {/* 服务时间 — floating popover edit with react-datepicker */}
               <div className="dp-field dp-field--editable"><dt style={{ display: "flex", alignItems: "center", gap: 4 }}>服务时间{canAdjust && !mutationsDisabled && !editingTime && <button className="dp-section__edit-btn" onClick={startEditTime} type="button" title="调整时间"><Edit3 size={12} /></button>}</dt><dd>
-                {`${formatDate(s.serviceDate)} ${formatWindow(s)}`}
+                {`${formatDateWithDay(s.serviceDate)} ${formatWindow(s)}`}
                 {editingTime && (
                   <div className="dp-field-popover" style={{ minWidth: 340 }}>
                     <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>

@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { formatTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -91,13 +92,6 @@ function matchStateFilter(obj: ServiceObject, filter: StateFilter): boolean {
   return true;
 }
 
-
-function formatTime(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-}
 
 /* ==========================================
    Page-level components (unchanged)

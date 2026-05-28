@@ -1,4 +1,5 @@
 import { useEscClose } from "./useEscClose";
+import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { useState, useCallback, useEffect } from "react";
@@ -50,14 +51,6 @@ function badgeStatusTone(status: string) {
   if (status === "offline" || status === "sync_delayed" || status === "low_battery") return "warning";
   return "muted";
 }
-
-function formatSyncTime(iso?: string) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
 
 export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutateProp, initialSearch }: { resource?: Resource<SocialWorkersResponse>; onMutate?: () => void; initialSearch?: string } = {}) {
   const ctxData = useSiteOpsData();
