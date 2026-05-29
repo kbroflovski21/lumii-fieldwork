@@ -8,6 +8,7 @@ import { ADMIN_COMMANDS, HeaderCopilotInput } from "../features/siteOperations/C
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { QualityPage } from "../quality/QualityPage";
 import { GY_AREA_TO_PATH } from "../router";
+import { DetailPageProvider, useDetailEntity } from "../shared/DetailPageContext";
 import "../features/siteOperations/siteOperations.css";
 import "../shared/shell-profile.css";
 
@@ -37,7 +38,7 @@ function pathToView(pathname: string): View {
   return "dashboard";
 }
 
-export function QualityLayout() {
+function QualityLayoutInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,17 +55,26 @@ export function QualityLayout() {
     });
   }, []);
 
+  const [refetchKey, setRefetchKey] = useState(0);
+  const qualityRefetch = useCallback(() => setRefetchKey(k => k + 1), []);
+
   const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
   const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
     agentId: "lumii-goldenyears",
     sessionId: "copilot:admin",
     getToken,
+    onRefetch: qualityRefetch,
   });
 
+  const detailEntity = useDetailEntity();
   const sendWithContext = useCallback((msg: string) => {
     const label = ADMIN_NAV.find(n => n.id === activeView)?.label ?? "质量总览";
-    handleSend(`[ctx:${label}] ${msg}`);
-  }, [activeView, handleSend]);
+    if (detailEntity) {
+      handleSend(`[ctx:${label}/${detailEntity.entityName}/${detailEntity.entityId}] ${msg}`);
+    } else {
+      handleSend(`[ctx:${label}] ${msg}`);
+    }
+  }, [activeView, detailEntity, handleSend]);
 
   const openCopilotWithMessage = useCallback((msg: string) => {
     setCopilotOpen(true);
@@ -127,7 +137,7 @@ export function QualityLayout() {
         {/* Main content */}
         <main className="site-operations-main site-operations-main--layout">
           <div className="site-operations-content">
-            <QualityPage activeView={activeView} onSelectView={handleSelectView} onNavigate={handleCopilotNavigate} />
+            <QualityPage activeView={activeView} onSelectView={handleSelectView} onNavigate={handleCopilotNavigate} refetchKey={refetchKey} />
             <Outlet />
           </div>
         </main>
@@ -154,5 +164,13 @@ export function QualityLayout() {
         )}
       </div>
     </div>
+  );
+}
+
+export function QualityLayout() {
+  return (
+    <DetailPageProvider>
+      <QualityLayoutInner />
+    </DetailPageProvider>
   );
 }

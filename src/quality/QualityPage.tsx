@@ -259,8 +259,8 @@ const VIEW_LABELS: Record<View, string> = {
 
 const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard", feishu: "feishu" };
 
-export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: onNavigateProp }: {
-  activeView?: View; onSelectView?: (v: string) => void; onNavigate?: (area: string, params: Record<string, string>) => void;
+export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: onNavigateProp, refetchKey }: {
+  activeView?: View; onSelectView?: (v: string) => void; onNavigate?: (area: string, params: Record<string, string>) => void; refetchKey?: number;
 } = {}) {
   const { user } = useAuth();
   const { id: routeId } = useParams();
@@ -314,16 +314,16 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
         <SupervisorContent />
       ) : showingDetail ? (
         <>
-          {view === "sites" && <SitesView />}
-          {view === "users" && <UsersView />}
+          {view === "sites" && <SitesView refetchKey={refetchKey} />}
+          {view === "users" && <UsersView refetchKey={refetchKey} />}
         </>
       ) : view === "feishu" ? (
         <FeishuView />
       ) : (
         <div className="quality-content">
           {view === "dashboard" && <DashboardView />}
-          {view === "sites" && <SitesView />}
-          {view === "users" && <UsersView />}
+          {view === "sites" && <SitesView refetchKey={refetchKey} />}
+          {view === "users" && <UsersView refetchKey={refetchKey} />}
         </div>
       )}
     </div>
@@ -741,7 +741,7 @@ interface SiteData {
   operators: Array<{ id: string; username: string; name: string; role: string }>;
 }
 
-function SitesView() {
+function SitesView({ refetchKey }: { refetchKey?: number }) {
   const { token } = useAuth();
   const { id: routeId } = useParams();
   const navigate = useNavigate();
@@ -768,7 +768,7 @@ function SitesView() {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { fetchSites(); }, [fetchSites]);
+  useEffect(() => { fetchSites(); }, [fetchSites, refetchKey]);
 
   const openSite = useCallback((s: SiteData) => { setEditingSite(false); navigate(`/admin/sites/${s.id}`); }, [navigate]);
   const openSiteEdit = useCallback((s: SiteData) => { setEditingSite(true); navigate(`/admin/sites/${s.id}`); }, [navigate]);
@@ -1154,7 +1154,7 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
   careworker: "护理员",
 };
 
-function UsersView() {
+function UsersView({ refetchKey }: { refetchKey?: number }) {
   const { token } = useAuth();
   const { id: routeId } = useParams();
   const navigate = useNavigate();
@@ -1190,7 +1190,7 @@ function UsersView() {
     setLoading(false);
   }, [token]);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers, refetchKey]);
 
   const openDetail = useCallback((u: QualityUser, editMode = false) => { setInitialEditing(editMode); navigate(`/admin/users/${u.id}`); }, [navigate]);
   const closeDetail = useCallback(() => { setDetailUser(null); setInitialEditing(false); navigate("/admin/users"); }, [navigate]);
