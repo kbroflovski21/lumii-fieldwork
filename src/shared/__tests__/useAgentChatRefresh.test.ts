@@ -39,6 +39,6 @@ describe("stripRefreshMarker", () => {
     const input = "✅ 已更新\n[gy:refresh]\n额外信息";
     const result = stripRefreshMarker(input);
     expect(result.shouldRefresh).toBe(true);
-    expect(result.content).toBe("✅ 已更新\n额外信息");
+    expect(result.content).toBe("✅ 已更新\n\n额外信息");
   });
 });

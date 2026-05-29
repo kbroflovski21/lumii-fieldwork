@@ -164,10 +164,12 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken, onRefetch }
           });
           break;
 
-        case "stream_chunk":
+        case "stream_chunk": {
           if (frame.content?.startsWith(PROGRESS_PREFIX)) break;
-          setMessages((prev) => prev.map((m) => m.id === frame.msg_id ? { ...m, content: frame.content } : m));
+          const chunkContent = stripRefreshMarker(frame.content ?? "").content;
+          setMessages((prev) => prev.map((m) => m.id === frame.msg_id ? { ...m, content: chunkContent } : m));
           break;
+        }
 
         case "stream_end": {
           let endContent = frame.content;
@@ -259,7 +261,7 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken, onRefetch }
 export function stripRefreshMarker(content: string): { content: string; shouldRefresh: boolean } {
   const marker = "[gy:refresh]";
   if (!content.includes(marker)) return { content, shouldRefresh: false };
-  const cleaned = content.replace(/\[gy:refresh\]/g, "").replace(/\n{2,}/g, "\n").trim();
+  const cleaned = content.replace(/\[gy:refresh\]/g, "").replace(/\n{3,}/g, "\n\n").trim();
   return { content: cleaned, shouldRefresh: true };
 }
 
