@@ -16,6 +16,7 @@ interface UseAgentChatOptions {
   sessionId: string;
   siteId?: string;
   getToken: () => string;
+  onRefetch?: () => void;
 }
 
 interface UseAgentChatReturn {
@@ -28,7 +29,7 @@ interface UseAgentChatReturn {
   endRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentChatOptions): UseAgentChatReturn {
+export function useAgentChat({ agentId, sessionId, siteId, getToken, onRefetch }: UseAgentChatOptions): UseAgentChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [sending, setSending] = useState(false);
@@ -121,28 +122,39 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
           turnActiveRef.current = false;
           setConnected(frame.connected);
           setWip(frame.wip);
-          setMessages(frame.messages.map(toMessage));
+          setMessages(frame.messages.map((m: any) => {
+            if (m.role === "assistant" && m.content) {
+              const { content } = stripRefreshMarker(m.content);
+              return toMessage({ ...m, content });
+            }
+            return toMessage(m);
+          }));
           break;
 
-        case "message":
+        case "message": {
           if (frame.content?.startsWith(PROGRESS_PREFIX)) break;
+          let frameContent = frame.content;
+          if (frame.role === "assistant" && frameContent) {
+            const { content: stripped, shouldRefresh } = stripRefreshMarker(frameContent);
+            frameContent = stripped;
+            if (shouldRefresh && onRefetch) onRefetch();
+          }
           setMessages((prev) => {
-            // Dedup by message ID
             if (prev.some((m) => m.id === frame.id)) return prev;
-            // Echo dedup: match optimistic user bubble by content (strip [ctx:] prefix)
             if (frame.role === "user") {
-              const stripped = (frame.content ?? "").replace(/^\[ctx:[^\]]*\]\s*/, "");
-              const idx = prev.findIndex((m) => m.sendStatus === "sending" && (m.content === frame.content || m.content === stripped) && m.role === "user");
+              const rawContent = (frameContent ?? "").replace(/^\[ctx:[^\]]*\]\s*/, "");
+              const idx = prev.findIndex((m) => m.sendStatus === "sending" && (m.content === frameContent || m.content === rawContent) && m.role === "user");
               if (idx >= 0) {
                 const updated = [...prev];
                 updated[idx] = { ...updated[idx], id: frame.id, sendStatus: "sent", timestamp: frame.timestamp };
                 return updated;
               }
             }
-            return [...prev, toMessage(frame)];
+            return [...prev, toMessage({ ...frame, content: frameContent })];
           });
           setSending(false);
           break;
+        }
 
         case "stream_start":
           if (frame.content?.startsWith(PROGRESS_PREFIX)) break;
@@ -157,10 +169,17 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
           setMessages((prev) => prev.map((m) => m.id === frame.msg_id ? { ...m, content: frame.content } : m));
           break;
 
-        case "stream_end":
-          setMessages((prev) => prev.map((m) => m.id === frame.msg_id ? { ...m, content: frame.content, isStreaming: false, msgType: "text" } : m));
+        case "stream_end": {
+          let endContent = frame.content;
+          if (endContent) {
+            const { content: stripped, shouldRefresh } = stripRefreshMarker(endContent);
+            endContent = stripped;
+            if (shouldRefresh && onRefetch) onRefetch();
+          }
+          setMessages((prev) => prev.map((m) => m.id === frame.msg_id ? { ...m, content: endContent, isStreaming: false, msgType: "text" } : m));
           setSending(false);
           break;
+        }
 
         case "turn_active":
           turnActiveRef.current = frame.active === true;
@@ -178,7 +197,13 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
           break;
 
         case "history":
-          setMessages((prev) => [...frame.messages.map(toMessage), ...prev]);
+          setMessages((prev) => [...frame.messages.map((m: any) => {
+            if (m.role === "assistant" && m.content) {
+              const { content } = stripRefreshMarker(m.content);
+              return toMessage({ ...m, content });
+            }
+            return toMessage(m);
+          }), ...prev]);
           break;
 
         case "error":
@@ -195,7 +220,7 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
       clearInterval(healthCheckTimer);
       ws?.close();
     };
-  }, [agentId, sessionId, siteId, getToken]);
+  }, [agentId, sessionId, siteId, getToken, onRefetch]);
 
   const handleSend = useCallback((content: string) => {
     if (!content.trim() || !wsRef.current || wsRef.current.readyState !== 1) return;
@@ -229,6 +254,13 @@ export function useAgentChat({ agentId, sessionId, siteId, getToken }: UseAgentC
   }, []);
 
   return { messages, connected, sending, wip, handleSend, sendCardAction, endRef };
+}
+
+export function stripRefreshMarker(content: string): { content: string; shouldRefresh: boolean } {
+  const marker = "[gy:refresh]";
+  if (!content.includes(marker)) return { content, shouldRefresh: false };
+  const cleaned = content.replace(/\[gy:refresh\]/g, "").replace(/\n{2,}/g, "\n").trim();
+  return { content: cleaned, shouldRefresh: true };
 }
 
 function toMessage(row: any): ChatMessage {
