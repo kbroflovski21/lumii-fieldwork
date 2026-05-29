@@ -23,7 +23,7 @@ Before writing any UI code, check if a shared component already exists:
 | Inline field editing | `useInlineEdit(initialValue, onSave)` | manual `editing`/`draft`/`save` state |
 | URL detail sync | `useRouteDetail(basePath, items, getId)` | manual `useParams` + `useEffect` |
 | ESC key close | `useEscClose(onClose)` | manual keydown listener |
-| Data fetching | `useFetch<T>(url, deps)` | manual `authFetch().then().then()` |
+| Data fetching | `useFetch<T>(url, deps, fetchFn)` | manual `fetch().then().then()` chains |
 | Clipboard copy | `useCopyToClipboard()` | manual textarea + execCommand |
 | Date formatting | `formatDateWithDay()` / `formatSyncTime()` etc. | local format functions |
 
@@ -45,7 +45,7 @@ Detail pages use `DetailPageShell` + `dp-card` + `dp-fields` CSS system. See `do
 - Shared components: `src/shared/components/`
 - Shared hooks: `src/shared/hooks/`
 - Shared utils: `src/shared/utils/`
-- CSS systems: `src/shared/detail-page.css`, `src/shared/utilities.css`
+- CSS systems: `src/shared/detail-page.css`
 - Server: `server/`
 - Database schema: `prisma/schema.prisma`
 - Tests: `src/shared/__tests__/` (107 tests, `npx vitest run src/shared/`)

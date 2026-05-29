@@ -903,11 +903,10 @@ bottom drawer: header + KPI group + attention list + action entry list + activit
 
 ```
 src/shared/
-  components/    ← React 组件
-  hooks/         ← Custom hooks
-  utils/         ← 纯函数工具
-  utilities.css  ← CSS 工具类
-  detail-page.css ← Detail Page 样式系统
+  components/    ← React 组件（StatusBadge, AvatarInitial, FilterDropdown, EmptyState, OperationalBanner, ConfirmAction, ListToolbar）
+  hooks/         ← Custom hooks（useInlineEdit, useRouteDetail, useEscClose, useFetch, useCopyToClipboard）
+  utils/         ← 纯函数工具（dateTimeUtils）
+  detail-page.css ← Detail Page 样式系统（dp-* classes）
   DetailPageShell.tsx  ← Detail Page 布局壳
   AddressMap.tsx       ← 地图组件
 ```
@@ -1111,15 +1110,16 @@ useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
 #### useFetch — 数据获取
 
 ```tsx
-const { data, loading, error, refetch } = useFetch<{ items: T[] }>("/api/endpoint", [depId]);
+const { data, loading, error, refetch } = useFetch<{ items: T[] }>("/api/endpoint", [depId], authFetch);
 ```
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `url` | string \| null | null 时跳过请求 |
 | `deps?` | unknown[] | 依赖变化时重新请求 |
+| `fetchFn?` | `(url: string) => Promise<Response>` | 自定义 fetch 函数，默认 `fetch` |
 
-内部使用 `authFetch`，自动处理竞态（version counter）。返回 `{ data, loading, error, refetch }`。
+自动处理竞态（version counter）。返回 `{ data, loading, error, refetch }`。传入 `authFetch` 可实现带鉴权请求。
 
 #### useCopyToClipboard — 复制到剪贴板
 
@@ -1143,18 +1143,7 @@ const { copy, copied } = useCopyToClipboard();
 
 所有函数对无效输入返回原始值或空字符串，不抛异常。
 
-### 13.4 CSS 工具类（`src/shared/utilities.css`）
-
-| Class | 效果 |
-|-------|------|
-| `.btn--compact` | height 28px, font-size 12px |
-| `.btn--xs` | height 26px, font-size 11px |
-| `.flex-end` | flex + justify-content: flex-end |
-| `.flex-end-gap-8` | flex + gap 8px + flex-end |
-| `.flex-center-gap-8` | flex + align-items center + gap 8px |
-| `.mt-12` | margin-top 12px |
-
-### 13.5 使用规则
+### 13.4 使用规则
 
 1. **新增页面必须优先使用共享组件**。不在业务文件中重新实现 StatusBadge、AvatarInitial、FilterDropdown 等已有组件。
 2. **新增组件先补充本节**。如果需要本节未定义的可复用 UI element，先在此处定义接口和规范，再实现。
