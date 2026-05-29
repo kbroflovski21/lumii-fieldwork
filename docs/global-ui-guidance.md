@@ -1,7 +1,7 @@
 # Lumii Fieldwork 全局 UI 规范
 
 状态：全局视觉与 UI element 基线
-日期：2026-05-15
+日期：2026-05-28
 适用范围：产品壳、视觉 token、通用 UI element、响应式和视觉验收规则
 
 ## 1. 文档边界
@@ -32,7 +32,7 @@ Fieldwork 是助手优先的工作台界面。视觉应服务高频操作、快�
 - 层级靠布局、字号、色彩和留白建立，不靠堆叠阴影。
 - 业务列表优先使用紧凑行、rich row 或表格，不把每一行做成重卡片。
 - 操作按钮、状态标签、筛选 chip、指标值必须视觉语义分明。
-- 详情和复杂操作进入 drawer、modal 或页面明确允许的 `Inline Detail Panel`，不塞进列表行。
+- 详情和复杂操作进入 Detail Page（首选）、drawer、modal 或页面明确允许的 `Inline Detail Panel`，不塞进列表行。
 - 每个屏幕最多一层强调面板；禁止阴影 panel 套阴影 panel。
 
 反模式：
@@ -43,6 +43,7 @@ Fieldwork 是助手优先的工作台界面。视觉应服务高频操作、快�
 - 状态标签和按钮使用同一种蓝色 pill 样式。
 - 把详情页内容直接接在列表下方。
 - 用巨大标题占据操作界面视觉中心。
+- Detail Modal 弹窗覆盖列表（已废弃，改用 Detail Page 全页替换列表）。
 
 ## 3. 视觉 Token
 
@@ -102,6 +103,8 @@ Fieldwork 是助手优先的工作台界面。视觉应服务高频操作、快�
 - 工作台内部不用 hero title。
 - 右侧面板标题使用 panel title，不得大于 page title。
 - KPI 数字可以成为视觉重点，但 KPI label 必须弱化。
+- 页面标题和副标题使用**水平 inline 布局**（`display: flex; align-items: baseline; gap: 12px`），不使用上下堆叠。副标题 13px muted 与标题同行显示。
+- 页面 header 使用 `min-height: 36px` 保证有无操作按钮时高度一致。
 
 字体实现规则：
 
@@ -123,7 +126,7 @@ Fieldwork 是助手优先的工作台界面。视觉应服务高频操作、快�
 | `--space-sm` | `8px` | 紧凑元素间距 |
 | `--space-md` | `12px` | 行内和卡片间距 |
 | `--space-lg` | `16-20px` | 面板内边距、section 间距 |
-| `--space-page` | `24px` | 页面 padding |
+| `--space-page` | `16px` | 页面内容区 padding（紧凑模式） |
 | `--shadow-raised` | `0 4px 12px rgba(0,0,0,0.06)` | hover 浮起效果（轻量） |
 | `--shadow-drawer` | `-12px 0 40px rgba(0,0,0,0.1)` | 桌面端 drawer 阴影 |
 | `--shadow-drawer-mobile` | `0 -16px 40px rgba(0,0,0,0.12)` | 手机端底部 drawer 阴影 |
@@ -185,6 +188,32 @@ Fieldwork 是助手优先的工作台界面。视觉应服务高频操作、快�
 - 36px 圆形，姓名首字母，颜色从姓名哈希生成
 - 点击弹出向上菜单：用户名、角色、修改密码、退出登录
 - z-index: 侧栏 20, 菜单 100（确保不被内容区覆盖）
+
+### 4.3.3 侧栏子菜单（Sub-menu）
+
+当一个导航项包含多个相关子视图时，使用侧栏子菜单展开子项列表。
+
+结构：
+
+```text
+侧栏展开模式：
+  [Icon] 服务记录  ▼          ← 父菜单（激活时显示 ChevronDown）
+         服务记录              ← 子菜单项
+         录音记录              ← 子菜单项
+  [Icon] 其他菜单  ▸          ← 未激活父菜单显示 ChevronRight
+
+侧栏收缩模式：
+  [Icon]                      ← 不显示子菜单，只显示图标
+```
+
+规则：
+
+- 父菜单项包含 `children` 数组定义子项。
+- 子菜单仅在侧栏展开且父菜单激活时显示。
+- 子项缩进 `padding-left: 30px`，字号 12px，间距 1px。
+- 激活子项使用 `--accent` 色 + `font-weight: 600`，不使用背景色。
+- 展开指示符：激活时 `ChevronDown`（14px），未激活时 `ChevronRight`（14px），颜色 `--muted`。
+- 子菜单各子项拥有独立 URL 路由，可直接通过 URL 访问。
 
 ### 4.4 Mobile Bottom Navigation
 
@@ -498,85 +527,121 @@ table container (white, --line border, --radius-lg)
 
 ## 8. Detail Elements
 
-### 8.1 Detail Modal
+### 8.1 Detail Page（主模式）
 
-Detail Modal 是业务 tab 中展示列表选中项详情的主要 UI element。取代传统 Drawer，提供更大的信息展示空间和更好的信息层级。
+Detail Page 是业务 tab 中展示列表选中项详情的主要 UI element。使用条件渲染完全替换列表内容（非 overlay），通过面包屑导航返回列表。
 
-所有业务 tab（服务人员、设备、服务对象、服务排期、服务记录）统一使用 Detail Modal。
+所有业务 tab（服务人员、设备、服务对象、服务排期、服务记录、录音记录）和 org admin 页面（站点、用户）统一使用 Detail Page。
 
-桌面端：
+#### 条件渲染模式
 
-- 居中弹出，固定高度 92vh，宽度自适应（桌面端约 680px）。
-- `--surface` 白底 + `--radius-lg` 圆角 + scrim overlay。
-- 不使用右侧滑入。
-
-手机端：
-
-- 全屏 Modal，底部圆角。
-- 最大高度 92vh，内容区内部滚动。
-
-通用结构（CSS class `so-modal`）：
-
-```text
-┌──────────────────────────────────────────────┐
-│ 摘要卡 (so-modal__summary)                    │
-│   avatar + 标题 + 副标题/状态 + 关闭按钮       │
-│   padding 14px, 标题 17px                     │
-├──────────────────────────────────────────────┤
-│ Tab 导航 (so-modal__tabs)                     │
-│   tab 按钮组（2-4 个 tab）                     │
-├──────────────────────────────────────────────┤
-│ 内容区 (so-modal__content, scrollable)        │
-│   概览网格 / tab 内容                          │
-├──────────────────────────────────────────────┤
-│ 底部操作栏 (so-modal__footer, 可选)            │
-│   左: 破坏性操作  右: 主要操作                  │
-└──────────────────────────────────────────────┘
+```tsx
+// 列表 OR 详情页，不同时渲染
+{routeId ? (
+  routeId === "new"
+    ? <CreatePage />
+    : <DetailPage object={selectedObj} />
+) : (
+  <ListContent />
+)}
 ```
 
-变体：
+URL 带有 `:id` 参数时渲染详情页，否则渲染列表。浏览器后退 → `routeId` 变为 undefined → 列表恢复。
 
-| 变体 | CSS class | 用途 | 特殊结构 |
-| --- | --- | --- | --- |
-| 查看模式 | `so-modal--view` | 查看详情 + tab 切换 | 摘要卡 + tab + 内容 + footer |
-| 表单模式 | `so-modal--form` | 编辑/创建 | 摘要卡 + 表单卡 (`so-form-cards`) + footer |
-| 事件卡片 | `sch-event-modal` | 排期详情 | 状态色 banner + 信息卡 + 操作栏 + 详情 + footer |
-| 无 footer | `rec-modal--no-footer` | 服务记录 | header（含操作按钮）+ tab + 内容 |
+#### DetailPageShell 通用结构（CSS class `detail-page`）
 
-概览网格规则（`so-modal__overview`）：
+```text
+┌──────────────────────────────────────────────────────┐
+│ ← 长者 / 李明                                        │  breadcrumb header
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │ Tab 导航 (dp-tabs, 可选)                        │  │
+│  │   概览 | 服务计划 | 历史记录 | 洞察              │  │
+│  ├────────────────────────────────────────────────┤  │
+│  │ 卡片内容区 (dp-card__body)                      │  │
+│  │   section 分组 → 字段网格 (dp-fields)           │  │
+│  │   inline 编辑 → 浮动 popover (dp-field-popover) │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+│  [提交] [归档]                                        │  卡片底部操作按钮
+│                                                      │
+└──────────────────────────────────────────────────────┘
+```
 
-- 使用 CSS Grid 3 列布局：`grid-template-columns: 1fr 1fr 1fr`
-- 字段间用右边框（`--line`）分隔，最后一列无右边框
-- 字段按业务含义分组，每行填满 3 个字段
-- full-width 字段使用 `--full` class 跨 3 列
-- 手机端（<768px）自动降级为单列
+Props:
 
-内联替换模式：
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `parentLabel` | string | 面包屑父级标签（"长者"、"服务人员"等） |
+| `parentPath` | string | 点击父级标签/返回箭头时导航的路径 |
+| `title` | string | 当前对象名称或"新增" |
+| `actions` | ReactNode? | 可选的 breadcrumb 右侧按钮（仅用于状态操作） |
+| `children` | ReactNode | 详情页内容 |
 
-- 当 Modal 内需要查看关联服务记录时，不叠加第二层 Modal
-- 使用 early return 模式：`viewingRecord` 状态触发组件 early return，RecordDrawer 完全替换当前 Modal
-- 返回按钮（"← 返回 XXX"）清除 `viewingRecord` 状态回到原 Modal
+#### Breadcrumb 行为
 
-摘要卡样式规范：
+- 点击 `←` 箭头或父级标签：`navigate(parentPath)` 返回列表。
+- 父级标签：14px `--muted` 色，可点击。
+- 分隔符：` / `，`--line` 色。
+- 当前标题：15px / 600，`--text` 色。
+- Breadcrumb header padding: `12px 16px`，底部 1px `--line` 边框。
 
-- Avatar：per-name 彩色底 + 首字母，40-48px 圆角方形
-- 标题：17px / 700
-- 副标题：12-13px muted
-- 关闭按钮：28-32px icon button
-- Padding：14px
-- 底部无分割线（直接接 tab 导航）
+#### dp-card 卡片系统
 
-规则：
+| CSS class | 用途 | 样式 |
+|-----------|------|------|
+| `.dp-card` | 白色卡片容器 | 白底 + `--line` 边框 + `--radius-lg`（12px） 圆角 |
+| `.dp-tabs` | 卡片顶部 tab 导航 | padding `0 24px`，底部 `--line` 边框，顶部圆角 12px |
+| `.dp-tabs__btn` | tab 按钮 | 13px/600，底部 2px 边框，激活态 `--accent` 色 |
+| `.dp-card__body` | 卡片内容区 | padding 20px |
+| `.dp-section` | 内容分区 | 底部 `--line-subtle` 分割线 + 20px margin/padding |
+| `.dp-section__head` | 分区标题行 | flex，gap 8px，含可选编辑按钮 |
+| `.dp-section__title` | 分区标题 | 14px/600 |
+| `.dp-fields` | 字段网格 | 3 列 grid `repeat(3, 1fr)`，gap `16px 24px` |
+| `.dp-field` | 字段项 | flex column，`dt` 12px/500 muted + `dd` 14px |
+| `.dp-field--full` | 全宽字段 | `grid-column: 1 / -1` |
+| `.dp-field--editable` | 可编辑字段锚点 | `position: relative`（为浮动 popover 提供定位参考） |
 
-- 所有 Detail Modal 高度固定 92vh，不随内容动态调整
-- tab 切换不改变 Modal 尺寸
-- 列表行不展示 Modal 内的任何操作按钮
-- Modal 关闭后列表布局不跳动
-- 编辑、归档、绑定等 detail actions 放在 Modal footer 或 header 内
+手机端（<768px）：
+
+- `dp-fields` 降级为单列 `grid-template-columns: 1fr`
+- `dp-card` 圆角缩小为 8px
+- `dp-tabs` padding 缩小为 `0 12px`，字号 12px
+- `dp-card__body` padding 缩小为 16px
+- breadcrumb header 的 actions 折行到第二行
+
+#### 操作按钮位置
+
+- **主动作按钮**（提交、保存、激活等）放在**卡片底部**（`dp-card__body` 内），使用 primary button。
+- **状态操作**（归档、停用等破坏性操作）可放在 breadcrumb actions 区域，使用 danger ghost button。
+- 不使用"取消"按钮 — 面包屑返回按钮即为取消操作。
+- 同一个 dp-card 底部最多一个 primary button + 一个 secondary button。
+
+#### 创建页面
+
+新增页面使用 `routeId === "new"` 判断，复用 DetailPageShell 包裹表单。表单提交按钮在卡片底部。
+
+### 8.1.1 Detail Modal（已废弃，仅保留参考）
+
+> **注意：** Detail Modal 模式已被 Detail Page 替代。以下内容仅作为历史参考。
+> 新建或修改详情展示一律使用 Detail Page（8.1）。
+> 仅 ConfirmDialog、ResetPasswordModal 等小型工具 modal 保留为弹窗。
+
+Detail Modal 曾是业务 tab 中展示列表选中项详情的主要 UI element。使用居中弹窗覆盖列表。
+
+通用结构（CSS class `so-modal`）：摘要卡 + Tab 导航 + 内容区 + 底部操作栏。
+
+此模式的问题：
+
+- 弹窗覆盖列表，用户失去列表上下文。
+- URL 不反映详情状态，无法直接链接到具体详情页。
+- 嵌套详情需要复杂的 early return 替换逻辑。
+- 手机端全屏 modal 与 Detail Page 体验几乎相同，多了不必要的 scrim overlay。
 
 ### 8.2 对话记录（WeChat 风格）
 
-对话记录用于服务记录 Modal 的"录音 · 对话"tab 内，展示完整服务对话。采用 WeChat/飞书风格聊天气泡布局（CSS class `rec-chat`），直接在 tab 内显示，不需要额外弹窗。
+对话记录用于服务记录详情页的"录音 · 对话"tab 内，展示完整服务对话。采用 WeChat/飞书风格聊天气泡布局（CSS class `rec-chat`），直接在 tab 内显示，不需要额外弹窗。
 
 结构：
 
@@ -602,9 +667,50 @@ tab 内容区 (scrollable):
 - 对话按时间顺序排列
 - 无对话数据时不显示聊天区域
 
-### 8.3 Drawer（辅助模式）
+### 8.3 Floating Popover Inline Edit（Per-field 编辑）
 
-Drawer 作为辅助详情展示模式，仅在特定场景使用（如导出流程、快捷编辑）。业务 tab 的主详情展示统一使用 Detail Modal（8.1）。
+Floating Popover 是 Detail Page 中 per-field 编辑的标准模式。点击字段标签旁的编辑图标，弹出浮动面板（不影响页面布局），完成编辑后面板关闭。
+
+结构：
+
+```text
+dp-field--editable (position: relative)
+  dt: 字段标签 + 编辑图标按钮
+  dd: 字段值
+  dp-field-popover (position: absolute, top: 100%)
+    编辑控件（输入框 / 搜索下拉 / 日期选择器 / 地图）
+    dp-field-popover__actions: [取消] [保存]
+```
+
+样式规范（CSS class `dp-field-popover`）：
+
+- `position: absolute; top: 100%; left: 0` — 悬浮在字段下方
+- `z-index: 50` — 浮在其他字段之上但不遮挡面包屑
+- 白底 + `--line` 边框 + `border-radius: 10px`
+- `box-shadow: 0 8px 24px rgba(0,0,0,0.1)` — 中等阴影表示浮层
+- `min-width: 240px`，内部 `padding: 12px`
+- 操作按钮靠右（`justify-content: flex-end`），gap 6px
+
+编辑控件变体：
+
+| 控件类型 | 适用场景 | 实现 |
+|----------|----------|------|
+| 文本输入框 | 姓名、电话等简短字段 | `<input>` 32px 高，`--accent` 边框 |
+| 搜索下拉 | 人员选择等关联实体 | 文本过滤 + 列表选择，support 多行 |
+| 日期时间选择 | 服务日期和时间段 | `react-datepicker`，`dp-datepicker-input` 样式 |
+| 地图选择 | 地址字段 | 内联展开 leaflet 地图（不使用 popover） |
+
+规则：
+
+- 同一时刻最多一个 popover 打开，打开新的自动关闭旧的。
+- Popover 不挤压或推移页面其他元素。
+- 保存后立即调用 API 更新，无需全局"保存"按钮。
+- 搜索下拉必须支持文本过滤（不只是普通下拉框）。
+- 地址字段的地图使用内联展开模式（点击地图标记图标展开），不使用 popover。
+
+### 8.4 Drawer（辅助模式）
+
+Drawer 作为辅助详情展示模式，仅在特定场景使用（如导出流程、快捷编辑）。业务 tab 的主详情展示统一使用 Detail Page（8.1）。
 
 桌面端：
 
@@ -622,7 +728,7 @@ Drawer 作为辅助详情展示模式，仅在特定场景使用（如导出流�
 - 列表行不展示 drawer 内的任何操作按钮。
 - Drawer 关闭后列表布局不跳动。
 
-### 8.4 Inline Detail Panel
+### 8.5 Inline Detail Panel
 
 Inline detail panel 只在页面规格明确允许时使用。
 
@@ -735,10 +841,11 @@ bottom drawer: header + KPI group + attention list + action entry list + activit
 
 ### 10.1 Desktop
 
-- 主导航使用左侧 56px icon rail。
+- 主导航使用左侧 56px icon rail（展开时 200px，含子菜单）。
 - 主工作区应在首屏内形成稳定布局。
 - 右侧信息面板只用于首页或聊天首页。
-- 详情使用右侧 drawer。
+- 详情使用 Detail Page（全页替换列表），辅助 Drawer 仅用于特殊场景。
+- Detail Page 的 dp-fields 使用 3 列 grid 布局。
 
 ### 10.2 Mobile
 
@@ -746,8 +853,12 @@ bottom drawer: header + KPI group + attention list + action entry list + activit
 - 主工作区单列。
 - 右侧信息面板内容进入主区域 compact module 或底部 drawer。
 - Table 转换为 rich row。
-- Detail Modal 使用全屏模式，辅助 Drawer 使用底部 drawer。
+- Detail Page 的 dp-fields 降级为单列布局。
+- dp-card 圆角缩小为 8px。
+- Breadcrumb header actions 折行到第二行（`width: 100%`）。
+- 辅助 Drawer 使用底部 drawer。
 - 所有文本必须在容器内换行或截断，不允许溢出遮挡。
+- 注意 `grid-column` 值在移动端单列 grid 下需重置为 1（避免 `grid-column: 2` 在 1fr 布局下溢出）。
 
 ## 11. Accessibility 和 Fit
 
@@ -770,7 +881,285 @@ bottom drawer: header + KPI group + attention list + action entry list + activit
 - 状态 badge 和 button 是否视觉分离。
 - 表格是否只在需要比较时使用。
 - Rich row 是否有清晰主标题、元信息、状态、指标和单一入口。
-- Detail Modal 是否承载详情和复杂动作（主模式），Drawer 仅用于辅助场景。
+- Detail Page 是否使用 DetailPageShell 面包屑导航（主模式），不使用 Detail Modal 弹窗。
+- Detail Page 是否使用 dp-card + dp-fields 布局，不使用 so-modal 结构。
+- 面包屑点击是否正确导航回列表页（parentPath）。
+- 操作按钮是否在卡片底部（主动作）或 breadcrumb actions（状态操作），不在页面其他位置。
+- Floating popover 编辑面板是否悬浮显示，不推移页面元素。
+- 侧栏子菜单展开/收缩指示符是否正确显示。
 - 手机端是否将 table、右侧面板和 drawer 转换为对应移动形态。
+- 手机端 dp-fields 是否降级为单列。
+- 页面标题和副标题是否水平 inline 布局。
+- 所有内容区 padding 是否统一为 16px。
 - 页面是否没有巨大 hero 标题和营销式布局。
 - 文本是否在所有断点下不溢出、不遮挡。
+- 新增页面是否复用了共享组件库（Section 13），不重复实现已有组件。
+
+## 13. 共享组件库
+
+新增页面必须优先使用已提炼的共享组件、hooks 和工具函数，禁止在业务文件中重复实现已有功能。
+
+文件位置：`src/shared/`
+
+```
+src/shared/
+  components/    ← React 组件
+  hooks/         ← Custom hooks
+  utils/         ← 纯函数工具
+  utilities.css  ← CSS 工具类
+  detail-page.css ← Detail Page 样式系统
+  DetailPageShell.tsx  ← Detail Page 布局壳
+  AddressMap.tsx       ← 地图组件
+```
+
+### 13.1 UI 组件（`src/shared/components/`）
+
+#### StatusBadge — 状态标签
+
+```tsx
+import { StatusBadge } from "../shared/components/StatusBadge";
+
+<StatusBadge tone="success">在职</StatusBadge>
+<StatusBadge tone="warning" style={{ fontSize: 10 }}>待补全</StatusBadge>
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `tone` | string | `"success"` / `"warning"` / `"danger"` / `"accent"` / `"info"` / `"muted"` |
+| `children` | ReactNode | 显示文本 |
+| `style?` | CSSProperties | 可选内联样式覆盖 |
+
+CSS：`.sw-status-badge[data-tone]`。Tone 计算由业务方自行决定，组件只负责渲染。
+
+#### AvatarInitial — 姓名首字母头像
+
+```tsx
+import { AvatarInitial } from "../shared/components/AvatarInitial";
+
+<AvatarInitial name="张三" />           // 36px 默认
+<AvatarInitial name="李四" size="sm" /> // 28px 紧凑
+<AvatarInitial name="王五" size="lg" /> // 48px 大号
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `name` | string | 姓名，取第一个字符作为首字母 |
+| `size?` | `"sm"` / `"md"` / `"lg"` | 28px / 36px(默认) / 48px |
+| `className?` | string | 附加 CSS class |
+
+内置 6 色调色盘，基于姓名哈希确定性选色。CSS：`.sw-avatar`。
+
+导出 `avatarColor(name: string): { bg, text }` 供需要颜色值但不需要组件的场景。
+
+#### FilterDropdown — 筛选下拉框
+
+```tsx
+import { FilterDropdown } from "../shared/components/FilterDropdown";
+
+<FilterDropdown
+  onChange={(v) => setStatusFilter(v)}
+  options={[{ label: "全部", value: "" }, { label: "在职", value: "active" }]}
+  value={statusFilter}
+/>
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `onChange` | `(value: string) => void` | 选择回调 |
+| `options` | `Array<{ label, value }>` | 选项列表 |
+| `value` | string | 当前选中值，空字符串为未筛选 |
+
+CSS：`.sw-filter`，选中非默认值时 select 加 `.sw-filter--active`。
+
+#### EmptyState — 空状态 / 加载 / 错误
+
+```tsx
+import { EmptyState } from "../shared/components/EmptyState";
+
+<EmptyState icon={UserRound} description="数据加载中..." />
+<EmptyState icon={X} description={error} isError />
+<EmptyState icon={UserRound} title="暂无数据" description="点击新增" action={<button>新增</button>} />
+<EmptyState icon={Search} description="没有匹配结果" />
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `icon` | LucideIcon | 图标组件（size=32） |
+| `title?` | string | 粗体标题 |
+| `description?` | string | 说明文字 |
+| `action?` | ReactNode | 操作按钮 |
+| `isError?` | boolean | 为 true 时图标加 `--error` 样式 |
+
+CSS：`.sw-empty`，`.sw-empty__icon`，`.sw-empty__icon--error`。
+
+#### OperationalBanner — 操作权限提示
+
+```tsx
+import { OperationalBanner } from "../shared/components/OperationalBanner";
+
+<OperationalBanner
+  state={operationalState}
+  resourceLabel="服务人员"
+  readOnlyHint="可查看数据，新增、编辑等操作已禁用。"
+/>
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `state` | `{ unavailableMessage?, permission? }` | 操作状态 |
+| `resourceLabel` | string | 资源名称（"服务人员"、"设备"等） |
+| `readOnlyHint?` | string | 只读模式提示文案 |
+| `restrictedHint?` | string | 权限受限提示文案 |
+
+渲染逻辑：`unavailableMessage` → danger 横幅；`permission === "read_only"` → warning 横幅；`permission === "restricted"` → warning 横幅；否则 → null。
+
+CSS：`.sw-banner`，`.sw-banner--danger`，`.sw-banner--warning`。
+
+#### ConfirmAction — 二次确认操作按钮
+
+```tsx
+import { ConfirmAction } from "../shared/components/ConfirmAction";
+
+<ConfirmAction label="归档" onConfirm={handleArchive} buttonStyle={{ height: 28 }} />
+<ConfirmAction label="停用" tone="warning" onConfirm={handleDisable} />
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `label` | string | 按钮文案（"归档"、"停用"、"删除"） |
+| `confirmLabel?` | string | 确认文案，默认 `确认{label}` |
+| `tone?` | `"danger"` / `"warning"` | 默认 `"danger"` |
+| `onConfirm` | `() => void` | 确认回调 |
+| `disabled?` | boolean | 禁用触发按钮 |
+| `buttonStyle?` | CSSProperties | 按钮内联样式 |
+
+行为：点击 → 显示 `确认{label}？` + 确认/取消按钮 → 确认触发回调 → 取消恢复初始状态。
+
+#### ListToolbar — 搜索 + 筛选工具栏
+
+```tsx
+import { ListToolbar } from "../shared/components/ListToolbar";
+
+<ListToolbar
+  searchValue={query}
+  onSearchChange={setQuery}
+  searchPlaceholder="搜索姓名或电话..."
+  filters={<>
+    <FilterDropdown ... />
+    <FilterDropdown ... />
+  </>}
+  actions={<button>新增</button>}
+/>
+```
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `searchValue` | string | 搜索框值 |
+| `onSearchChange` | `(v: string) => void` | 搜索变化回调 |
+| `searchPlaceholder?` | string | 默认 `"搜索..."` |
+| `filters?` | ReactNode | 筛选区内容（FilterDropdown 组合） |
+| `actions?` | ReactNode | 右侧操作按钮 |
+
+CSS：`.sw-toolbar`，`.sw-search`，`.sw-toolbar__filters`。
+
+### 13.2 Hooks（`src/shared/hooks/`）
+
+#### useInlineEdit — 内联编辑状态管理
+
+```tsx
+const edit = useInlineEdit(
+  { name: obj.name, phone: obj.phone },
+  async (draft) => { await api.patch(obj.id, draft); }
+);
+// edit.editing, edit.draft, edit.setDraft, edit.startEdit, edit.cancel, edit.save, edit.saving
+```
+
+| 返回值 | 类型 | 说明 |
+|--------|------|------|
+| `editing` | boolean | 是否编辑中 |
+| `draft` | T | 编辑中的草稿值 |
+| `setDraft` | SetStateAction | 更新草稿 |
+| `startEdit()` | void | 进入编辑，复制初始值到草稿 |
+| `cancel()` | void | 取消编辑，重置草稿 |
+| `save()` | Promise | 调用 onSave，成功退出编辑，失败保持编辑 |
+| `saving` | boolean | 保存中 |
+
+#### useRouteDetail — URL ↔ 详情页状态同步
+
+```tsx
+const { routeId, selectedItem, isCreate, close, open, openCreate } =
+  useRouteDetail("/workers", workers, w => w.id);
+```
+
+| 返回值 | 类型 | 说明 |
+|--------|------|------|
+| `routeId` | string \| undefined | URL 中的 `:id` 参数 |
+| `selectedItem` | T \| undefined | 匹配的列表项 |
+| `isCreate` | boolean | `routeId === "new"` |
+| `close()` | void | navigate 到 basePath |
+| `open(id)` | void | navigate 到 `basePath/id` |
+| `openCreate()` | void | navigate 到 `basePath/new` |
+
+#### useEscClose — ESC 键关闭
+
+```tsx
+useEscClose(useCallback(() => { closeDrawer(); }, [closeDrawer]));
+```
+
+监听 Escape 按键，触发 onClose。组件卸载时自动清理。
+
+#### useFetch — 数据获取
+
+```tsx
+const { data, loading, error, refetch } = useFetch<{ items: T[] }>("/api/endpoint", [depId]);
+```
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `url` | string \| null | null 时跳过请求 |
+| `deps?` | unknown[] | 依赖变化时重新请求 |
+
+内部使用 `authFetch`，自动处理竞态（version counter）。返回 `{ data, loading, error, refetch }`。
+
+#### useCopyToClipboard — 复制到剪贴板
+
+```tsx
+const { copy, copied } = useCopyToClipboard();
+<button onClick={() => copy(text)}>{copied ? "✓ 已复制" : "复制"}</button>
+```
+
+`copied` 在复制后 1.5 秒自动重置为 false。使用 textarea fallback + Clipboard API。
+
+### 13.3 工具函数（`src/shared/utils/dateTimeUtils.ts`）
+
+| 函数 | 输入 | 输出 | 示例 |
+|------|------|------|------|
+| `formatDateWithDay(d)` | `"2026-05-28"` | `"5/28 周三"` | 排期列表 |
+| `formatDateShort(d)` | `"2026-05-28"` | `"5/28"` | 记录列表 |
+| `formatSyncTime(iso?)` | ISO string | `"5/28 14:30"` | 设备同步时间 |
+| `formatTime(iso?)` | ISO string | `"5/28 14:30"` (Asia/Shanghai) | 记录时间 |
+| `toBjStr(d)` | Date | `{ date, time, full }` | 北京时间转换 |
+| `formatWindow(s)` | timeWindow 对象 | `"上午"` 或 `"09:00-12:00"` | 时间段 |
+
+所有函数对无效输入返回原始值或空字符串，不抛异常。
+
+### 13.4 CSS 工具类（`src/shared/utilities.css`）
+
+| Class | 效果 |
+|-------|------|
+| `.btn--compact` | height 28px, font-size 12px |
+| `.btn--xs` | height 26px, font-size 11px |
+| `.flex-end` | flex + justify-content: flex-end |
+| `.flex-end-gap-8` | flex + gap 8px + flex-end |
+| `.flex-center-gap-8` | flex + align-items center + gap 8px |
+| `.mt-12` | margin-top 12px |
+
+### 13.5 使用规则
+
+1. **新增页面必须优先使用共享组件**。不在业务文件中重新实现 StatusBadge、AvatarInitial、FilterDropdown 等已有组件。
+2. **新增组件先补充本节**。如果需要本节未定义的可复用 UI element，先在此处定义接口和规范，再实现。
+3. **不修改共享组件的渲染输出**来适配单个页面。如需变体，通过 props 扩展（如 StatusBadge 的 `style` prop），不 fork 组件。
+4. **Detail Page 结构统一使用** `DetailPageShell` + `dp-card` + `dp-fields` CSS 系统（见 Section 8.1）。
+5. **列表页统一使用** `ListToolbar` + `FilterDropdown` + `EmptyState` 组合。
+6. **破坏性操作统一使用** `ConfirmAction` 二次确认模式。
+7. **Hooks 按需使用**：`useInlineEdit` 适用于简单字段编辑；`useRouteDetail` 适用于列表→详情 URL 同步；`useFetch` 适用于简单 GET 请求。
