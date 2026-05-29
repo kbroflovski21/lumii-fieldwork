@@ -101,6 +101,8 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   const [recordings, setRecordings] = useState<any[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(false);
   const [recordingsPage, setRecordingsPage] = useState(1);
+  const [recSearch, setRecSearch] = useState("");
+  const [recStatusFilter, setRecStatusFilter] = useState("");
   const RECORDINGS_PER_PAGE = 20;
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;
@@ -175,6 +177,17 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
     return true;
   });
 
+  const filteredRecordings = recordings.filter((rec: any) => {
+    if (recStatusFilter && rec.status !== recStatusFilter) return false;
+    if (recSearch) {
+      const q = recSearch.toLowerCase();
+      if (!(rec.workerName ?? "").toLowerCase().includes(q)
+        && !(rec.matchedServiceObjectName ?? "").toLowerCase().includes(q)
+        && !(rec.badgeId ?? "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
   const isLoading = resource.status === "loading" || resource.status === "idle";
   useEscClose(useCallback(() => { stopClip(); closeDrawer(); }, [closeDrawer]));
 
@@ -241,8 +254,26 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
 
             {viewMode === "recordings" && (
               <div className="sw-table-container">
+                <ListToolbar
+                  searchValue={recSearch}
+                  onSearchChange={(v) => { setRecSearch(v); setRecordingsPage(1); }}
+                  searchPlaceholder="搜索人员、长者或工牌..."
+                  filters={
+                    <FilterDropdown
+                      onChange={(v) => { setRecStatusFilter(v); setRecordingsPage(1); }}
+                      options={[
+                        { label: "全部状态", value: "" },
+                        { label: "已匹配", value: "matched" },
+                        { label: "待匹配", value: "pending_match" },
+                        { label: "未匹配", value: "unmatched" },
+                        { label: "处理中", value: "processing" },
+                      ]}
+                      value={recStatusFilter}
+                    />
+                  }
+                />
                 {recordingsLoading ? <EmptyState icon={FileText} description="录音记录加载中..." />
-                : recordings.length === 0 ? <EmptyState icon={FileText} description="暂无录音记录" />
+                : filteredRecordings.length === 0 ? <EmptyState icon={FileText} description={recordings.length === 0 ? "暂无录音记录" : "没有匹配的录音记录"} />
                 : (
                   <>
                     <div className="sw-table rec-table" role="table">
@@ -254,7 +285,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                         <span role="columnheader">时长</span>
                         <span role="columnheader">匹配状态</span>
                       </div>
-                      {recordings
+                      {filteredRecordings
                         .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
                         .map((rec: any) => {
                           const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
@@ -284,7 +315,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                     </div>
 
                     <div className="sw-mobile-list">
-                      {recordings
+                      {filteredRecordings
                         .slice((recordingsPage - 1) * RECORDINGS_PER_PAGE, recordingsPage * RECORDINGS_PER_PAGE)
                         .map((rec: any) => {
                           const statusLabels: Record<string, string> = { processing: "处理中", pending_match: "待匹配", matched: "已匹配", unmatched: "未匹配" };
@@ -308,11 +339,11 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
                         })}
                     </div>
 
-                    {recordings.length > RECORDINGS_PER_PAGE && (
+                    {filteredRecordings.length > RECORDINGS_PER_PAGE && (
                       <div style={{ display: "flex", justifyContent: "center", gap: 8, padding: "12px 0" }}>
                         <button className="sw-btn sw-btn--secondary" disabled={recordingsPage <= 1} onClick={() => setRecordingsPage(p => p - 1)}>上一页</button>
-                        <span style={{ fontSize: 13, color: "#64748B", lineHeight: "32px" }}>{recordingsPage} / {Math.ceil(recordings.length / RECORDINGS_PER_PAGE)}</span>
-                        <button className="sw-btn sw-btn--secondary" disabled={recordingsPage >= Math.ceil(recordings.length / RECORDINGS_PER_PAGE)} onClick={() => setRecordingsPage(p => p + 1)}>下一页</button>
+                        <span style={{ fontSize: 13, color: "#64748B", lineHeight: "32px" }}>{recordingsPage} / {Math.ceil(filteredRecordings.length / RECORDINGS_PER_PAGE)}</span>
+                        <button className="sw-btn sw-btn--secondary" disabled={recordingsPage >= Math.ceil(filteredRecordings.length / RECORDINGS_PER_PAGE)} onClick={() => setRecordingsPage(p => p + 1)}>下一页</button>
                       </div>
                     )}
                   </>
