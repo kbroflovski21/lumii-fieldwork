@@ -5101,6 +5101,40 @@ details[open] > .so-schedules-summary::before { content: "▾ "; }
   background: #B91C1C;
 }
 
+/* ── Records mobile sub-nav tabs (hidden on desktop) ── */
+.records-mobile-tabs {
+  display: none;
+}
+@media (max-width: 767px) {
+  .records-mobile-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--site-card, #FFFCF8);
+    border: 1px solid var(--site-line, #DDD5CC);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .records-mobile-tabs__btn {
+    flex: 1;
+    padding: 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--site-muted, #A89E96);
+    background: none;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    transition: color 150ms, background 150ms;
+  }
+  .records-mobile-tabs__btn[data-active="true"] {
+    color: var(--site-accent, #EB6420);
+    background: var(--site-accent-soft, rgba(235, 100, 32, 0.08));
+  }
+  .records-mobile-tabs__btn:not([data-active="true"]):hover {
+    background: rgba(0,0,0,0.03);
+  }
+}
+
 .rec-missing-count {
   color: var(--site-warning-text);
   font-size: 10px;

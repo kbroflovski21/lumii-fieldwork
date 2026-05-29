@@ -194,6 +194,26 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
               </div>
             </header>
 
+            {/* Mobile-only sub-nav tab bar for records/recordings */}
+            <nav className="records-mobile-tabs" aria-label="记录类型切换">
+              <button
+                className="records-mobile-tabs__btn"
+                data-active={viewMode === "records"}
+                type="button"
+                onClick={() => navigate("/records")}
+              >
+                服务记录
+              </button>
+              <button
+                className="records-mobile-tabs__btn"
+                data-active={viewMode === "recordings"}
+                type="button"
+                onClick={() => navigate("/recordings")}
+              >
+                录音记录
+              </button>
+            </nav>
+
             {viewMode === "records" && (
             <div className="sw-table-container">
               <ListToolbar

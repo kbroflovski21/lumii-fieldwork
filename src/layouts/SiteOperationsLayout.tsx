@@ -333,12 +333,13 @@ export function SiteOperationsLayout() {
       <nav className="site-operations-mobile-nav" aria-label="移动端导航">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
+          const isActive = item.id === activeArea || (item.children?.some(c => c.id === activeArea) ?? false);
           return (
             <Link
               key={item.id}
               to={item.path}
               className="site-operations-mobile-nav__item"
-              data-active={item.id === activeArea}
+              data-active={isActive}
             >
               <Icon size={20} />
               <span>{item.label}</span>
