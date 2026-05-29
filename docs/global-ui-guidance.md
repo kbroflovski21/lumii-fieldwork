@@ -1152,3 +1152,72 @@ const { copy, copied } = useCopyToClipboard();
 5. **列表页统一使用** `ListToolbar` + `FilterDropdown` + `EmptyState` 组合。
 6. **破坏性操作统一使用** `ConfirmAction` 二次确认模式。
 7. **Hooks 按需使用**：`useInlineEdit` 适用于简单字段编辑；`useRouteDetail` 适用于列表→详情 URL 同步；`useFetch` 适用于简单 GET 请求。
+
+---
+
+## 14. Copilot 详情页上下文 & 自动刷新
+
+### 14.1 概述
+
+Copilot（AI 助手）面板能感知用户当前打开的详情页实体。当 Agent 通过 API 修改数据后，页面自动刷新。
+
+### 14.2 上下文格式
+
+| 场景 | 消息前缀 | 示例 |
+|------|---------|------|
+| 列表页 | `[ctx:页面标签]` | `[ctx:服务人员] 在职人数有多少` |
+| 详情页 | `[ctx:页面标签/实体名称/实体ID]` | `[ctx:服务人员/王丽/worker-001] 修改电话为139xxx` |
+| 创建页 | `[ctx:页面标签]`（无实体上下文） | `[ctx:服务人员] 创建新人员` |
+
+Agent 收到三段式上下文时，直接使用实体 ID 执行操作，无需反问"请问要操作哪位？"
+
+### 14.3 DetailPageContext
+
+**Provider:** `DetailPageProvider`（位于 `SiteOperationsLayout` 和 `QualityLayout`）
+
+**Hooks:**
+- `useDetailEntity()` — 返回 `DetailEntity | null`（当前详情页实体）
+- `useSetDetailEntity()` — 返回 setter，Area 组件用于发布/清除实体
+
+**接口:**
+```ts
+interface DetailEntity {
+  entityType: string;   // "social_worker" | "smart_badge" | "schedule" | ...
+  entityId: string;     // "worker-001"
+  entityName: string;   // "王丽"
+}
+```
+
+**实体映射:**
+
+| Area 组件 | entityType | entityName 来源 |
+|-----------|-----------|----------------|
+| SocialWorkersArea | `social_worker` | `drawer.worker.name` |
+| SmartBadgesArea | `smart_badge` | `drawer.badge.deviceCode` |
+| SchedulesArea | `schedule` | `drawer.schedule.serviceProject` |
+| ServiceObjectsArea | `service_object` | `drawer.object.name` |
+| RecordsArea (记录) | `service_record` | `drawer.record.serviceObjectName` |
+| RecordsArea (录音) | `recording` | `selectedRecording.workerName` |
+| QualityPage (站点) | `site` | `detailSite.name` |
+| QualityPage (用户) | `user` | `detailUser.name` |
+
+### 14.4 自动刷新机制 — `[gy:refresh]`
+
+Agent 的 mutation sub-skill 在成功输出末尾包含 `[gy:refresh]` 标记。
+
+**前端处理规则:**
+- **实时消息**（`message` / `stream_end` frame）→ strip 标记 + 调用 `onRefetch()`
+- **流式片段**（`stream_chunk` frame）→ strip 标记（仅显示，不触发刷新）
+- **历史消息**（`init` / `history` frame）→ strip 标记，不触发刷新
+- 用户永远看不到 `[gy:refresh]` 文本
+
+**刷新路径:**
+- SiteOperationsLayout → `onRefetch: data.refetch`（来自 `useSiteOperationsData`）
+- QualityLayout → `onRefetch: () => setRefetchKey(k => k + 1)`，通过 prop 传至 SitesView / UsersView
+
+### 14.5 使用规则
+
+1. **新增详情页必须发布 entity。** 在 URL→drawer sync 的 `useEffect` 后添加 `setDetailEntity` 调用。
+2. **创建页（routeId="new"）不设置 entity。** 创建页没有已有实体可引用。
+3. **useEffect 必须包含 cleanup。** `return () => setDetailEntity(null)` 防止组件卸载后残留上下文。
+4. **Agent sub-skill 的 mutation 成功输出必须以 `[gy:refresh]` 结尾。** 失败输出不包含此标记。

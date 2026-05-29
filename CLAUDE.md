@@ -39,6 +39,24 @@ All list-to-detail navigation uses **conditional rendering** (list OR detail, no
 
 Detail pages use `DetailPageShell` + `dp-card` + `dp-fields` CSS system. See `docs/global-ui-guidance.md` Section 8.1.
 
+## Copilot Detail-Page Context
+
+When a user is on a detail page, the copilot knows which entity is open via `DetailPageContext`:
+
+| Need | Use |
+|------|-----|
+| Read current entity | `useDetailEntity()` → `{ entityType, entityId, entityName } \| null` |
+| Publish entity from detail page | `useSetDetailEntity()` → call with entity or null |
+| Send context-enriched message | `sendWithContext` auto-reads context (in Layout components) |
+
+**Adding a new detail page:** Wire `useSetDetailEntity()` in the component's `useEffect`, after the URL→drawer sync. Include cleanup: `return () => setDetailEntity(null)`.
+
+**Auto-refresh after agent mutations:** `useAgentChat` accepts `onRefetch` callback. Agent replies containing `[gy:refresh]` trigger it automatically. The marker is stripped before display. See `docs/global-ui-guidance.md` Section 14.
+
+**Code review bug fixes (2026-05-29):**
+- I-1: `stream_chunk` now strips `[gy:refresh]` for display (prevents marker flash during streaming)
+- I-2: `stripRefreshMarker` regex uses `\n{3,}` not `\n{2,}` (preserves paragraph breaks)
+
 ## Key Paths
 
 - Frontend source: `src/`

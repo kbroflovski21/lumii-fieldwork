@@ -41,4 +41,25 @@ describe("stripRefreshMarker", () => {
     expect(result.shouldRefresh).toBe(true);
     expect(result.content).toBe("✅ 已更新\n\n额外信息");
   });
+
+  it("preserves paragraph spacing after stripping", () => {
+    const input = "段落一\n\n段落二\n\n[gy:refresh]";
+    const result = stripRefreshMarker(input);
+    expect(result.shouldRefresh).toBe(true);
+    expect(result.content).toBe("段落一\n\n段落二");
+  });
+
+  it("handles multiple markers (defensive)", () => {
+    const input = "✅ 已更新\n[gy:refresh]\n[gy:refresh]";
+    const result = stripRefreshMarker(input);
+    expect(result.shouldRefresh).toBe(true);
+    expect(result.content).toBe("✅ 已更新");
+  });
+
+  it("does not match partial marker text", () => {
+    const input = "使用 [gy:refres] 标记";
+    const result = stripRefreshMarker(input);
+    expect(result.shouldRefresh).toBe(false);
+    expect(result.content).toBe("使用 [gy:refres] 标记");
+  });
 });
