@@ -3,7 +3,7 @@ import { formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect } from "react";
-import { Search, X, Plus, Smartphone, Battery, Clock, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, X, Plus, Smartphone, Edit3, RefreshCw } from "lucide-react";
 import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";

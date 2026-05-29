@@ -12,7 +12,6 @@ import { pathToArea, GY_AREA_TO_PATH } from "../router";
 import type { WorkAreaId } from "../features/siteOperations/contracts";
 import "../features/siteOperations/siteOperations.css";
 import "../shared/shell-profile.css";
-import "../shared/utilities.css";
 
 /* ── Data context for area components ── */
 const SiteOpsDataContext = createContext<ReturnType<typeof useSiteOperationsData> | null>(null);

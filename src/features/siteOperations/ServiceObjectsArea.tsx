@@ -4,7 +4,7 @@ import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, Ban, CalendarClock, FileText, Phone, MapPin } from "lucide-react";
+import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, FileText, MapPin } from "lucide-react";
 import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";

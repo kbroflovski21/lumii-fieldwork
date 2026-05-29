@@ -1,6 +1,0 @@
-.btn--compact { height: 28px; font-size: 12px; }
-.btn--xs { height: 26px; font-size: 11px; padding: 0 10px; }
-.flex-end { display: flex; justify-content: flex-end; }
-.flex-end-gap-8 { display: flex; gap: 8px; justify-content: flex-end; }
-.flex-center-gap-8 { display: flex; align-items: center; gap: 8px; }
-.mt-12 { margin-top: 12px; }

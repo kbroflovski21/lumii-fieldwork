@@ -5,7 +5,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import { ConfirmAction } from "../../shared/components/ConfirmAction";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, ChevronDown, List, Calendar, MapPin, Clock, UserRound, AlertTriangle, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
+import { X, List, Calendar, MapPin, AlertTriangle, ChevronLeft, ChevronRight as ChevronRightIcon, Maximize2, Minimize2, Edit3 } from "lucide-react";
 import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import DatePicker from "react-datepicker";

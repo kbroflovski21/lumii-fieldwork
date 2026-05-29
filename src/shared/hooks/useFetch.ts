@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { authFetch } from "../../features/siteOperations/api";
 
 export function useFetch<T>(
   url: string | null,
   deps: unknown[] = [],
+  fetchFn: (url: string) => Promise<Response> = (u) => fetch(u),
 ): {
   data: T | null;
   loading: boolean;
@@ -20,7 +20,7 @@ export function useFetch<T>(
     const version = ++versionRef.current;
     setLoading(true);
     setError(null);
-    authFetch(url)
+    fetchFn(url)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -39,7 +39,7 @@ export function useFetch<T>(
         }
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, ...deps]);
+  }, [url, fetchFn, ...deps]);
 
   useEffect(() => { doFetch(); }, [doFetch]);
 
