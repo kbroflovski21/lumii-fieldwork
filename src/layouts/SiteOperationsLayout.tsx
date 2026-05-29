@@ -8,6 +8,7 @@ import { useAgentChat } from "../features/siteOperations/useAgentChat";
 import { SITE_OPS_COMMANDS, HeaderCopilotInput } from "../features/siteOperations/CommandInput";
 import { ProfileMenu } from "../shared/ProfileMenu";
 import { useSiteOperationsData } from "../features/siteOperations/useSiteOperationsData";
+import { DetailPageProvider, useDetailEntity } from "../shared/DetailPageContext";
 import { pathToArea, GY_AREA_TO_PATH } from "../router";
 import type { WorkAreaId } from "../features/siteOperations/contracts";
 import "../features/siteOperations/siteOperations.css";
@@ -45,7 +46,7 @@ const AREA_LABELS: Record<string, string> = {
   recordings: "录音记录",
 };
 
-export function SiteOperationsLayout() {
+function SiteOperationsLayoutInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const activeArea = pathToArea(location.pathname) as WorkAreaId;
@@ -78,6 +79,9 @@ export function SiteOperationsLayout() {
     return () => document.removeEventListener("mousedown", handler);
   }, [siteDropdownOpen]);
 
+  // Data hook for area components (must be before useAgentChat to pass onRefetch)
+  const data = useSiteOperationsData(activeArea, currentSite?.id);
+
   // Copilot chat
   const getToken = useCallback(() => localStorage.getItem("gy_chat_token") ?? "", []);
   const { messages, connected, wip, handleSend, sendCardAction, endRef } = useAgentChat({
@@ -85,7 +89,10 @@ export function SiteOperationsLayout() {
     sessionId: "copilot",
     siteId: currentSite?.id,
     getToken,
+    onRefetch: data.refetch,
   });
+
+  const detailEntity = useDetailEntity();
 
   const handleCopilotNavigate = useCallback(
     (area: string, params: Record<string, string>) => {
@@ -101,9 +108,13 @@ export function SiteOperationsLayout() {
   const sendWithContext = useCallback(
     (content: string) => {
       const label = AREA_LABELS[activeArea] ?? activeArea;
-      handleSend(`[ctx:${label}] ${content}`);
+      if (detailEntity) {
+        handleSend(`[ctx:${label}/${detailEntity.entityName}/${detailEntity.entityId}] ${content}`);
+      } else {
+        handleSend(`[ctx:${label}] ${content}`);
+      }
     },
-    [activeArea, handleSend]
+    [activeArea, detailEntity, handleSend]
   );
 
   const openCopilotWithMessage = useCallback(
@@ -113,9 +124,6 @@ export function SiteOperationsLayout() {
     },
     [sendWithContext]
   );
-
-  // Data hook for area components
-  const data = useSiteOperationsData(activeArea, currentSite?.id);
 
   if (siteLoading) {
     return (
@@ -348,5 +356,13 @@ export function SiteOperationsLayout() {
         })}
       </nav>
     </div>
+  );
+}
+
+export function SiteOperationsLayout() {
+  return (
+    <DetailPageProvider>
+      <SiteOperationsLayoutInner />
+    </DetailPageProvider>
   );
 }
