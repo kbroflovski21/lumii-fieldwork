@@ -28,6 +28,7 @@ import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useSetDetailEntity } from "../../shared/DetailPageContext";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -106,6 +107,7 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
   const resource = resourceProp ?? ctxData.serviceObjects;
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlSearch = searchParams.get("search") ?? "";
@@ -153,6 +155,15 @@ export function ServiceObjectsArea({ resource: resourceProp, onMutate: onMutateP
       setDrawer({ kind: "closed" });
     }
   }, [routeId, objects]);
+
+  useEffect(() => {
+    if (routeId && routeId !== "new" && drawer.kind === "view") {
+      setDetailEntity({ entityType: "service_object", entityId: routeId, entityName: drawer.object.name });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, drawer, setDetailEntity]);
 
   // Sync drawer object with refreshed list data
   useEffect(() => {

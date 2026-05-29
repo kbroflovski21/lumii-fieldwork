@@ -18,6 +18,7 @@ import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useSetDetailEntity } from "../../shared/DetailPageContext";
 import { DetailPageShell } from "../../shared/DetailPageShell";
 
 let _clipPlayer: HTMLAudioElement | null = null;
@@ -88,6 +89,7 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
   const resource = resourceProp ?? ctxData.serviceRecords;
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const location = useLocation();
   const viewMode = location.pathname.startsWith("/recordings") ? "recordings" as const : "records" as const;
@@ -144,6 +146,17 @@ export function RecordsArea({ resource: resourceProp, onMutate: onMutateProp }: 
       }
     }
   }, [routeId, viewMode]);
+
+  useEffect(() => {
+    if (viewMode === "records" && routeId && drawer.kind === "view") {
+      setDetailEntity({ entityType: "service_record", entityId: routeId, entityName: drawer.record.serviceObjectName ?? "服务记录" });
+    } else if (viewMode === "recordings" && routeId && selectedRecording) {
+      setDetailEntity({ entityType: "recording", entityId: routeId, entityName: selectedRecording.workerName ?? selectedRecording.badgeId ?? "录音" });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, viewMode, drawer, selectedRecording, setDetailEntity]);
 
   useEffect(() => {
     if (viewMode !== "recordings") return;

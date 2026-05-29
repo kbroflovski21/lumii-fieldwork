@@ -22,6 +22,7 @@ import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useSetDetailEntity } from "../../shared/DetailPageContext";
 
 type DrawerMode =
   | { kind: "closed" }
@@ -62,6 +63,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   const resource = resourceProp ?? ctxData.socialWorkers;
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlSearch = searchParams.get("search") ?? "";
@@ -108,6 +110,15 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
       setDrawer({ kind: "closed" });
     }
   }, [routeId, workers]);
+
+  useEffect(() => {
+    if (routeId && routeId !== "new" && drawer.kind === "view") {
+      setDetailEntity({ entityType: "social_worker", entityId: routeId, entityName: drawer.worker.name });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, drawer, setDetailEntity]);
 
   // Sync drawer worker with refreshed list data
   useEffect(() => {

@@ -10,6 +10,7 @@ import { ProfileMenu } from "../shared/ProfileMenu";
 import { DetailPageShell } from "../shared/DetailPageShell";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import { useEscClose } from "../shared/hooks/useEscClose";
+import { useSetDetailEntity } from "../shared/DetailPageContext";
 import "./quality.css";
 
 /* ── Types ── */
@@ -744,6 +745,7 @@ interface SiteData {
 function SitesView({ refetchKey }: { refetchKey?: number }) {
   const { token } = useAuth();
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [sites, setSites] = useState<SiteData[]>([]);
@@ -785,6 +787,15 @@ function SitesView({ refetchKey }: { refetchKey?: number }) {
       setDetailSite(null); setEditingSite(false);
     }
   }, [routeId, sites]);
+
+  useEffect(() => {
+    if (routeId && routeId !== "new" && detailSite) {
+      setDetailEntity({ entityType: "site", entityId: routeId, entityName: detailSite.name });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, detailSite, setDetailEntity]);
 
   // Sync detailSite with refreshed sites data
   useEffect(() => {
@@ -1157,6 +1168,7 @@ const QUALITY_ROLE_LABELS: Record<string, string> = {
 function UsersView({ refetchKey }: { refetchKey?: number }) {
   const { token } = useAuth();
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<QualityUser[]>([]);
@@ -1206,6 +1218,15 @@ function UsersView({ refetchKey }: { refetchKey?: number }) {
       setDetailUser(null); setInitialEditing(false);
     }
   }, [routeId, users]);
+
+  useEffect(() => {
+    if (routeId && routeId !== "new" && detailUser) {
+      setDetailEntity({ entityType: "user", entityId: routeId, entityName: detailUser.name });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, detailUser, setDetailEntity]);
 
   // Sync detailUser with refreshed users data
   useEffect(() => {

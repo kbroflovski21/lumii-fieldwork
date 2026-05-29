@@ -20,6 +20,7 @@ import type { Resource } from "./useSiteOperationsData";
 import { useSite } from "../../auth/SiteContext";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
 import { useParams, useNavigate } from "react-router-dom";
+import { useSetDetailEntity } from "../../shared/DetailPageContext";
 
 type ScheduleView = "list" | "calendar" | "map";
 
@@ -38,6 +39,7 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   const resource = resourceProp ?? ctxData.serviceSchedules;
   const onMutate = onMutateProp ?? ctxData.refetch;
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const navigate = useNavigate();
   const [view, setView] = useState<ScheduleView>("list");
   const [drawer, setDrawer] = useState<DrawerMode>({ kind: "closed" });
@@ -91,6 +93,15 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
       setDrawer({ kind: "closed" });
     }
   }, [routeId, schedules]);
+
+  useEffect(() => {
+    if (routeId && drawer.kind === "view") {
+      setDetailEntity({ entityType: "schedule", entityId: routeId, entityName: drawer.schedule.serviceProject });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, drawer, setDetailEntity]);
 
   const filtered = schedules.filter((s) => {
     if (view !== "calendar") {

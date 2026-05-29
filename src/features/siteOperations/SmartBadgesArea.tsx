@@ -9,6 +9,7 @@ import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { EmptyState } from "../../shared/components/EmptyState";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useSetDetailEntity } from "../../shared/DetailPageContext";
 import type {
   SmartBadge,
   SmartBadgeStatus,
@@ -68,6 +69,7 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
   const onMutate = onMutateProp ?? ctxData.refetch;
   const navigate = useNavigate();
   const { id: routeId } = useParams();
+  const setDetailEntity = useSetDetailEntity();
   const [searchParams] = useSearchParams();
   const urlSearch = searchParams.get("search") ?? "";
   const effectiveInitialSearch = initialSearch ?? urlSearch;
@@ -114,6 +116,15 @@ export function SmartBadgesArea({ resource: resourceProp, onOpenRecords: onOpenR
       setDrawer({ kind: "closed" });
     }
   }, [routeId, badges]);
+
+  useEffect(() => {
+    if (routeId && routeId !== "activate" && drawer.kind === "view") {
+      setDetailEntity({ entityType: "smart_badge", entityId: routeId, entityName: drawer.badge.deviceCode });
+    } else {
+      setDetailEntity(null);
+    }
+    return () => setDetailEntity(null);
+  }, [routeId, drawer, setDetailEntity]);
 
   // Sync drawer badge with refreshed list data
   useEffect(() => {
