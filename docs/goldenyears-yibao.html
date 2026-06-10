@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金色年华 · 面向医保局的方案与演示</title>
+<style>
+  :root {
+    --bg: #fafaf9; --card: #ffffff; --text: #1c1917; --muted: #78716c;
+    --accent: #0f766e; --accent-light: #ccfbf1; --border: #e7e5e4;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --yellow: #ca8a04; --yellow-bg: #fefce8;
+    --red: #dc2626; --red-bg: #fef2f2;
+    --blue: #2563eb; --blue-bg: #eff6ff;
+    --purple: #7c3aed; --purple-bg: #f5f3ff;
+  }
+  html { scroll-behavior: smooth; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.75; font-size: 17px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 32px 80px; }
+  .back-link { font-size: 14px; color: var(--muted); text-decoration: none; display: inline-block; margin-bottom: 24px; }
+  .back-link:hover { color: var(--accent); }
+
+  .report-header {
+    text-align: center; padding: 40px 0 32px;
+    border-bottom: 1px solid var(--border); margin-bottom: 40px;
+  }
+  .report-header h1 { font-size: 30px; font-weight: 700; margin-bottom: 8px; }
+  .report-header .subtitle { font-size: 17px; color: var(--muted); }
+  .report-header .meta { margin-top: 12px; font-size: 13px; color: var(--muted); }
+
+  .section { margin-bottom: 56px; }
+  .section-number {
+    display: inline-block; width: 28px; height: 28px; line-height: 28px;
+    text-align: center; background: var(--accent); color: white;
+    border-radius: 50%; font-size: 13px; font-weight: 700; margin-right: 10px; vertical-align: middle;
+  }
+  .section h2 { font-size: 22px; font-weight: 700; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--accent); }
+  .section h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; }
+  .section p { margin-bottom: 12px; color: #44403c; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 15.5px; }
+  thead th {
+    background: #f5f5f4; padding: 10px 14px; text-align: left; font-weight: 600;
+    font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px;
+    border-bottom: 2px solid var(--border);
+  }
+  tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-light);
+    padding: 18px 22px; margin: 20px 0; border-radius: 0 6px 6px 0; font-size: 15.5px;
+  }
+  .callout.gov { border-left-color: var(--red); background: var(--red-bg); }
+  .callout.blue { border-left-color: var(--blue); background: var(--blue-bg); }
+  .callout strong { font-weight: 700; }
+
+  .hero-keyword {
+    display: block; font-size: 28px; font-weight: 800; color: var(--red);
+    margin: 16px 0 8px; line-height: 1.3;
+  }
+  .hero-keyword-sm {
+    display: block; font-size: 22px; font-weight: 800; color: var(--red);
+    margin: 12px 0 6px; line-height: 1.3;
+  }
+  .hero-keyword-xs {
+    display: inline; font-size: 17px; font-weight: 800; color: var(--red);
+  }
+
+  /* Goal box */
+  .goal-box {
+    background: var(--card); border: 2px solid var(--accent); border-radius: 12px;
+    padding: 28px 32px; margin: 24px 0;
+  }
+  .goal-box .goal-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .goal-box .goal-text { font-size: 18px; font-weight: 600; line-height: 1.6; }
+  .goal-box .goal-sub { font-size: 15px; color: var(--muted); margin-top: 8px; }
+
+  /* Pain point chips */
+  .pain-chips {
+    display: flex; gap: 16px; margin: 20px 0; flex-wrap: wrap;
+  }
+  .pain-chip {
+    flex: 1; min-width: 200px; background: var(--red-bg); border-radius: 8px;
+    padding: 16px 20px; text-align: center;
+  }
+  .pain-chip .chip-title {
+    font-size: 20px; font-weight: 800; color: var(--red); margin-bottom: 4px;
+  }
+  .pain-chip .chip-desc { font-size: 13px; color: #78716c; }
+
+  /* Methodology cards */
+  .method-cards {
+    display: flex; gap: 16px; margin: 20px 0; flex-wrap: wrap;
+  }
+  .method-card {
+    flex: 1; min-width: 280px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; border-top: 4px solid var(--accent);
+  }
+  .method-card .mc-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); background: #f5f5f4;
+    padding: 2px 8px; border-radius: 4px; margin-bottom: 10px;
+  }
+  .method-card .mc-title {
+    font-size: 20px; font-weight: 800; color: var(--red); margin-bottom: 4px;
+  }
+  .method-card .mc-subtitle {
+    font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px;
+  }
+  .method-card .mc-body { font-size: 14.5px; color: #44403c; line-height: 1.7; }
+
+  /* Role row */
+  .role-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0;
+  }
+  .role-item {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; text-align: center;
+  }
+  .role-item .role-name {
+    font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 6px;
+  }
+  .role-item .role-desc { font-size: 13px; color: #44403c; }
+
+  /* Flow */
+  .flow-steps {
+    display: flex; align-items: center; gap: 0; margin: 16px 0; flex-wrap: wrap;
+  }
+  .flow-step {
+    background: var(--accent-light); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600;
+    color: var(--accent); text-align: center; min-width: 120px;
+  }
+  .flow-arrow {
+    font-size: 20px; color: var(--accent); padding: 0 6px; flex-shrink: 0;
+  }
+
+  /* Cycle diagram for PDCA */
+  .cycle-flow {
+    display: flex; align-items: stretch; gap: 0; margin: 16px 0; flex-wrap: wrap;
+  }
+  .cycle-item {
+    flex: 1; min-width: 140px; padding: 14px 12px; text-align: center;
+    font-size: 13.5px; color: #44403c; border: 1px solid var(--border); background: var(--card);
+  }
+  .cycle-item:first-child { border-radius: 8px 0 0 8px; }
+  .cycle-item:last-child { border-radius: 0 8px 8px 0; }
+  .cycle-item .ci-title { font-weight: 700; color: var(--accent); font-size: 14px; margin-bottom: 4px; }
+  .cycle-arrow { display: flex; align-items: center; font-size: 18px; color: var(--accent); padding: 0 2px; }
+
+  @media (max-width: 640px) {
+    .pain-chips { flex-direction: column; }
+    .method-cards { flex-direction: column; }
+    .role-row { grid-template-columns: 1fr; }
+    .hero-keyword { font-size: 24px; }
+    .hero-keyword-sm { font-size: 19px; }
+    .flow-steps { flex-direction: column; align-items: stretch; }
+    .flow-arrow { transform: rotate(90deg); text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <a href="goldenyears-narrative.html" class="back-link">&larr; 返回叙事总览</a>
+
+  <div class="report-header">
+    <h1>金色年华 · 面向医保局的方案与演示</h1>
+    <div class="subtitle">长护险智慧监管：服务同质、管理同标、发展同步</div>
+    <div class="meta">2026年6月 · 基于金色年华实地调研</div>
+  </div>
+
+  <!-- ====== S1: OVERVIEW ====== -->
+  <div class="section" id="overview">
+    <h2><span class="section-number">1</span>总览</h2>
+
+    <h3>核心目标</h3>
+    <div class="goal-box">
+      <div class="goal-label">最终目标</div>
+      <div class="goal-text">获得医保局认可，成为杭州市长护险标杆试点机构，帮助医保局实现——</div>
+      <div class="goal-text" style="margin-top: 8px;">
+        <span class="hero-keyword-xs">全市定点长护机构的服务同质、管理同标、发展同步</span>
+      </div>
+      <div class="goal-sub">路径：向医保局展示金色年华的长护险方案，覆盖医保局重点要求，给出系统性、有完整方法论、相比竞品有差异化和竞争力的整体方案。</div>
+    </div>
+
+    <h3>医保局的痛点</h3>
+    <div class="pain-chips">
+      <div class="pain-chip">
+        <div class="chip-title">服务标准</div>
+        <div class="chip-desc">如何让纸面标准落地到每一次服务现场？</div>
+      </div>
+      <div class="pain-chip">
+        <div class="chip-title">服务监督</div>
+        <div class="chip-desc">如何对长护险服务进行有效监督和审计？</div>
+      </div>
+      <div class="pain-chip">
+        <div class="chip-title">服务质量</div>
+        <div class="chip-desc">如何实现跨机构跨地区的质量量化、管理和持续提升？</div>
+      </div>
+    </div>
+    <p style="text-align: center; color: var(--muted); font-size: 14px; margin-top: -8px;">+ 人员不足、人效偏低的结构性挑战</p>
+
+    <h3>金色年华的三大方法论</h3>
+    <div class="method-cards">
+      <div class="method-card">
+        <div class="mc-tag">标准方法论</div>
+        <div class="mc-title">"标准现场化"</div>
+        <div class="mc-subtitle">从"标准在纸上"到"标准在现场"</div>
+        <div class="mc-body">
+          <strong>核心机制：</strong>"标准即代码" + 现场实时反馈。<br><br>
+          主管维护标准 → AI 自动生成督导/引导/评估规则 → 事前提示 → 事中引导/督导 → 事后评估。
+        </div>
+      </div>
+      <div class="method-card">
+        <div class="mc-tag">监督方法论</div>
+        <div class="mc-title">"黑盒变白盒"</div>
+        <div class="mc-subtitle">让每一次上门服务可感知、可验证、可审计</div>
+        <div class="mc-body">
+          <strong>技术手段：</strong>多模态数据采集（雷达+录音+拍照+定位+声纹），AI 交叉矛盾检测验证，从原始数据到服务报告全程可审计。<br><br>
+          <strong>三个角色构成监督活动：</strong>
+        </div>
+      </div>
+      <div class="method-card">
+        <div class="mc-tag">质量方法论</div>
+        <div class="mc-title">"循环式改善"</div>
+        <div class="mc-subtitle">机构内部管理 + 医保局监督，双驱动质量提升</div>
+        <div class="mc-body">
+          <strong>核心理念：</strong>服务质量既不只是机构的事，也不只是医保局的事，而是双方共同的事。<br><br>
+          微观服务过程监管 + 宏观服务质量监管 → 发现问题 → 机构提升 → 数据体现提升。
+        </div>
+      </div>
+    </div>
+
+    <!-- Standard: flow -->
+    <h3>标准方法论展开：全流程控制</h3>
+    <div class="flow-steps">
+      <div class="flow-step">主管维护标准</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">AI 生成规则</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="background: var(--yellow-bg); border-color: var(--yellow); color: var(--yellow);">事前提示</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="background: var(--red-bg); border-color: var(--red); color: var(--red);">事中引导/督导</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step" style="background: var(--green-bg); border-color: var(--green); color: var(--green);">事后评估</div>
+    </div>
+    <p style="color: var(--muted); font-size: 14px;">更新一次标准 = 全部护工的 AI 助手同步更新，无需重新培训。</p>
+
+    <!-- Supervision: 3 roles -->
+    <h3>监督方法论展开：三个角色</h3>
+    <div class="role-row">
+      <div class="role-item">
+        <div class="role-name">护工上门流程</div>
+        <div class="role-desc">护工使用 App + 智能设备执行服务，多模态数据自动采集，AI 实时引导和督导</div>
+      </div>
+      <div class="role-item">
+        <div class="role-name">机构管理后台</div>
+        <div class="role-desc"><span class="hero-keyword-xs">金色智云</span><br>机构内部的服务管理、质量看板、人员管理、SOP 维护</div>
+      </div>
+      <div class="role-item">
+        <div class="role-name">医保独立审计入口</div>
+        <div class="role-desc"><span class="hero-keyword-xs">金色智眼</span><br>医保局独立使用的监管门户，随时可穿透式核查任意服务</div>
+      </div>
+    </div>
+
+    <!-- Quality: cycle -->
+    <h3>质量方法论展开：双驱动循环</h3>
+    <div class="cycle-flow">
+      <div class="cycle-item">
+        <div class="ci-title">微观监管</div>
+        服务过程<br>实时监控
+      </div>
+      <div class="cycle-arrow">+</div>
+      <div class="cycle-item">
+        <div class="ci-title">宏观监管</div>
+        跨站点<br>质量看板
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-item">
+        <div class="ci-title">发现问题</div>
+        AI 自动识别<br>质量偏差
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-item">
+        <div class="ci-title">机构提升</div>
+        根因分析<br>纠正行动
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-item">
+        <div class="ci-title">数据验证</div>
+        质量提升<br>数据可见
+      </div>
+      <div class="cycle-arrow">→</div>
+      <div class="cycle-item" style="background: var(--accent-light);">
+        <div class="ci-title" style="color: var(--accent);">循环</div>
+        持续<br>改善
+      </div>
+    </div>
+    <div class="callout">
+      <strong>双驱动：</strong>机构通过<strong>金色智云</strong>进行内部质量管理，医保局通过<strong>金色智眼</strong>进行外部监督。两个视角、同一套数据、共同推动质量提升。服务质量的改善不是靠一方自觉，而是靠双方协同。
+    </div>
+  </div>
+
+  <!-- ====== S2: PRODUCT DESIGN ====== -->
+  <div class="section" id="products">
+    <h2><span class="section-number">2</span>产品设计</h2>
+
+    <!-- Product 1: 护工 -->
+    <h3>护工 — 移动端 App</h3>
+    <p>两个 Tab：<strong>今日任务</strong>、<strong>标准规范</strong>。</p>
+
+    <div class="compare-block">
+      <div class="compare-header gy">Tab 1：今日任务</div>
+      <div class="compare-row">
+        <div class="compare-label">服务流程</div>
+        <div class="compare-value">
+          1）发起任务<br>
+          2）选择老人，显示老人基本信息（姓名/重点关注/地址）<br>
+          3）勾选计划服务的项目（显示各项目剩余次数）<br>
+          4）点击"发起"，弹出确认信息，GPS 定位验证 + 信标验证<br>
+          5）验证通过，进入服务，显示录音界面，AI 实时引导/督导在后台运行<br>
+          6）点击"结束服务"，拍照或从相册选择照片上传<br>
+          7）结束服务，服务记录由 AI 自动生成
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-block">
+      <div class="compare-header gy">Tab 2：标准规范</div>
+      <div class="compare-row">
+        <div class="compare-label">内容</div>
+        <div class="compare-value">
+          1）<strong>通用标准</strong> — 适用于所有上门服务的通用行为规范和操作准则<br>
+          2）<strong>长护险项目规范</strong> — 按长护险服务项目分类的具体操作标准和 SOP<br>
+          3）<strong>培训 Copilot</strong> — 具体功能待定（可能需要在站点运营 Dashboard 配套培训管理 Tab）
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 2: 集团总部 -->
+    <h3>集团总部 — Dashboard</h3>
+    <div class="compare-block">
+      <div class="compare-header gy">待补充</div>
+    </div>
+
+    <!-- Product 3: 站点运营 -->
+    <h3>站点运营 — Dashboard</h3>
+    <div class="compare-block">
+      <div class="compare-header gy">概览</div>
+      <div class="compare-row">
+        <div class="compare-label">Tab</div>
+        <div class="compare-value">首页总览（集团运营数据+质量数据）、服务人员、设备、长者、服务排期、进行中服务、已完成服务、回访管理、家属反馈、服务培训。</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-label">和现在版本有何不同</div>
+        <div class="compare-value">
+          1）"设备"需要管理毫米波雷达。服务人员绑定设备，对应现实中雷达派发给护工的行为。<br>
+          2）"服务人员"需要录入声纹信息。<br>
+          3）在"长者"界面，要选择一名对应的服务人员；对应关系也显示在"服务人员"界面，即显示某一名服务人员对应服务哪几名长者。<br>
+          4）"服务人员"界面需要管理登陆App的账号密码。<br>
+          5）"服务排期"待了解现在做法<br>
+          6）"进行中服务"显示所有实时发生的服务，展示基本的服务信息、可能的异常信息提示（GPS不符合、声纹不符合等）、查看实时语音转文字日志、查看实时毫米波雷达位置图、发起语音/视频飞检。<br>
+          7）"已完成服务"显示所有已经完成的服务。展示：基本的服务信息、服务质量评估（AI评估的总结）、语音记录（原始音频+日志+AI解析信息）、雷达记录（雷达数据+加工统计后数据+AI解析信息）、检查信息（如果有飞检）、回访信息（如果存在对应服务的回访信息）。<br>
+          8）回访管理：记录每一条回访记录。3种类型：上门回访、人工电话回访、AI电话回访。谁执行的回访、何时何地、回访的结论。<br>
+          9）家属反馈：记录每一条反馈，包含：时间、谁的家属、对应服务人员、反馈内容、反馈渠道、针对反馈的措施记录。
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 4: 医保局 -->
+    <h3>医保局 — Dashboard（金色智眼）</h3>
+    <div class="compare-block">
+      <div class="compare-header gy">概览</div>
+      <div class="compare-row">
+        <div class="compare-label">Tab</div>
+        <div class="compare-value">总览仪表盘、机构管理、服务审计、异常与预警、标准与合规、质量趋势。</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-label">功能说明</div>
+        <div class="compare-value">
+          1）"总览仪表盘"全市核心指标（服务总量、经费支出、机构数量、覆盖老人数），跨机构质量排行和异常预警汇总。<br>
+          2）"机构管理"定点机构列表，基本信息、服务规模、质量评分/评级。点击下钻到单个机构的详细指标。<br>
+          3）"服务审计"按条件检索任意一次服务，查看完整审计视图（六重证据链+AI评估+关联回访/反馈）。支持随机抽查模式。<br>
+          4）"异常与预警"AI 自动标记的异常服务列表，分类分级。跨服务模式识别（系统性异常检测）。处理流程追踪（待核实→已核实→已处理）。<br>
+          5）"标准与合规"医保局发布的官方标准，各机构的执行合规率。跨机构横向对比同一标准的执行情况。<br>
+          6）"质量趋势"跨机构多维度质量对比，单机构质量趋势（改善/恶化），机构自动评级（A/B/C/D）。
+        </div>
+      </div>
+    </div>
+
+    <!-- Product 5: 家属 -->
+    <h3>家属 — 移动端 H5 页面</h3>
+    <div class="compare-block">
+      <div class="compare-header gy">待补充</div>
+    </div>
+  </div>
+
+  <!-- 后续板块待讨论后补充 -->
+
+</div>
+</body>
+</html>

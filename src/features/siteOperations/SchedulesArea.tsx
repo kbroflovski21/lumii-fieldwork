@@ -72,10 +72,16 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   const toggleStatus = (v: string) => setStatusFilters(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
   const statusLabel = statusFilters.length === 0 ? "排期状态" : statusFilters.length === 1 ? statusOptions.find(o => o.value === statusFilters[0])?.label ?? "排期状态" : `${statusFilters.length}项已选`;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [workerFilter, setWorkerFilter] = useState("");
+  const [elderFilter, setElderFilter] = useState("");
   const operationalState = resource.status === "success" ? resource.data.operationalState : undefined;
   const mutationsDisabled = isMutationDisabled(operationalState);
 
   const schedules = resource.status === "success" ? resource.data.serviceSchedules : [];
+
+  // Unique workers and elders for filter dropdowns
+  const uniqueWorkers = Array.from(new Map(schedules.filter(s => s.assignedSocialWorkerName).map(s => [s.assignedSocialWorkerId, s.assignedSocialWorkerName!])).entries()).map(([id, name]) => ({ id, name }));
+  const uniqueElders = Array.from(new Map(schedules.map(s => [s.serviceObjectId, s.serviceObjectName])).entries()).map(([id, name]) => ({ id, name }));
 
   const closeDrawer = useCallback(() => { navigate("/schedules"); }, [navigate]);
 
@@ -104,6 +110,8 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
   }, [routeId, drawer, setDetailEntity]);
 
   const filtered = schedules.filter((s) => {
+    if (workerFilter && s.assignedSocialWorkerId !== workerFilter) return false;
+    if (elderFilter && s.serviceObjectId !== elderFilter) return false;
     if (view !== "calendar") {
       if (dateFilter) {
         const today = new Date().toISOString().slice(0, 10);
@@ -137,11 +145,11 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
 
   return (
     <>
-      <section aria-label="服务排期" className="sw-page">
+      <section aria-label="服务排班" className="sw-page">
         <div className="sw-page__inner">
           <header className="sw-header">
             <div className="sw-header__title-group">
-              <h2 className="sw-header__title">服务排期</h2>
+              <h2 className="sw-header__title">服务排班</h2>
               <p className="sw-header__desc">查看和管理所有长者的服务安排</p>
             </div>
             <div className="sch-view-switch">
@@ -170,14 +178,22 @@ export function SchedulesArea({ resource: resourceProp, onMutate: onMutateProp }
                   </select>
                   {statusDropOpen && <StatusDropdown anchorRef={statusRef} options={statusOptions} selected={statusFilters} onToggle={toggleStatus} onClear={() => { setStatusFilters([]); setStatusDropOpen(false); }} />}
                 </div>
+                <select className="sw-filter-select" value={workerFilter} onChange={e => setWorkerFilter(e.target.value)} style={{ minWidth: 100, height: 32, borderRadius: 6, border: "1px solid #D1D5DB", fontSize: 13, padding: "0 8px" }}>
+                  <option value="">按服务人员</option>
+                  {uniqueWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
+                <select className="sw-filter-select" value={elderFilter} onChange={e => setElderFilter(e.target.value)} style={{ minWidth: 100, height: 32, borderRadius: 6, border: "1px solid #D1D5DB", fontSize: 13, padding: "0 8px" }}>
+                  <option value="">按长者</option>
+                  {uniqueElders.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
               </>}
             />
 
-            {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务排期" readOnlyHint="可查看数据，调整和取消操作已禁用。" /> : null}
+            {operationalState ? <OperationalBanner state={operationalState} resourceLabel="服务排班" readOnlyHint="可查看数据，调整和取消操作已禁用。" /> : null}
 
-            {isLoading ? <EmptyState icon={Calendar} description="服务排期数据加载中..." />
+            {isLoading ? <EmptyState icon={Calendar} description="服务排班数据加载中..." />
             : resource.status === "error" ? <EmptyState icon={X} description={resource.error} isError />
-            : filtered.length === 0 ? <EmptyState icon={Calendar} description={schedules.length === 0 ? "暂无服务排期" : "没有匹配的排期"} />
+            : filtered.length === 0 ? <EmptyState icon={Calendar} description={schedules.length === 0 ? "暂无服务排班" : "没有匹配的排期"} />
             : view === "calendar" ? <CalendarView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
             : view === "map" ? <MapView schedules={filtered} onSelect={(s) => navigate(`/schedules/${s.id}`)} />
             : <ListView schedules={filtered} selectedId={selectedId} onRowClick={(s) => navigate(`/schedules/${s.id}`)} />}
@@ -620,7 +636,7 @@ function ScheduleDrawer({ schedule: s, mutationsDisabled, onClose, onUpdated }: 
     : workerOptions;
 
   return (
-    <DetailPageShell parentLabel="服务排期" parentPath="/schedules" title={`${s.serviceProject} · ${formatDateWithDay(s.serviceDate)}`} actions={cancelAction}>
+    <DetailPageShell parentLabel="服务排班" parentPath="/schedules" title={`${s.serviceProject} · ${formatDateWithDay(s.serviceDate)}`} actions={cancelAction}>
       <div className="dp-card">
         <div className="dp-card__body">
           <div className="dp-section">

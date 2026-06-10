@@ -1,10 +1,9 @@
 import { useEscClose } from "../../shared/hooks/useEscClose";
-import { formatTime } from "../../shared/utils/dateTimeUtils";
+import { formatTime, formatSyncTime } from "../../shared/utils/dateTimeUtils";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
-import { ConfirmAction } from "../../shared/components/ConfirmAction";
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, FileText, MapPin } from "lucide-react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { Search, X, Plus, UserRound, Edit3, AlertTriangle, CalendarPlus, Sparkles, Send, Clock, FileText, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { ListToolbar } from "../../shared/components/ListToolbar";
 import { OperationalBanner } from "../../shared/components/OperationalBanner";
 import { FilterDropdown } from "../../shared/components/FilterDropdown";
@@ -19,6 +18,7 @@ import type {
   FamilyContact,
   AiScheduleResult,
   ServicePlan,
+  Device,
 } from "./contracts";
 import { RecordDrawer } from "./RecordsArea";
 import { statusText } from "./contracts";
@@ -41,7 +41,7 @@ type RiskFilter = "" | "has" | "none";
 
 const eligibilityFilterOptions: Array<{ label: string; value: EligibilityFilter }> = [
   { label: "服务资格", value: "" },
-  { label: "养护险", value: "insurance" },
+  { label: "长护险", value: "insurance" },
   { label: "政府购买", value: "government" },
   { label: "机构服务", value: "institution" },
   { label: "自费", value: "self_paid" }
@@ -62,7 +62,7 @@ const riskFilterOptions: Array<{ label: string; value: RiskFilter }> = [
 ];
 
 const eligibilityLabel: Record<string, string> = {
-  insurance: "养护险", government: "政府购买", institution: "机构服务", self_paid: "自费"
+  insurance: "长护险", government: "政府购买", institution: "机构服务", self_paid: "自费"
 };
 
 const subscriptionLabel: Record<string, string> = {
@@ -339,7 +339,7 @@ function ObjectDrawer({ drawer, mutationsDisabled, onClose, onCreated, onUpdated
   return <CreateModal onClose={onClose} onCreated={onCreated} />;
 }
 
-type ViewTab = "overview" | "plans" | "history" | "insights";
+type ViewTab = "overview" | "plans" | "schedule" | "history";
 
 function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
   object: ServiceObject; mutationsDisabled: boolean; onClose: () => void; onUpdated: () => void;
@@ -375,6 +375,15 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
       setWorkerOptions((data.socialWorkers ?? []).map((w: any) => ({ id: w.id, name: w.name })));
     }).catch(() => {});
   }, [obj.id, refreshPlanData, currentSite?.id]);
+
+  // Fetch beacon device bound to this elder
+  const [beaconDevice, setBeaconDevice] = useState<Device | null>(null);
+  useEffect(() => {
+    authFetch("/api/devices?deviceType=ble_beacon").then(r => r.json()).then(data => {
+      const beacon = (data.devices ?? []).find((d: Device) => d.boundToType === "elder_home" && d.boundToId === obj.id);
+      setBeaconDevice(beacon ?? null);
+    }).catch(() => {});
+  }, [obj.id]);
 
   // Inline editing state
   const [editingBasic, setEditingBasic] = useState(false);
@@ -533,23 +542,20 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
     onUpdated();
   };
 
-  const hasInsights = (obj.insightSummaries ?? []).length > 0 || !!obj.latestInsightSummary;
   const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "overview", label: "档案概览" },
     { id: "plans", label: "服务计划", count: savedPlans.length },
+    { id: "schedule", label: "服务排班", count: savedSchedules.length },
     { id: "history", label: "服务历史" },
-    { id: "insights", label: "AI 洞察", count: hasInsights ? (obj.insightSummaries ?? []).length || undefined : undefined },
   ];
 
-  const openAiScheduler = () => {
-    setActiveTab("plans");
-    setShowScheduleForm(true);
+  const openScheduleTab = () => {
+    setActiveTab("schedule");
   };
 
   const headerActions = (
     <>
-      <ConfirmAction label="归档" onConfirm={() => {}} disabled={mutationsDisabled} buttonStyle={{ height: 28, fontSize: 12 }} />
-      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={openAiScheduler} type="button">
+      <button className="sw-btn sw-btn--primary" style={{ height: 32, fontSize: 12 }} disabled={mutationsDisabled} onClick={openScheduleTab} type="button">
         <CalendarPlus size={14} /> 安排服务
       </button>
     </>
@@ -594,7 +600,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
                 <div className="dp-field"><dt>身份证号</dt><dd>{editingBasic ? <input value={editIdNumber} onChange={e => setEditIdNumber(e.target.value)} maxLength={18} /> : (obj.idNumber || "—")}</dd></div>
                 <div className="dp-field"><dt>年龄</dt><dd>{editingBasic ? <input value={editAge} onChange={e => setEditAge(e.target.value)} type="number" style={{ width: 60 }} /> : (obj.age ? `${obj.age}岁` : "—")}</dd></div>
                 <div className="dp-field"><dt>性别</dt><dd>{editingBasic ? <select value={editGender} onChange={e => setEditGender(e.target.value)}><option value="female">女</option><option value="male">男</option><option value="unknown">未知</option></select> : (obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "—")}</dd></div>
-                <div className="dp-field"><dt>服务资格</dt><dd>{editingBasic ? <select value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">养护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
+                <div className="dp-field"><dt>服务资格</dt><dd>{editingBasic ? <select value={editEligibility} onChange={e => setEditEligibility(e.target.value)}><option value="insurance">长护险</option><option value="government">政府购买</option><option value="institution">机构服务</option><option value="self_paid">自费</option></select> : <span className="sw-tag">{eligibilityLabel[obj.eligibilityType]}</span>}</dd></div>
                 <div className="dp-field"><dt>服务套餐</dt><dd>{editingBasic ? <input value={editProjects} onChange={e => setEditProjects(e.target.value)} placeholder="如：长护险" /> : (obj.serviceProjects.join("、") || "长护险")}</dd></div>
                 <div className="dp-field dp-field--full"><dt>地址</dt><dd className="so-address-cell">{editingBasic ? <input value={editAddress} onChange={e => setEditAddress(e.target.value)} style={{ width: "100%" }} /> : (
                   <>
@@ -628,7 +634,7 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
 
             <div className="dp-section">
               <div className="dp-section__head">
-                <h4 className="dp-section__title">照护重点</h4>
+                <h4 className="dp-section__title">健康档案</h4>
                 {!editingCare && <button className="dp-section__edit-btn" disabled={mutationsDisabled} onClick={() => { setEditRiskTags(obj.riskTags.join("、")); setEditCareNotes(obj.careNotes.join("\n")); setEditingCare(true); }} type="button" title="编辑"><Edit3 size={14} /></button>}
               </div>
               {editingCare ? (
@@ -654,219 +660,37 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
             </div>
 
             <FamilySection obj={obj} mutationsDisabled={mutationsDisabled} onUpdated={onUpdated} />
+
+            {/* 信标绑定信息 */}
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">蓝牙信标</h4>
+              </div>
+              {beaconDevice ? (
+                <dl className="dp-fields">
+                  <div className="dp-field"><dt>信标编码</dt><dd><span className="badges-code-tag">{beaconDevice.deviceCode}</span></dd></div>
+                  <div className="dp-field"><dt>状态</dt><dd>
+                    <StatusBadge tone={beaconDevice.status === "in_use" ? "success" : beaconDevice.status === "offline" ? "warning" : "muted"}>
+                      {statusText[beaconDevice.status] ?? beaconDevice.status}
+                    </StatusBadge>
+                  </dd></div>
+                  <div className="dp-field"><dt>最后同步</dt><dd>{beaconDevice.lastSyncAt ? formatSyncTime(beaconDevice.lastSyncAt) : "--"}</dd></div>
+                  <div className="dp-field"><dt>安装时间</dt><dd>{beaconDevice.activatedAt ? formatSyncTime(beaconDevice.activatedAt) : "--"}</dd></div>
+                </dl>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+                  <p className="sw-text-muted" style={{ margin: 0 }}>未安装信标</p>
+                  <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} disabled={mutationsDisabled} type="button">绑定信标</button>
+                </div>
+              )}
+            </div>
           </>
         )}
 
         {activeTab === "plans" && (
-          <>
-            {/* AI Schedule Form */}
-            {showScheduleForm ? (
-              <div className="dp-section">
-                <div className="so-schedule-form">
-                  <div className="so-schedule-form__header">
-                    <Sparkles size={16} />
-                    <strong>AI 安排服务</strong>
-                    <button className="sw-btn sw-btn--secondary so-schedule-form__close" onClick={() => { setShowScheduleForm(false); setGeneratedItems([]); setAiInput(""); }} type="button">收起</button>
-                  </div>
-
-                  <div className="so-ai-input-area">
-                    <p className="so-ai-hint">描述服务安排，AI 自动生成服务计划：</p>
-                    <div className="so-ai-prompts">
-                      {examplePrompts.map(p => (
-                        <button className="so-ai-prompt" key={p} onClick={() => setAiInput(p)} type="button">{p}</button>
-                      ))}
-                    </div>
-                    <div className="so-ai-input-row">
-                      <textarea
-                        className="so-ai-input"
-                        rows={3}
-                        onChange={(e) => setAiInput(e.target.value)}
-                        placeholder={"输入服务安排，如：\n每周一三五上午10点到12点助餐、测血糖血压\n今天下午2点到3点上门助浴"}
-                        value={aiInput}
-                      />
-                      <button className="so-ai-send" disabled={generating || !aiInput.trim()} onClick={handleGenerate} type="button">
-                        {generating ? <Clock size={16} className="so-ai-spin" /> : <Send size={16} />}
-                      </button>
-                    </div>
-                    {generating && (
-                      <div className="so-ai-loading">
-                        <Sparkles size={16} className="so-ai-spin" />
-                        <span>AI 正在分析服务安排...</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {aiResult && (
-                    <div className="so-plan-summary-card">
-                      <div className="so-plan-summary-card__header">
-                        <CalendarPlus size={18} />
-                        <h4>{aiResult.plan.isRecurring ? "周期服务计划" : "一次性服务排期"}</h4>
-                      </div>
-                      <div className="so-plan-summary-card__body">
-                        <dl className="dp-fields">
-                          <div className="dp-field"><dt>服务内容</dt><dd>{aiResult.plan.serviceContent}</dd></div>
-                          {aiResult.plan.isRecurring && <div className="dp-field"><dt>频率</dt><dd>{aiResult.plan.cadenceLabel}</dd></div>}
-                          <div className="dp-field"><dt>时间</dt><dd>{aiResult.plan.timeWindow.start}-{aiResult.plan.timeWindow.end}</dd></div>
-                          <div className="dp-field"><dt>开始日期</dt><dd>{aiResult.plan.startDate}</dd></div>
-                        </dl>
-
-                        <div className="so-plan-field">
-                          <label className="sw-field"><span>服务人员</span>
-                            <select value={planWorkerId} onChange={e => setPlanWorkerId(e.target.value)}>
-                              <option value="">不指定（待分配）</option>
-                              {workerOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                            </select>
-                          </label>
-                        </div>
-
-                        <div className="so-plan-field">
-                          <strong className="so-plan-field__label">服务项目</strong>
-                          <div className="so-plan-sop-list">
-                            {allServiceSops.filter(s => selectedSopIds.includes(s.id)).map(s => (
-                              <label key={s.id} className="so-plan-sop-item">
-                                <input type="checkbox" checked onChange={() => setSelectedSopIds(prev => prev.filter(id => id !== s.id))} />
-                                <span>{s.name}</span>
-                              </label>
-                            ))}
-                          </div>
-                          {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).length > 0 && (
-                            <select className="so-plan-sop-add" value="" onChange={(e) => { if (e.target.value) setSelectedSopIds(prev => [...prev, e.target.value]); }}>
-                              <option value="">+ 添加服务项目</option>
-                              {allServiceSops.filter(s => !selectedSopIds.includes(s.id)).map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-
-                        {aiResult.preview.length > 0 && (
-                          <div className="so-plan-field">
-                            <strong className="so-plan-field__label">近期排期预览</strong>
-                            <div className="so-plan-preview">
-                              {aiResult.preview.map((p, i) => (
-                                <div key={i} className="so-plan-preview-item">
-                                  <span className="so-plan-preview-date">{p.date}</span>
-                                  <span className="so-plan-preview-day">{p.dayLabel}</span>
-                                  <span className="so-plan-preview-time">{p.timeLabel}</span>
-                                </div>
-                              ))}
-                              {aiResult.plan.isRecurring && <div className="so-plan-preview-note">将自动生成后续排期</div>}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="so-plan-summary-card__footer">
-                        <button className="sw-btn sw-btn--secondary" onClick={() => setAiResult(null)} type="button">取消</button>
-                        <button className="sw-btn sw-btn--primary" onClick={handleCreatePlan} type="button">
-                          {aiResult.plan.isRecurring ? "创建计划" : "创建排期"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="so-plans-header-bar">
-                <button className="sw-btn sw-btn--primary" disabled={mutationsDisabled} onClick={() => setShowScheduleForm(true)} type="button">
-                  <Sparkles size={14} /> AI 安排服务
-                </button>
-              </div>
-            )}
-
-            {/* Existing plans */}
-            <div className="dp-section">
-              <div className="dp-section__head"><h4 className="dp-section__title">当前计划</h4></div>
-              {savedPlans.length > 0 ? (
-                <div className="so-plans">
-                  {savedPlans.map(plan => (
-                    <div className="so-plan-card" data-status={plan.status} key={plan.id}>
-                      {/* Row 1: cadence + time + status */}
-                      <div className="so-plan-card__row1">
-                        <span className="so-plan-card__rule">{plan.cadenceLabel} · {plan.preferredTimeWindow?.start ?? ""}-{plan.preferredTimeWindow?.end ?? ""}</span>
-                        <StatusBadge tone={plan.status === "active" ? "success" : plan.status === "paused" ? "warning" : "muted"}>
-                          {plan.status === "active" ? "进行中" : plan.status === "paused" ? "已暂停" : "已停用"}
-                        </StatusBadge>
-                      </div>
-                      {/* Row 2: worker + SOP tags */}
-                      <div className="so-plan-card__row2">
-                        <span className="so-plan-card__worker-tag"><UserRound size={11} /> {plan.primarySocialWorkerName ?? "待分配"}</span>
-                        {plan.sopLinks?.map((s: any) => <span key={s.sopId} className="sw-tag sw-tag--sm">{s.sopName}</span>)}
-                      </div>
-                      {/* Row 3: actions */}
-                      <div className="so-plan-card__row3">
-                        <button className="so-plan-card__action" onClick={() => setEditingPlanId(plan.id)} type="button"><Edit3 size={12} /> 编辑</button>
-                        {plan.status === "active" ? (
-                          <div style={{ position: "relative" }}>
-                            <button className="so-plan-card__action" onClick={() => setCancelPlanConfirmId(cancelPlanConfirmId === plan.id ? null : plan.id)} type="button">停用</button>
-                            {cancelPlanConfirmId === plan.id && (
-                              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FDE68A", padding: "10px 14px", zIndex: 100, whiteSpace: "nowrap" }}>
-                                <div style={{ fontSize: 13, color: "#92400E", marginBottom: 8 }}>确定停用此计划？排期将被暂停。</div>
-                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                  <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setCancelPlanConfirmId(null)} type="button">取消</button>
-                                  <button className="sw-btn sw-btn--primary" style={{ height: 26, fontSize: 11, padding: "0 10px", background: "#D97706" }} onClick={() => handleCancelPlan(plan.id)} type="button">确认停用</button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : plan.status === "archived" ? (
-                          <button className="so-plan-card__action so-plan-card__action--primary" onClick={() => handleReactivatePlan(plan.id)} type="button">重新启用</button>
-                        ) : null}
-                        <div style={{ position: "relative" }}>
-                          <button className="so-plan-card__action so-plan-card__action--danger" onClick={() => setDeletePlanConfirmId(deletePlanConfirmId === plan.id ? null : plan.id)} type="button">删除</button>
-                          {deletePlanConfirmId === plan.id && (
-                            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid #FECACA", padding: "10px 14px", zIndex: 100, whiteSpace: "nowrap" }}>
-                              <div style={{ fontSize: 13, color: "#B42318", marginBottom: 8 }}>确定删除此计划？相关排期将被永久删除。</div>
-                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                <button className="sw-btn sw-btn--secondary" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => setDeletePlanConfirmId(null)} type="button">取消</button>
-                                <button className="sw-btn sw-btn--danger" style={{ height: 26, fontSize: 11, padding: "0 10px" }} onClick={() => handleDeletePlan(plan.id)} type="button">确认删除</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="sw-text-muted">暂无周期服务计划</p>}
-            </div>
-
-            {/* Plan Edit Modal */}
-            {editingPlanId && (() => {
-              const ep = savedPlans.find(p => p.id === editingPlanId);
-              if (!ep) return null;
-              return <PlanEditModal plan={ep} workerOptions={workerOptions} allServiceSops={allServiceSops} onSave={(updates) => handleSavePlanEdit(ep.id, updates)} onClose={() => setEditingPlanId(null)} />;
-            })()}
-
-            {/* Schedule occurrences */}
-            {savedSchedules.length > 0 && (
-              <div className="dp-section">
-                <div className="dp-section__head"><h4 className="dp-section__title">近期排期 ({savedSchedules.length}条)</h4></div>
-                <div className="so-schedules-list">
-                  {[...savedSchedules].sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || (a.timeWindow?.start ?? "").localeCompare(b.timeWindow?.start ?? "")).slice(0, 20).map(s => {
-                    const effectiveStatus = (!s.assignedSocialWorkerId && s.status === "scheduled") ? "unassigned" : s.status;
-                    const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-                    const dow = dayNames[new Date(s.serviceDate + "T00:00:00").getDay()];
-                    const timeStr = `${s.timeWindow?.start ?? ""}–${s.timeWindow?.end ?? ""}`;
-                    return (
-                      <div className="so-schedule-row" key={s.id}>
-                        <span>{s.serviceDate} {dow} {timeStr}</span>
-                        <span>{s.assignedSocialWorkerName ?? ""}</span>
-                        <StatusBadge tone={effectiveStatus === "completed" ? "success" : effectiveStatus === "cancelled" ? "muted" : effectiveStatus === "unassigned" ? "warning" : "accent"} style={{ fontSize: 10, padding: "2px 6px" }}>
-                          {statusText[effectiveStatus] ?? effectiveStatus}
-                        </StatusBadge>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Placeholder for future local plans section */}
-            {false && (
-              <div></div>
-            )}
-          </>
+          <div className="dp-section">
+            <ServicePlanTab obj={obj} mutationsDisabled={mutationsDisabled} />
+          </div>
         )}
 
         {activeTab === "history" && (
@@ -875,24 +699,506 @@ function ViewModal({ object: obj, mutationsDisabled, onClose, onUpdated }: {
           </div>
         )}
 
-        {activeTab === "insights" && (
-          <div className="dp-section">
-            {hasInsights ? (
-              <>
-                {obj.latestInsightSummary ? <p className="so-insight-summary">{obj.latestInsightSummary}</p> : null}
-                {(obj.insightSummaries ?? []).map(insight => (
-                  <div className="so-insight" data-severity={insight.severity} key={insight.id}>
-                    <strong>{insight.title}</strong>
-                    <span>{insight.description}</span>
-                  </div>
-                ))}
-              </>
-            ) : <p className="sw-text-muted">暂无 AI 洞察数据</p>}
-          </div>
+        {activeTab === "schedule" && (
+          <ElderScheduleCalendar
+            savedSchedules={savedSchedules}
+            obj={obj}
+            workerOptions={workerOptions}
+            allServiceSops={allServiceSops}
+            selectedSopIds={selectedSopIds}
+            setSelectedSopIds={setSelectedSopIds}
+            planWorkerId={planWorkerId}
+            setPlanWorkerId={setPlanWorkerId}
+            aiInput={aiInput}
+            setAiInput={setAiInput}
+            generating={generating}
+            aiResult={aiResult}
+            showScheduleForm={showScheduleForm}
+            setShowScheduleForm={setShowScheduleForm}
+            handleGenerate={handleGenerate}
+            handleCreatePlan={handleCreatePlan}
+            setAiResult={setAiResult}
+            mutationsDisabled={mutationsDisabled}
+          />
         )}
         </div>
       </div>
     </DetailPageShell>
+  );
+}
+
+/* ── Hangzhou 41-item catalog (static fallback) ── */
+
+const HZ_CATALOG_ITEMS: Array<{
+  seq: number; name: string; category: string; referenceMinutes: number; frequency: string; qualification: string;
+}> = [
+  { seq: 1, name: "整理床单位", category: "清洁卫生类", referenceMinutes: 5, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 2, name: "面部清洁", category: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 3, name: "口腔清洁", category: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 4, name: "头发清洁及梳理", category: "清洁卫生类", referenceMinutes: 20, frequency: "1次/周", qualification: "护理员" },
+  { seq: 5, name: "指/趾甲护理", category: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/周", qualification: "护理员" },
+  { seq: 6, name: "温水擦浴", category: "清洁卫生类", referenceMinutes: 30, frequency: "1-2次/周", qualification: "护理员" },
+  { seq: 7, name: "沐浴", category: "清洁卫生类", referenceMinutes: 40, frequency: "1次/周", qualification: "护理员" },
+  { seq: 8, name: "协助更衣", category: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 9, name: "会阴护理", category: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 10, name: "足部清洁", category: "清洁卫生类", referenceMinutes: 15, frequency: "1-2次/周", qualification: "护理员" },
+  { seq: 11, name: "剃须", category: "清洁卫生类", referenceMinutes: 10, frequency: "必要时", qualification: "护理员" },
+  { seq: 12, name: "手部清洁", category: "清洁卫生类", referenceMinutes: 5, frequency: "必要时", qualification: "护理员" },
+  { seq: 13, name: "眼部清洁", category: "清洁卫生类", referenceMinutes: 5, frequency: "必要时", qualification: "护理员" },
+  { seq: 14, name: "耳部清洁", category: "清洁卫生类", referenceMinutes: 5, frequency: "必要时", qualification: "护理员" },
+  { seq: 15, name: "鼻部清洁", category: "清洁卫生类", referenceMinutes: 5, frequency: "必要时", qualification: "护理员" },
+  { seq: 16, name: "协助进食/水", category: "营养摄取类", referenceMinutes: 20, frequency: "必要时", qualification: "护理员" },
+  { seq: 17, name: "鼻饲", category: "营养摄取类", referenceMinutes: 20, frequency: "必要时", qualification: "护士" },
+  { seq: 18, name: "营养指导", category: "营养摄取类", referenceMinutes: 15, frequency: "1次/周", qualification: "护士" },
+  { seq: 19, name: "协助如厕", category: "排泄护理类", referenceMinutes: 10, frequency: "必要时", qualification: "护理员" },
+  { seq: 20, name: "失禁护理", category: "排泄护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护理员" },
+  { seq: 21, name: "人工取便术", category: "排泄护理类", referenceMinutes: 20, frequency: "必要时", qualification: "护士" },
+  { seq: 22, name: "留置尿管护理", category: "排泄护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护士" },
+  { seq: 23, name: "人工膀胱护理", category: "排泄护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护士" },
+  { seq: 24, name: "造口护理", category: "排泄护理类", referenceMinutes: 20, frequency: "必要时", qualification: "护士" },
+  { seq: 25, name: "灌肠", category: "排泄护理类", referenceMinutes: 20, frequency: "必要时", qualification: "护士" },
+  { seq: 26, name: "尿管更换", category: "排泄护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护士" },
+  { seq: 27, name: "协助翻身", category: "移动舒适和安全护理类", referenceMinutes: 5, frequency: "必要时", qualification: "护理员" },
+  { seq: 28, name: "协助移动", category: "移动舒适和安全护理类", referenceMinutes: 10, frequency: "必要时", qualification: "护理员" },
+  { seq: 29, name: "皮肤外用药涂擦", category: "移动舒适和安全护理类", referenceMinutes: 10, frequency: "必要时", qualification: "护理员" },
+  { seq: 30, name: "压疮预防护理", category: "移动舒适和安全护理类", referenceMinutes: 15, frequency: "1-2次/日", qualification: "护理员" },
+  { seq: 31, name: "压疮伤口换药", category: "移动舒适和安全护理类", referenceMinutes: 20, frequency: "必要时", qualification: "护士" },
+  { seq: 32, name: "安全护理", category: "移动舒适和安全护理类", referenceMinutes: 10, frequency: "必要时", qualification: "护理员" },
+  { seq: 33, name: "翻身叩背排痰", category: "移动舒适和安全护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护理员" },
+  { seq: 34, name: "吸痰护理", category: "移动舒适和安全护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护士" },
+  { seq: 35, name: "关节活动练习", category: "移动舒适和安全护理类", referenceMinutes: 20, frequency: "1次/日", qualification: "护理员" },
+  { seq: 36, name: "温热疗法", category: "移动舒适和安全护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护理员" },
+  { seq: 37, name: "冷疗法", category: "移动舒适和安全护理类", referenceMinutes: 15, frequency: "必要时", qualification: "护理员" },
+  { seq: 38, name: "生命体征监测", category: "生命体征观察与护理类", referenceMinutes: 10, frequency: "1次/日", qualification: "护士" },
+  { seq: 39, name: "血糖监测", category: "生命体征观察与护理类", referenceMinutes: 10, frequency: "必要时", qualification: "护士" },
+  { seq: 40, name: "口服给药", category: "用药指导类", referenceMinutes: 10, frequency: "必要时", qualification: "护士" },
+  { seq: 41, name: "药物管理指导", category: "用药指导类", referenceMinutes: 15, frequency: "1次/周", qualification: "护士" },
+];
+
+function ServicePlanTab({ obj, mutationsDisabled }: { obj: ServiceObject; mutationsDisabled: boolean }) {
+  const [catalogItems, setCatalogItems] = useState<typeof HZ_CATALOG_ITEMS>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    authFetch("/api/standard-catalogs/hz-2024/items")
+      .then(r => r.json())
+      .then(data => {
+        if (data.items && data.items.length > 0) {
+          setCatalogItems(data.items.map((it: any) => ({
+            seq: it.seq ?? it.itemNumber ?? 0,
+            name: it.name ?? it.itemName ?? "",
+            category: it.categoryName ?? it.category ?? "",
+            referenceMinutes: it.referenceMinutes ?? 0,
+            frequency: it.frequency ?? "",
+            qualification: (it.requiredQualifications ?? []).join("、") || (it.qualification ?? "护理员"),
+          })));
+        } else {
+          setCatalogItems(HZ_CATALOG_ITEMS);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setCatalogItems(HZ_CATALOG_ITEMS);
+        setLoading(false);
+      });
+  }, []);
+
+  // Match catalog items to this elder's serviceProjects
+  const elderProjectNames = useMemo(() => new Set((obj.serviceProjects ?? []).map(p => p.trim())), [obj.serviceProjects]);
+
+  const planItems = useMemo(() => {
+    if (catalogItems.length === 0) return [];
+    // Match by name
+    const matched = catalogItems.filter(item => elderProjectNames.has(item.name));
+    if (matched.length >= 5) return matched;
+    // If fewer than 5 matches, supplement with common care items
+    const defaultNames = ["整理床单位", "面部清洁", "协助进食/水", "协助如厕", "失禁护理", "翻身叩背排痰", "关节活动练习", "生命体征监测"];
+    const matchedNames = new Set(matched.map(m => m.name));
+    const supplemented = [...matched];
+    for (const dn of defaultNames) {
+      if (supplemented.length >= 8) break;
+      if (matchedNames.has(dn)) continue;
+      const found = catalogItems.find(c => c.name === dn);
+      if (found) { supplemented.push(found); matchedNames.add(dn); }
+    }
+    // If still not enough, fill from catalog
+    for (const item of catalogItems) {
+      if (supplemented.length >= 8) break;
+      if (!matchedNames.has(item.name)) { supplemented.push(item); matchedNames.add(item.name); }
+    }
+    return supplemented.sort((a, b) => a.seq - b.seq);
+  }, [catalogItems, elderProjectNames]);
+
+  return (
+    <div className="so-plan-official">
+      <div className="so-plan-official__header">
+        <h4>长期护理保险护理服务计划</h4>
+        <StatusBadge tone="success">生效中</StatusBadge>
+      </div>
+
+      <div className="so-plan-official__info">
+        <div className="so-plan-official__row"><dt>姓名</dt><dd>{obj.name}</dd></div>
+        <div className="so-plan-official__row"><dt>性别</dt><dd>{obj.gender === "female" ? "女" : obj.gender === "male" ? "男" : "未知"}</dd></div>
+        <div className="so-plan-official__row"><dt>身份证号</dt><dd>{obj.idNumber ?? "—"}</dd></div>
+        <div className="so-plan-official__row"><dt>现住地址</dt><dd>{obj.address}</dd></div>
+        <div className="so-plan-official__row"><dt>重度失能等级</dt><dd>重度二级</dd></div>
+        <div className="so-plan-official__row"><dt>联系人</dt><dd>{obj.familyContacts?.[0]?.name ?? "—"}（{obj.familyContacts?.[0]?.relation ?? ""}）{obj.familyContacts?.[0]?.phone ?? ""}</dd></div>
+        <div className="so-plan-official__row"><dt>定点长护服务机构</dt><dd>金色年华养老服务有限公司</dd></div>
+        <div className="so-plan-official__row"><dt>月度额度</dt><dd>25小时</dd></div>
+        <div className="so-plan-official__row"><dt>常用服务人员</dt><dd>{obj.servicePlanSummaries?.[0]?.primarySocialWorkerName ?? "待分配"}（建议，非硬约束）</dd></div>
+      </div>
+
+      <div className="so-plan-official__table">
+        <h5>护理服务项目</h5>
+        {loading ? (
+          <p className="sw-text-muted">加载服务目录中...</p>
+        ) : (
+          <table className="so-plan-table">
+            <thead>
+              <tr>
+                <th>编号</th>
+                <th>服务项目</th>
+                <th>大类</th>
+                <th>参考时长(分钟)</th>
+                <th>服务频次</th>
+                <th>资质要求</th>
+              </tr>
+            </thead>
+            <tbody>
+              {planItems.length > 0 ? planItems.map((item, idx) => (
+                <tr key={idx}>
+                  <td>{item.seq}</td>
+                  <td>{item.name}</td>
+                  <td>{item.category}</td>
+                  <td>{item.referenceMinutes}</td>
+                  <td>{item.frequency}</td>
+                  <td>{item.qualification}</td>
+                </tr>
+              )) : (
+                <tr><td colSpan={6} style={{ textAlign: "center", color: "#999" }}>暂无服务项目</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="so-plan-official__footer">
+        <button className="sw-btn sw-btn--secondary" disabled={mutationsDisabled} type="button"><Edit3 size={12} /> 编辑服务计划</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Elder Schedule Calendar (full day/week/month views + AI section) ── */
+
+type CalendarView = "day" | "week" | "month";
+
+function ElderScheduleCalendar({ savedSchedules, obj, workerOptions, allServiceSops, selectedSopIds, setSelectedSopIds, planWorkerId, setPlanWorkerId, aiInput, setAiInput, generating, aiResult, showScheduleForm, setShowScheduleForm, handleGenerate, handleCreatePlan, setAiResult, mutationsDisabled }: {
+  savedSchedules: Array<{ id: string; serviceDate: string; serviceProject: string; status: string; timeWindow?: any; assignedSocialWorkerName?: string; assignedSocialWorkerId?: string; source?: string; servicePlanId?: string }>;
+  obj: ServiceObject;
+  workerOptions: Array<{ id: string; name: string }>;
+  allServiceSops: Array<{ id: string; name: string }>;
+  selectedSopIds: string[];
+  setSelectedSopIds: (ids: string[]) => void;
+  planWorkerId: string;
+  setPlanWorkerId: (id: string) => void;
+  aiInput: string;
+  setAiInput: (v: string) => void;
+  generating: boolean;
+  aiResult: AiScheduleResult | null;
+  showScheduleForm: boolean;
+  setShowScheduleForm: (v: boolean) => void;
+  handleGenerate: () => void;
+  handleCreatePlan: () => void;
+  setAiResult: (v: AiScheduleResult | null) => void;
+  mutationsDisabled: boolean;
+}) {
+  const [calView, setCalView] = useState<CalendarView>("week");
+  const [calDate, setCalDate] = useState(() => new Date());
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [aiCollapsed, setAiCollapsed] = useState(true);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const dayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+
+  // Navigation helpers
+  const navigate = (dir: number) => {
+    const d = new Date(calDate);
+    if (calView === "day") d.setDate(d.getDate() + dir);
+    else if (calView === "week") d.setDate(d.getDate() + dir * 7);
+    else d.setMonth(d.getMonth() + dir);
+    setCalDate(d);
+  };
+  const goToday = () => setCalDate(new Date());
+
+  // Week dates
+  const weekDates = useMemo(() => {
+    const dow = calDate.getDay();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(calDate);
+      d.setDate(calDate.getDate() + mondayOffset + i);
+      return d.toISOString().slice(0, 10);
+    });
+  }, [calDate]);
+
+  // Month grid
+  const monthGrid = useMemo(() => {
+    const year = calDate.getFullYear();
+    const month = calDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPad = (firstDay.getDay() + 6) % 7; // Monday=0
+    const days: Array<{ date: string; inMonth: boolean }> = [];
+    // Pad from previous month
+    for (let i = startPad - 1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+      days.push({ date: d.toISOString().slice(0, 10), inMonth: false });
+    }
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      days.push({ date: new Date(year, month, d).toISOString().slice(0, 10), inMonth: true });
+    }
+    // Pad to complete last week
+    while (days.length % 7 !== 0) {
+      const nextD = new Date(year, month + 1, days.length - startPad - lastDay.getDate() + 1);
+      days.push({ date: nextD.toISOString().slice(0, 10), inMonth: false });
+    }
+    return days;
+  }, [calDate]);
+
+  // Period label
+  const periodLabel = useMemo(() => {
+    if (calView === "day") return calDate.toISOString().slice(0, 10);
+    if (calView === "week") return `${weekDates[0]} ~ ${weekDates[6]}`;
+    return `${calDate.getFullYear()}年${calDate.getMonth() + 1}月`;
+  }, [calView, calDate, weekDates]);
+
+  // Filtered schedules for current view
+  const schedulesForPeriod = useMemo(() => {
+    if (calView === "day") {
+      const ds = calDate.toISOString().slice(0, 10);
+      return savedSchedules.filter(s => s.serviceDate === ds);
+    }
+    if (calView === "week") {
+      const dateSet = new Set(weekDates);
+      return savedSchedules.filter(s => dateSet.has(s.serviceDate));
+    }
+    // month
+    const dateSet = new Set(monthGrid.map(d => d.date));
+    return savedSchedules.filter(s => dateSet.has(s.serviceDate));
+  }, [calView, calDate, weekDates, monthGrid, savedSchedules]);
+
+  const schedulesForDay = (date: string) => schedulesForPeriod.filter(s => s.serviceDate === date);
+
+  // Show toast helper
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 2000);
+  };
+
+  // AI generate handler
+  const handleAiGenerate = () => {
+    showToast("AI正在生成...");
+    setTimeout(() => {
+      handleGenerate();
+    }, 1500);
+  };
+
+  const renderCard = (s: typeof savedSchedules[0]) => (
+    <div className="so-elder-calendar__card" data-status={s.status} key={s.id}>
+      <div className="so-elder-calendar__card-time">{s.timeWindow?.start ?? ""}-{s.timeWindow?.end ?? ""}</div>
+      <div className="so-elder-calendar__card-worker">{s.assignedSocialWorkerName ?? "未分配"}</div>
+      <div className="so-elder-calendar__card-project">{s.serviceProject}</div>
+    </div>
+  );
+
+  return (
+    <div className="dp-section">
+      {/* Toast */}
+      {toastMsg && (
+        <div className="so-elder-calendar__toast">{toastMsg}</div>
+      )}
+
+      {/* Toolbar: view switcher + navigation */}
+      <div className="so-elder-calendar__toolbar">
+        <div className="so-elder-calendar__view-switcher">
+          {(["day", "week", "month"] as CalendarView[]).map(v => (
+            <button key={v} type="button" className="so-elder-calendar__view-btn" data-active={calView === v} onClick={() => setCalView(v)}>
+              {v === "day" ? "日" : v === "week" ? "周" : "月"}
+            </button>
+          ))}
+        </div>
+        <div className="so-elder-calendar__nav">
+          <button type="button" className="so-elder-calendar__nav-btn" onClick={() => navigate(-1)}><ChevronLeft size={16} /></button>
+          <button type="button" className="so-elder-calendar__nav-today" onClick={goToday}>今天</button>
+          <button type="button" className="so-elder-calendar__nav-btn" onClick={() => navigate(1)}><ChevronRight size={16} /></button>
+          <span className="so-elder-calendar__period-label">{periodLabel}</span>
+        </div>
+      </div>
+
+      {/* Week View */}
+      {calView === "week" && (
+        <div className="so-elder-calendar">
+          <div className="so-elder-calendar__header">
+            {dayNames.map((name, i) => (
+              <div className={`so-elder-calendar__day-header${weekDates[i] === todayStr ? " so-elder-calendar__day-header--today" : ""}`} key={i}>
+                <span className="so-elder-calendar__day-name">{name}</span>
+                <span className="so-elder-calendar__day-date">{weekDates[i].slice(5)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="so-elder-calendar__body">
+            {dayNames.map((_, i) => {
+              const date = weekDates[i];
+              const daySchedules = schedulesForDay(date);
+              return (
+                <div className={`so-elder-calendar__cell${date === todayStr ? " so-elder-calendar__cell--today" : ""}`} key={i}>
+                  {daySchedules.length > 0 ? daySchedules.map(renderCard) : (
+                    <span className="so-elder-calendar__empty">无排班</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Day View */}
+      {calView === "day" && (() => {
+        const ds = calDate.toISOString().slice(0, 10);
+        const daySchedules = schedulesForDay(ds);
+        return (
+          <div className="so-elder-calendar__day-view">
+            <div className="so-elder-calendar__day-view-header">
+              <span className="so-elder-calendar__day-view-date">{ds}{ds === todayStr ? "（今天）" : ""}</span>
+              <span className="so-elder-calendar__day-view-count">{daySchedules.length} 项排班</span>
+            </div>
+            {daySchedules.length > 0 ? (
+              <div className="so-elder-calendar__day-view-list">
+                {daySchedules.map(s => (
+                  <div className="so-elder-calendar__day-view-item" data-status={s.status} key={s.id}>
+                    <div className="so-elder-calendar__day-view-time">
+                      <Clock size={14} />
+                      <span>{s.timeWindow?.start ?? "—"} - {s.timeWindow?.end ?? "—"}</span>
+                    </div>
+                    <div className="so-elder-calendar__day-view-detail">
+                      <strong>{s.serviceProject}</strong>
+                      <span>{s.assignedSocialWorkerName ?? "未分配"}</span>
+                      <StatusBadge tone={s.status === "completed" ? "success" : s.status === "missed" ? "warning" : "muted"}>
+                        {s.status === "completed" ? "已完成" : s.status === "missed" ? "缺失" : s.status === "in_progress" ? "进行中" : "已排班"}
+                      </StatusBadge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="sw-text-muted" style={{ textAlign: "center", padding: 24 }}>当日无排班</p>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Month View */}
+      {calView === "month" && (
+        <>
+          <div className="so-elder-calendar__month-view">
+            <div className="so-elder-calendar__month-header">
+              {["一", "二", "三", "四", "五", "六", "日"].map(d => (
+                <div className="so-elder-calendar__month-header-cell" key={d}>周{d}</div>
+              ))}
+            </div>
+            <div className="so-elder-calendar__month-grid">
+              {monthGrid.map((cell, i) => {
+                const count = schedulesForDay(cell.date).length;
+                const isToday = cell.date === todayStr;
+                const isSelected = cell.date === selectedDay;
+                return (
+                  <div
+                    key={i}
+                    className={`so-elder-calendar__month-cell${!cell.inMonth ? " so-elder-calendar__month-cell--out" : ""}${isToday ? " so-elder-calendar__month-cell--today" : ""}${isSelected ? " so-elder-calendar__month-cell--selected" : ""}`}
+                    onClick={() => setSelectedDay(cell.date)}
+                  >
+                    <span className="so-elder-calendar__month-cell-day">{parseInt(cell.date.slice(8), 10)}</span>
+                    {count > 0 && <span className="so-elder-calendar__month-cell-dot" title={`${count}项排班`} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {selectedDay && (() => {
+            const daySchedules = schedulesForDay(selectedDay);
+            return (
+              <div className="so-elder-calendar__month-detail">
+                <h5>{selectedDay} 排班详情</h5>
+                {daySchedules.length > 0 ? (
+                  <div className="so-elder-calendar__day-view-list">
+                    {daySchedules.map(s => (
+                      <div className="so-elder-calendar__day-view-item" data-status={s.status} key={s.id}>
+                        <div className="so-elder-calendar__day-view-time">
+                          <Clock size={14} />
+                          <span>{s.timeWindow?.start ?? "—"} - {s.timeWindow?.end ?? "—"}</span>
+                        </div>
+                        <div className="so-elder-calendar__day-view-detail">
+                          <strong>{s.serviceProject}</strong>
+                          <span>{s.assignedSocialWorkerName ?? "未分配"}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="sw-text-muted">该日无排班</p>
+                )}
+              </div>
+            );
+          })()}
+        </>
+      )}
+
+      {savedSchedules.length === 0 && <p className="sw-text-muted" style={{ marginTop: 12 }}>暂无排班记录</p>}
+
+      {/* AI 安排服务 collapsible section */}
+      <div className="so-elder-calendar__ai-section">
+        <button type="button" className="so-elder-calendar__ai-toggle" onClick={() => setAiCollapsed(!aiCollapsed)}>
+          <Sparkles size={14} />
+          <span>AI 安排服务</span>
+          <ChevronRight size={14} className={`so-elder-calendar__ai-chevron${aiCollapsed ? "" : " so-elder-calendar__ai-chevron--open"}`} />
+        </button>
+        {!aiCollapsed && (
+          <div className="so-elder-calendar__ai-body">
+            <textarea
+              className="so-elder-calendar__ai-input"
+              placeholder="输入服务安排指令，如：每周一三五上午9点到11点上门"
+              value={aiInput}
+              onChange={e => setAiInput(e.target.value)}
+              rows={3}
+            />
+            <div className="so-elder-calendar__ai-chips">
+              {examplePrompts.map((p, i) => (
+                <button key={i} type="button" className="so-elder-calendar__ai-chip" onClick={() => setAiInput(p)}>{p}</button>
+              ))}
+            </div>
+            <div className="so-elder-calendar__ai-actions">
+              <button className="sw-btn sw-btn--primary" style={{ fontSize: 13 }} disabled={generating || !aiInput.trim() || mutationsDisabled} onClick={handleAiGenerate} type="button">
+                <Sparkles size={14} /> {generating ? "生成中..." : "AI 生成排班"}
+              </button>
+            </div>
+            {aiResult && (
+              <div className="so-elder-calendar__ai-result">
+                <div style={{ fontSize: 13, color: "#374151", marginBottom: 8 }}>
+                  AI 建议：{aiResult.plan?.cadenceLabel ?? "单次"} · {aiResult.plan?.timeWindow?.start ?? ""}-{aiResult.plan?.timeWindow?.end ?? ""} · {aiResult.plan?.serviceContent ?? ""}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="sw-btn sw-btn--primary" style={{ height: 28, fontSize: 12 }} disabled={mutationsDisabled} onClick={handleCreatePlan} type="button">确认创建</button>
+                  <button className="sw-btn sw-btn--secondary" style={{ height: 28, fontSize: 12 }} onClick={() => setAiResult(null)} type="button">取消</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1116,7 +1422,7 @@ function FormFields({ name, onNameChange, phone, onPhoneChange, idNumber, onIdNu
         <div className="so-form-card__row">
           <label className="sw-field"><span>服务资格</span>
             <select onChange={(e) => onEligibilityChange(e.target.value)} value={eligibility}>
-              <option value="insurance">养护险</option><option value="government">政府购买</option>
+              <option value="insurance">长护险</option><option value="government">政府购买</option>
               <option value="institution">机构服务</option><option value="self_paid">自费</option>
             </select>
           </label>

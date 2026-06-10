@@ -1170,10 +1170,124 @@ function AiConfigView({
           onViewVersion={(v) => onViewVersion("report", v)}
           onBackFromVersion={onBackFromVersion}
         />
+
+        {/* Training Mode Config */}
+        <TrainingModeConfig folderName={folder.name} />
       </div>
 
       {/* SOP reference */}
       {sopDoc && <SopReference doc={sopDoc} />}
+    </div>
+  );
+}
+
+/* ═══ Training Mode Config ═══ */
+
+function TrainingModeConfig({ folderName }: { folderName: string }) {
+  const [guidanceScript, setGuidanceScript] = useState(
+    `1. 欢迎${folderName}培训引导模式\n2. AI将逐步引导您完成${folderName}的操作要点\n3. 请跟随提示进行练习，完成后点击"下一步"继续`
+  );
+  const [supervisionCriteria, setSupervisionCriteria] = useState(
+    `1. 观察服务人员是否按照${folderName}标准流程执行\n2. 检查操作手法是否规范\n3. 记录服务人员与老人的沟通方式\n4. 评估安全防护措施是否到位`
+  );
+  const [scoringRubric, setScoringRubric] = useState(
+    `1. 流程完整性（30分）：是否完成${folderName}的全部步骤\n2. 操作规范性（30分）：手法是否符合标准要求\n3. 沟通表达（20分）：与老人沟通是否清晰、耐心\n4. 安全意识（20分）：是否注意安全防护`
+  );
+  const [passScore, setPassScore] = useState("60");
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="sv-ai-card" style={{ borderColor: "#9333EA22" }}>
+      <div className="sv-ai-card__header">
+        <div className="sv-ai-card__title" style={{ color: "#9333EA" }}>
+          培训模式配置
+        </div>
+        {saved && (
+          <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 500 }}>已保存</span>
+        )}
+      </div>
+      <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Guidance */}
+        <div>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+            培训引导配置
+          </label>
+          <textarea
+            value={guidanceScript}
+            onChange={(e) => setGuidanceScript(e.target.value)}
+            rows={4}
+            style={{
+              width: "100%", padding: "8px 10px", fontSize: 13, fontFamily: "inherit",
+              border: "1px solid #E2E8F0", borderRadius: 8, resize: "vertical",
+              lineHeight: 1.6, background: "#FAFBFC",
+            }}
+          />
+        </div>
+
+        {/* Supervision */}
+        <div>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+            培训督导配置
+          </label>
+          <textarea
+            value={supervisionCriteria}
+            onChange={(e) => setSupervisionCriteria(e.target.value)}
+            rows={4}
+            style={{
+              width: "100%", padding: "8px 10px", fontSize: 13, fontFamily: "inherit",
+              border: "1px solid #E2E8F0", borderRadius: 8, resize: "vertical",
+              lineHeight: 1.6, background: "#FAFBFC",
+            }}
+          />
+        </div>
+
+        {/* Exam */}
+        <div>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+            考试模式配置
+          </label>
+          <textarea
+            value={scoringRubric}
+            onChange={(e) => setScoringRubric(e.target.value)}
+            rows={4}
+            style={{
+              width: "100%", padding: "8px 10px", fontSize: 13, fontFamily: "inherit",
+              border: "1px solid #E2E8F0", borderRadius: 8, resize: "vertical",
+              lineHeight: 1.6, background: "#FAFBFC",
+            }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: "#64748B" }}>通过分数线：</label>
+            <input
+              type="number"
+              value={passScore}
+              onChange={(e) => setPassScore(e.target.value)}
+              min={0}
+              max={100}
+              style={{
+                width: 72, padding: "6px 10px", fontSize: 13,
+                border: "1px solid #E2E8F0", borderRadius: 6, textAlign: "center",
+              }}
+            />
+            <span style={{ fontSize: 12, color: "#94A3B8" }}>分 (满分100)</span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button
+            className="sv-btn"
+            style={{ background: "#9333EA", color: "#fff", borderColor: "#9333EA" }}
+            onClick={handleSave}
+          >
+            保存培训配置
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -72,6 +72,7 @@ When a user is on a detail page, the copilot knows which entity is open via `Det
 
 ## Development Rules
 
+- **Cloudflare Tunnel + Vite allowedHosts**: When using cloudflared tunnel, Vite 8 blocks requests from tunnel hostnames. `allowedHosts: true` and `allowedHosts: "all"` do NOT work in Vite 8. You MUST explicitly add the tunnel domain: `allowedHosts: [".trycloudflare.com"]` in vite.config.ts. Every time a new tunnel is created, verify the domain is covered. This has caused repeated issues — do not skip this step.
 - Run `npx vitest run src/shared/` before committing changes to shared components
 - Run `npx vite build` to verify no TypeScript errors before deploying
 - Use existing CSS class system (`sw-*`, `dp-*`), do not create new class prefixes

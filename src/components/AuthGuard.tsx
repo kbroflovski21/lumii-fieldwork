@@ -17,18 +17,24 @@ export function AuthGuard() {
     return <Navigate to="/login" replace />;
   }
 
-  // site_operator accessing /admin -> redirect home
-  if (user.role !== "org_admin" && location.pathname.startsWith("/admin")) {
+  // site_operator accessing /admin or /gov -> redirect home
+  if (user.role === "site_operator" && (location.pathname.startsWith("/admin") || location.pathname.startsWith("/gov"))) {
     return <Navigate to="/" replace />;
   }
 
-  // org_admin accessing / (not /admin) -> redirect to /admin
-  if (
-    user.role === "org_admin" &&
-    !location.pathname.startsWith("/admin") &&
-    location.pathname !== "/login"
-  ) {
+  // gov_auditor can only access /gov
+  if (user.role === "gov_auditor" && !location.pathname.startsWith("/gov")) {
+    return <Navigate to="/gov" replace />;
+  }
+
+  // org_admin default to /admin, but can also access /
+  if (user.role === "org_admin" && location.pathname === "/") {
     return <Navigate to="/admin" replace />;
+  }
+
+  // non-admin/non-gov users accessing /admin -> redirect home
+  if (user.role !== "org_admin" && user.role !== "gov_auditor" && location.pathname.startsWith("/admin")) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

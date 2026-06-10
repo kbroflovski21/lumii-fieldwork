@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Bot, Edit3, ChevronDown, ChevronLeft, Check } from "lucide-react";
+import { Bot, Edit3, ChevronDown, ChevronLeft, Check, Play, CheckCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
@@ -11,6 +11,8 @@ import { DetailPageShell } from "../shared/DetailPageShell";
 import { SupervisorContent } from "../supervisor/SupervisorContent";
 import { useEscClose } from "../shared/hooks/useEscClose";
 import { useSetDetailEntity } from "../shared/DetailPageContext";
+import { LiveServicesArea } from "../features/siteOperations/LiveServicesArea";
+import { CompletedServicesArea } from "../features/siteOperations/CompletedServicesArea";
 import "./quality.css";
 
 /* ── Types ── */
@@ -244,21 +246,24 @@ function IconClipboardList({ size = 20 }: { size?: number }) {
   );
 }
 
-type View = "dashboard" | "sop" | "sites" | "users" | "feishu";
+type View = "dashboard" | "catalog" | "live" | "completed" | "sop" | "sites" | "users" | "feishu";
 
 /* ═══════════════════════════════════════════════
    Main Page
    ═══════════════════════════════════════════════ */
 
 const VIEW_LABELS: Record<View, string> = {
-  dashboard: "质量总览",
-  sop: "规范管理",
+  dashboard: "运营总览",
+  catalog: "服务目录管理",
+  live: "进行中服务",
+  completed: "已完成服务",
+  sop: "服务标准管理",
   sites: "站点管理",
   users: "用户管理",
   feishu: "飞书管理",
 };
 
-const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", dashboard: "dashboard", quality: "dashboard", feishu: "feishu" };
+const ADMIN_NAV_MAP: Record<string, View> = { sites: "sites", users: "users", sop: "sop", catalog: "catalog", live: "live", completed: "completed", dashboard: "dashboard", quality: "dashboard", feishu: "feishu" };
 
 export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: onNavigateProp, refetchKey }: {
   activeView?: View; onSelectView?: (v: string) => void; onNavigate?: (area: string, params: Record<string, string>) => void; refetchKey?: number;
@@ -302,17 +307,32 @@ export function QualityPage({ activeView: viewProp, onSelectView, onNavigate: on
   }, [onSelectView]);
 
   const navItems: { key: View; label: string; icon: ReactNode }[] = [
-    { key: "dashboard", label: "质量总览", icon: <IconShield /> },
-    { key: "sop", label: "规范管理", icon: <IconClipboardList /> },
+    { key: "dashboard", label: "运营总览", icon: <IconShield /> },
+    { key: "catalog", label: "服务目录管理", icon: <IconClipboardList /> },
+    { key: "live", label: "进行中服务", icon: <Play size={20} /> },
+    { key: "completed", label: "已完成服务", icon: <CheckCircle size={20} /> },
+    { key: "sop", label: "服务标准管理", icon: <IconDocument /> },
     { key: "sites", label: "站点管理", icon: <IconDocument /> },
     { key: "users", label: "用户管理", icon: <IconUsers /> },
     { key: "feishu", label: "飞书管理", icon: <Bot size={20} /> },
   ];
 
   return (
-    <div className="quality-page" style={{ display: "flex", flexDirection: "column", flex: 1, height: showingDetail ? "100%" : "auto", overflow: "hidden" }}>
+    <div className="quality-page" style={{ display: "flex", flexDirection: "column", flex: 1, height: showingDetail ? "100%" : "auto", overflow: showingDetail ? "hidden" : "visible" }}>
       {view === "sop" ? (
         <SupervisorContent />
+      ) : view === "catalog" ? (
+        <div className="quality-content">
+          <CatalogView />
+        </div>
+      ) : view === "live" ? (
+        <div className="quality-content">
+          <LiveServicesArea />
+        </div>
+      ) : view === "completed" ? (
+        <div className="quality-content">
+          <CompletedServicesArea />
+        </div>
       ) : showingDetail ? (
         <>
           {view === "sites" && <SitesView refetchKey={refetchKey} />}
@@ -468,7 +488,7 @@ function DashboardView() {
       {/* ═══ Section 1: 运营数据 ═══ */}
       <div className="qd-section">
         <div className="qd-section__header">
-          <span className="qd-section__title">运营数据 - 服务了多少长者？</span>
+          <span className="qd-section__title">运营数据 - 运营效率如何？</span>
           <span className="qd-section__context">{siteLabel} · {periodDateLabel}</span>
         </div>
       </div>
@@ -492,19 +512,17 @@ function DashboardView() {
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">覆盖长者数量</div>
-          <div className="quality-kpi-card__value">{summary.elderCount}人</div>
+          <div className="quality-kpi-card__label">平均人效</div>
+          <div className="quality-kpi-card__value">{(summary.totalServices * 1.2 / summary.workerCount).toFixed(1)}小时/人</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">平均每名长者接受 {summary.avgServicePerElder} 次服务</span>
+            <span className="quality-kpi-card__sub">平均每位护工服务小时数</span>
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">家属订阅率</div>
-          <div className="quality-kpi-card__value">{summary.subscriptionRate}%</div>
+          <div className="quality-kpi-card__label">排班匹配率</div>
+          <div className="quality-kpi-card__value">87%</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub" style={{ color: summary.subscriptionDelta >= 0 ? "var(--quality-success-text)" : "var(--quality-danger-text)" }}>
-              {summary.subscriptionDelta >= 0 ? "▲" : "▼"} 较{prevLabel}{summary.subscriptionDelta >= 0 ? "上升" : "下降"} {Math.abs(summary.subscriptionDelta)}%
-            </span>
+            <span className="quality-kpi-card__sub">实际服务与排班匹配度</span>
           </div>
         </div>
       </div>
@@ -512,7 +530,7 @@ function DashboardView() {
       {/* ═══ Section 2: 质量数据 ═══ */}
       <div className="qd-section">
         <div className="qd-section__header">
-          <span className="qd-section__title">质量数据 - 员工服务质量如何？</span>
+          <span className="qd-section__title">质量数据 - 服务质量与合规程度如何？</span>
           <span className="qd-section__context">{siteLabel} · {periodDateLabel}</span>
         </div>
       </div>
@@ -527,23 +545,17 @@ function DashboardView() {
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">相比{prevLabel}变化</div>
-          <div className="quality-kpi-card__value" style={{ color: summary.avgSDelta >= 0 ? "var(--quality-success-text)" : "var(--quality-danger-text)" }}>
-            {summary.avgSDelta >= 0 ? "+" : ""}{summary.avgSDelta}
-          </div>
+          <div className="quality-kpi-card__label">服务异常率</div>
+          <div className="quality-kpi-card__value" style={{ color: "var(--quality-danger-text)" }}>8%</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">{prevLabel}均分 {summary.prevAvgS}</span>
+            <span className="quality-kpi-card__sub">证据不匹配、缺失、违规的比例</span>
           </div>
         </div>
         <div className="quality-kpi-card">
-          <div className="quality-kpi-card__label">服务人员 进步 / 退步</div>
-          <div className="quality-kpi-card__value">
-            <span style={{ color: "var(--quality-success-text)" }}>{summary.improved}</span>
-            {" / "}
-            <span style={{ color: "var(--quality-danger-text)" }}>{summary.declined}</span>
-          </div>
+          <div className="quality-kpi-card__label">进行中服务</div>
+          <div className="quality-kpi-card__value">3</div>
           <div className="quality-kpi-card__trend">
-            <span className="quality-kpi-card__sub">较{prevLabel}变动人数</span>
+            <span className="quality-kpi-card__sub">目前进行中的服务有几项</span>
           </div>
         </div>
         <div className="quality-kpi-card">
@@ -643,6 +655,73 @@ function DashboardView() {
             {siteTableExpanded ? "收起" : `展开全部 ${siteScores.length} 个站点`}
           </button>
         )}
+      </div>
+
+      {/* ═══ Section 3: Cross-site Comparison Charts ═══ */}
+      <div className="qd-section" style={{ marginTop: 24 }}>
+        <div className="qd-section__header">
+          <span className="qd-section__title">跨站点对比</span>
+          <span className="qd-section__context">{periodDateLabel}</span>
+        </div>
+      </div>
+
+      <div className="quality-cross-site-charts">
+        {/* Quota Usage Rate */}
+        <div className="quality-cross-site-chart">
+          <h4 className="quality-cross-site-chart__title">额度使用率</h4>
+          <div className="quality-cross-site-chart__bars">
+            {siteScores.map(s => {
+              const usageRate = Math.min(100, Math.round(60 + Math.random() * 35));
+              const barH = Math.max(6, (usageRate / 100) * 100);
+              const cls = usageRate >= 80 ? "quality-bar--good" : usageRate >= 60 ? "quality-bar--ok" : "quality-bar--bad";
+              return (
+                <div key={s.siteId} className="quality-bar-group">
+                  <span className="quality-bar-value">{usageRate}%</span>
+                  <div className={`quality-bar ${cls}`} style={{ height: `${barH}px` }} />
+                  <span className="quality-bar-label">{s.siteName}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Schedule Compliance Rate */}
+        <div className="quality-cross-site-chart">
+          <h4 className="quality-cross-site-chart__title">排班符合率</h4>
+          <div className="quality-cross-site-chart__bars">
+            {siteScores.map(s => {
+              const compRate = Math.min(100, Math.round(70 + Math.random() * 25));
+              const barH = Math.max(6, (compRate / 100) * 100);
+              const cls = compRate >= 85 ? "quality-bar--good" : compRate >= 70 ? "quality-bar--ok" : "quality-bar--bad";
+              return (
+                <div key={s.siteId} className="quality-bar-group">
+                  <span className="quality-bar-value">{compRate}%</span>
+                  <div className={`quality-bar ${cls}`} style={{ height: `${barH}px` }} />
+                  <span className="quality-bar-label">{s.siteName}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Evidence Pass Rate */}
+        <div className="quality-cross-site-chart">
+          <h4 className="quality-cross-site-chart__title">证据通过率</h4>
+          <div className="quality-cross-site-chart__bars">
+            {siteScores.map(s => {
+              const passRate = Math.min(100, Math.round(75 + Math.random() * 20));
+              const barH = Math.max(6, (passRate / 100) * 100);
+              const cls = passRate >= 85 ? "quality-bar--good" : passRate >= 75 ? "quality-bar--ok" : "quality-bar--bad";
+              return (
+                <div key={s.siteId} className="quality-bar-group">
+                  <span className="quality-bar-value">{passRate}%</span>
+                  <div className={`quality-bar ${cls}`} style={{ height: `${barH}px` }} />
+                  <span className="quality-bar-label">{s.siteName}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Worker detail modal */}
@@ -1589,6 +1668,217 @@ function ConfirmDialog({ title, message, confirmLabel, danger, submitting, onCon
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Catalog Management View
+   ═══════════════════════════════════════════════ */
+
+const MOCK_CATALOGS = [
+  { id: "cat-001", name: "杭州市长护险标准", region: "杭州市", itemCount: 41, status: "active" as const },
+  { id: "cat-002", name: "国家长护险标准", region: "全国", itemCount: 36, status: "active" as const },
+];
+
+const MOCK_CATALOG_ITEMS: Record<string, Array<{ seq: number; name: string; categoryName: string; referenceMinutes: number; frequency: string; requiredQualifications: string[] }>> = {
+  "cat-001": [
+    { seq: 1, name: "整理床单位", categoryName: "清洁卫生类", referenceMinutes: 15, frequency: "1次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 2, name: "面部清洁", categoryName: "清洁卫生类", referenceMinutes: 10, frequency: "1-2次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 3, name: "梳头", categoryName: "清洁卫生类", referenceMinutes: 5, frequency: "1-2次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 4, name: "口腔清洁", categoryName: "清洁卫生类", referenceMinutes: 10, frequency: "2次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 5, name: "协助进食", categoryName: "营养摄取类", referenceMinutes: 30, frequency: "3次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 6, name: "协助饮水", categoryName: "营养摄取类", referenceMinutes: 10, frequency: "必要时", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 7, name: "翻身叩背", categoryName: "卧位护理类", referenceMinutes: 15, frequency: "每2小时", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 8, name: "生命体征测量", categoryName: "健康监测类", referenceMinutes: 10, frequency: "1次/日", requiredQualifications: ["护士"] },
+    { seq: 9, name: "口服给药", categoryName: "健康监测类", referenceMinutes: 10, frequency: "遵医嘱", requiredQualifications: ["护士"] },
+    { seq: 10, name: "压疮护理", categoryName: "专项护理类", referenceMinutes: 20, frequency: "必要时", requiredQualifications: ["护士"] },
+  ],
+  "cat-002": [
+    { seq: 1, name: "清洁照料", categoryName: "基础生活照料", referenceMinutes: 15, frequency: "1次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 2, name: "饮食照料", categoryName: "基础生活照料", referenceMinutes: 30, frequency: "3次/日", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 3, name: "排泄照料", categoryName: "基础生活照料", referenceMinutes: 15, frequency: "必要时", requiredQualifications: ["养老护理员(初级)"] },
+    { seq: 4, name: "体位转移", categoryName: "功能维护类", referenceMinutes: 15, frequency: "必要时", requiredQualifications: ["养老护理员(中级)"] },
+    { seq: 5, name: "康复训练指导", categoryName: "功能维护类", referenceMinutes: 30, frequency: "1次/周", requiredQualifications: ["康复治疗师"] },
+    { seq: 6, name: "生命体征监测", categoryName: "医疗护理类", referenceMinutes: 10, frequency: "1次/日", requiredQualifications: ["护士"] },
+    { seq: 7, name: "药物管理", categoryName: "医疗护理类", referenceMinutes: 10, frequency: "遵医嘱", requiredQualifications: ["护士"] },
+    { seq: 8, name: "伤口护理", categoryName: "医疗护理类", referenceMinutes: 20, frequency: "必要时", requiredQualifications: ["护士"] },
+  ],
+};
+
+const MOCK_POLICY_CONSTRAINTS: Record<string, Array<{ id: string; name: string; description: string; severity: "hard" | "soft" }>> = {
+  "cat-001": [
+    { id: "pc1", name: "单次工时约束", description: "每次上门服务不少于30分钟，不超过3小时", severity: "hard" },
+    { id: "pc2", name: "每周上门约束", description: "每位老人每周上门次数不少于2次", severity: "hard" },
+    { id: "pc3", name: "月度工时上限", description: "每位老人月度服务总时长不超过25小时", severity: "hard" },
+    { id: "pc4", name: "服务人员上限", description: "每位服务人员同时服务老人数不超过8人", severity: "soft" },
+  ],
+  "cat-002": [
+    { id: "pc5", name: "单次工时约束", description: "每次上门服务不少于45分钟", severity: "hard" },
+    { id: "pc6", name: "月度工时上限", description: "每位老人月度服务总时长不超过30小时", severity: "hard" },
+    { id: "pc7", name: "资质匹配要求", description: "医疗护理类服务须持有护士资质", severity: "hard" },
+  ],
+};
+
+const MOCK_QUALIFICATION_TAGS = [
+  { id: "qt1", name: "护士", category: "medical" },
+  { id: "qt2", name: "养老护理员(初级)", category: "caregiving" },
+  { id: "qt3", name: "养老护理员(中级)", category: "caregiving" },
+  { id: "qt4", name: "养老护理员(高级)", category: "caregiving" },
+  { id: "qt5", name: "康复治疗师", category: "medical" },
+  { id: "qt6", name: "急救证", category: "other" },
+  { id: "qt7", name: "营养师", category: "medical" },
+  { id: "qt8", name: "心理咨询师", category: "other" },
+];
+
+const QUAL_CATEGORY_LABELS: Record<string, string> = {
+  medical: "医疗类",
+  caregiving: "护理类",
+  other: "其他",
+};
+
+function CatalogView() {
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null);
+
+  const selectedCatalog = MOCK_CATALOGS.find(c => c.id === selectedCatalogId);
+  const items = selectedCatalogId ? MOCK_CATALOG_ITEMS[selectedCatalogId] ?? [] : [];
+  const constraints = selectedCatalogId ? MOCK_POLICY_CONSTRAINTS[selectedCatalogId] ?? [] : [];
+
+  // Group items by category
+  const groupedItems = items.reduce<Record<string, typeof items>>((acc, item) => {
+    if (!acc[item.categoryName]) acc[item.categoryName] = [];
+    acc[item.categoryName].push(item);
+    return acc;
+  }, {});
+
+  if (selectedCatalog) {
+    return (
+      <>
+        <div className="qd-page-header">
+          <div className="qd-page-header__left">
+            <button
+              className="quality-catalog-back"
+              onClick={() => setSelectedCatalogId(null)}
+              type="button"
+            >
+              &larr; 返回目录列表
+            </button>
+            <div className="quality-dashboard__title">{selectedCatalog.name}</div>
+            <div className="qd-context-badge">{selectedCatalog.region} &middot; {selectedCatalog.itemCount} 个项目</div>
+          </div>
+        </div>
+
+        {/* Service items by category */}
+        <div className="quality-catalog-section">
+          <h3 className="quality-catalog-section__title">服务项目</h3>
+          {Object.entries(groupedItems).map(([category, catItems]) => (
+            <div key={category} className="quality-catalog-category">
+              <h4 className="quality-catalog-category__title">{category}</h4>
+              <table className="quality-catalog-items-table">
+                <thead>
+                  <tr>
+                    <th>序号</th>
+                    <th>名称</th>
+                    <th>参考时长(分)</th>
+                    <th>频次</th>
+                    <th>资质要求</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catItems.map(item => (
+                    <tr key={item.seq}>
+                      <td>{item.seq}</td>
+                      <td>{item.name}</td>
+                      <td>{item.referenceMinutes}</td>
+                      <td>{item.frequency}</td>
+                      <td>
+                        {item.requiredQualifications.map((q, i) => (
+                          <span key={i} className="quality-catalog-qual-tag">{q}</span>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+
+        {/* Policy constraints */}
+        <div className="quality-catalog-section">
+          <h3 className="quality-catalog-section__title">医保约束规则</h3>
+          <div className="quality-catalog-constraints">
+            {constraints.length === 0 ? (
+              <div className="quality-catalog-empty">暂无约束规则</div>
+            ) : (
+              constraints.map(c => (
+                <div key={c.id} className="quality-catalog-constraint">
+                  <div className="quality-catalog-constraint__header">
+                    <span className="quality-catalog-constraint__name">{c.name}</span>
+                    <span className={`quality-catalog-severity quality-catalog-severity--${c.severity}`}>
+                      {c.severity === "hard" ? "硬约束" : "软约束"}
+                    </span>
+                  </div>
+                  <p className="quality-catalog-constraint__desc">{c.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Qualification tags */}
+        <div className="quality-catalog-section">
+          <h3 className="quality-catalog-section__title">资质标签</h3>
+          <div className="quality-catalog-quals">
+            {MOCK_QUALIFICATION_TAGS.map(tag => (
+              <div key={tag.id} className="quality-catalog-qual-item">
+                <span className="quality-catalog-qual-item__name">{tag.name}</span>
+                <span className={`quality-catalog-qual-category quality-catalog-qual-category--${tag.category}`}>
+                  {QUAL_CATEGORY_LABELS[tag.category] ?? tag.category}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Catalog list
+  return (
+    <>
+      <div className="qd-page-header">
+        <div className="qd-page-header__left">
+          <div className="quality-dashboard__title">服务目录管理</div>
+          <div className="qd-context-badge">标准目录维护 &middot; 医保约束规则管理</div>
+        </div>
+      </div>
+
+      <div className="quality-catalog-list">
+        {MOCK_CATALOGS.map(catalog => (
+          <div
+            key={catalog.id}
+            className="quality-catalog-card"
+            onClick={() => setSelectedCatalogId(catalog.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={e => e.key === "Enter" && setSelectedCatalogId(catalog.id)}
+          >
+            <div className="quality-catalog-card__header">
+              <span className="quality-catalog-card__name">{catalog.name}</span>
+              <span className={`quality-catalog-card__status quality-catalog-card__status--${catalog.status}`}>
+                {catalog.status === "active" ? "生效中" : "已归档"}
+              </span>
+            </div>
+            <div className="quality-catalog-card__meta">
+              <span>适用地区: {catalog.region}</span>
+              <span>服务项目: {catalog.itemCount} 项</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+
     </>
   );
 }

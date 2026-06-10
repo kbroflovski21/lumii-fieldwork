@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
-import { Bot, Shield, FileText, MapPin, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, Shield, FileText, MapPin, Users, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookOpen, Play, CheckCircle } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
 import { useAgentChat } from "../features/siteOperations/useAgentChat";
@@ -12,11 +12,14 @@ import { DetailPageProvider, useDetailEntity } from "../shared/DetailPageContext
 import "../features/siteOperations/siteOperations.css";
 import "../shared/shell-profile.css";
 
-type View = "dashboard" | "sop" | "sites" | "users" | "feishu";
+type View = "dashboard" | "catalog" | "live" | "completed" | "sop" | "sites" | "users" | "feishu";
 
 const ADMIN_NAV = [
-  { id: "dashboard", path: "/admin", icon: Shield, label: "质量总览" },
-  { id: "sop", path: "/admin/sop", icon: FileText, label: "规范管理" },
+  { id: "dashboard", path: "/admin", icon: Shield, label: "运营总览" },
+  { id: "catalog", path: "/admin/catalog", icon: BookOpen, label: "服务目录管理" },
+  { id: "sop", path: "/admin/sop", icon: FileText, label: "服务标准管理" },
+  { id: "live", path: "/admin/live", icon: Play, label: "进行中服务" },
+  { id: "completed", path: "/admin/completed", icon: CheckCircle, label: "已完成服务" },
   { id: "sites", path: "/admin/sites", icon: MapPin, label: "站点管理" },
   { id: "users", path: "/admin/users", icon: Users, label: "用户管理" },
   { id: "feishu", path: "/admin/feishu", icon: Bot, label: "飞书管理" },
@@ -24,6 +27,9 @@ const ADMIN_NAV = [
 
 const VIEW_TO_PATH: Record<View, string> = {
   dashboard: "/admin",
+  catalog: "/admin/catalog",
+  live: "/admin/live",
+  completed: "/admin/completed",
   sop: "/admin/sop",
   sites: "/admin/sites",
   users: "/admin/users",
@@ -31,6 +37,9 @@ const VIEW_TO_PATH: Record<View, string> = {
 };
 
 function pathToView(pathname: string): View {
+  if (pathname.startsWith("/admin/catalog")) return "catalog";
+  if (pathname.startsWith("/admin/live")) return "live";
+  if (pathname.startsWith("/admin/completed")) return "completed";
   if (pathname.startsWith("/admin/sop")) return "sop";
   if (pathname.startsWith("/admin/sites")) return "sites";
   if (pathname.startsWith("/admin/users")) return "users";

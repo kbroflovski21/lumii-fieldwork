@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   username: string;
   name: string;
-  role: "org_admin" | "site_operator";
+  role: "org_admin" | "site_operator" | "gov_auditor";
   orgId: string;
   siteIds: string[];
 }

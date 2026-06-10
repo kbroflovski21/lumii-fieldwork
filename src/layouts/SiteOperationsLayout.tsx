@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
-import { Bot, UsersRound, Smartphone, UserRound, CalendarDays, FileText, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, UsersRound, Smartphone, UserRound, CalendarDays, Play, CheckCircle, PhoneCall, MessageSquare, GraduationCap, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useSite } from "../auth/SiteContext";
 import { useAuth } from "../auth/AuthContext";
 import { CopilotPanel } from "../features/siteOperations/CopilotPanel";
@@ -25,25 +25,29 @@ export function useSiteOpsData() {
 
 /* ── Nav items ── */
 const NAV_ITEMS: Array<{ id: string; path: string; icon: typeof Bot; label: string; children?: Array<{ id: string; path: string; label: string }> }> = [
-  { id: "home", path: "/", icon: Bot, label: "首页" },
+  { id: "home", path: "/", icon: Bot, label: "首页总览" },
   { id: "social_workers", path: "/workers", icon: UsersRound, label: "服务人员" },
-  { id: "smart_badges", path: "/badges", icon: Smartphone, label: "设备" },
-  { id: "service_objects", path: "/elders", icon: UserRound, label: "长者" },
-  { id: "service_schedules", path: "/schedules", icon: CalendarDays, label: "服务排期" },
-  { id: "service_records", path: "/records", icon: FileText, label: "服务记录", children: [
-    { id: "service_records", path: "/records", label: "服务记录" },
-    { id: "recordings", path: "/recordings", label: "录音记录" },
-  ] },
+  { id: "smart_badges", path: "/devices", icon: Smartphone, label: "设备管理" },
+  { id: "service_objects", path: "/elders", icon: UserRound, label: "长者管理" },
+  { id: "service_schedules", path: "/schedules", icon: CalendarDays, label: "服务排班" },
+  { id: "live_services", path: "/live", icon: Play, label: "进行中服务" },
+  { id: "completed_services", path: "/completed", icon: CheckCircle, label: "已完成服务" },
+  { id: "follow_ups", path: "/followups", icon: PhoneCall, label: "回访管理" },
+  { id: "family_feedback", path: "/feedback", icon: MessageSquare, label: "家属反馈" },
+  { id: "training", path: "/training", icon: GraduationCap, label: "培训管理" },
 ];
 
 const AREA_LABELS: Record<string, string> = {
-  home: "首页",
+  home: "首页总览",
   social_workers: "服务人员",
-  smart_badges: "设备",
-  service_objects: "长者",
-  service_schedules: "服务排期",
-  service_records: "服务记录",
-  recordings: "录音记录",
+  smart_badges: "设备管理",
+  service_objects: "长者管理",
+  service_schedules: "服务排班",
+  live_services: "进行中服务",
+  completed_services: "已完成服务",
+  follow_ups: "回访管理",
+  family_feedback: "家属反馈",
+  training: "培训管理",
 };
 
 function SiteOperationsLayoutInner() {

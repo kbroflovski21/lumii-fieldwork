@@ -166,7 +166,7 @@ export function HomeArea({ resource: resourceProp, onRoute: onRouteProp }: { res
       {/* ═══ Section 1: 运营数据 ═══ */}
       <div className="hd-section">
         <div className="hd-section__header">
-          <span className="hd-section__title">运营数据 - 服务了多少长者？</span>
+          <span className="hd-section__title">运营数据 - 运营效率如何？</span>
           <span className="hd-section__context">{periodDateLabel}</span>
         </div>
       </div>
@@ -186,23 +186,21 @@ export function HomeArea({ resource: resourceProp, onRoute: onRouteProp }: { res
           </div>
         </div>
         <div className="hd-kpi-card">
-          <div className="hd-kpi-card__label">覆盖长者数量</div>
-          <div className="hd-kpi-card__value">{summary.elderCount}人</div>
-          <div className="hd-kpi-card__sub">平均每名长者接受 {summary.avgServicePerElder} 次服务</div>
+          <div className="hd-kpi-card__label">平均人效</div>
+          <div className="hd-kpi-card__value">{(summary.totalServices * 1.2 / summary.workerCount).toFixed(1)}小时/人</div>
+          <div className="hd-kpi-card__sub">平均每位护工服务小时数</div>
         </div>
         <div className="hd-kpi-card">
-          <div className="hd-kpi-card__label">家属订阅率</div>
-          <div className="hd-kpi-card__value">{summary.subscriptionRate}%</div>
-          <div className="hd-kpi-card__sub" style={{ color: summary.subscriptionDelta >= 0 ? "var(--site-success-text)" : "var(--site-danger-text)" }}>
-            {summary.subscriptionDelta >= 0 ? "▲" : "▼"} 较{prevLabel}{summary.subscriptionDelta >= 0 ? "上升" : "下降"} {Math.abs(summary.subscriptionDelta)}%
-          </div>
+          <div className="hd-kpi-card__label">排班匹配率</div>
+          <div className="hd-kpi-card__value">87%</div>
+          <div className="hd-kpi-card__sub">实际服务与排班匹配度</div>
         </div>
       </div>
 
       {/* ═══ Section 2: 质量数据 ═══ */}
       <div className="hd-section">
         <div className="hd-section__header">
-          <span className="hd-section__title">质量数据 - 员工服务质量如何？</span>
+          <span className="hd-section__title">质量数据 - 服务质量与合规程度如何？</span>
           <span className="hd-section__context">{periodDateLabel}</span>
         </div>
       </div>
@@ -214,25 +212,79 @@ export function HomeArea({ resource: resourceProp, onRoute: onRouteProp }: { res
           <div className="hd-kpi-card__sub">满分 40</div>
         </div>
         <div className="hd-kpi-card">
-          <div className="hd-kpi-card__label">相比{prevLabel}变化</div>
-          <div className="hd-kpi-card__value" style={{ color: summary.avgSDelta >= 0 ? "var(--site-success-text)" : "var(--site-danger-text)" }}>
-            {summary.avgSDelta >= 0 ? "+" : ""}{summary.avgSDelta}
-          </div>
-          <div className="hd-kpi-card__sub">{prevLabel}均分 {summary.prevAvgS}</div>
+          <div className="hd-kpi-card__label">服务异常率</div>
+          <div className="hd-kpi-card__value" style={{ color: "var(--site-danger-text)" }}>8%</div>
+          <div className="hd-kpi-card__sub">证据不匹配、缺失、违规的比例</div>
         </div>
         <div className="hd-kpi-card">
-          <div className="hd-kpi-card__label">服务人员 进步 / 退步</div>
-          <div className="hd-kpi-card__value">
-            <span style={{ color: "var(--site-success-text)" }}>{summary.improved}</span>
-            {" / "}
-            <span style={{ color: "var(--site-danger-text)" }}>{summary.declined}</span>
-          </div>
-          <div className="hd-kpi-card__sub">较{prevLabel}变动人数</div>
+          <div className="hd-kpi-card__label">进行中服务</div>
+          <div className="hd-kpi-card__value">3</div>
+          <div className="hd-kpi-card__sub">目前进行中的服务有几项</div>
         </div>
         <div className="hd-kpi-card">
           <div className="hd-kpi-card__label">表现最佳员工</div>
           <div className="hd-kpi-card__value">{summary.bestWorkerName}</div>
           <div className="hd-kpi-card__sub">S 均分 {summary.bestWorkerScore.toFixed(1)}</div>
+        </div>
+      </div>
+
+      {/* ═══ Section 3: 排班与额度 ═══ */}
+      <div className="hd-section">
+        <div className="hd-section__header">
+          <span className="hd-section__title">排班与额度 - 服务安排执行情况</span>
+          <span className="hd-section__context">{periodDateLabel}</span>
+        </div>
+      </div>
+
+      <div className="hd-kpi-grid">
+        <div className="hd-kpi-card">
+          <div className="hd-kpi-card__label">本周排班完成率</div>
+          <div className="hd-kpi-card__value">85%</div>
+          <div className="hd-kpi-card__sub" style={{ color: "var(--site-success-text)" }}>+3% 较上周</div>
+        </div>
+        <div className="hd-kpi-card">
+          <div className="hd-kpi-card__label">排班符合率</div>
+          <div className="hd-kpi-card__value">78%</div>
+          <div className="hd-kpi-card__sub">按排班执行的比例</div>
+        </div>
+        <div className="hd-kpi-card">
+          <div className="hd-kpi-card__label">计划外服务</div>
+          <div className="hd-kpi-card__value">3次</div>
+          <div className="hd-kpi-card__sub">非排班的服务</div>
+        </div>
+        <div className="hd-kpi-card">
+          <div className="hd-kpi-card__label">缺失排班长者</div>
+          <div className="hd-kpi-card__value">1人</div>
+          <div className="hd-kpi-card__sub" style={{ color: "var(--site-danger-text)" }}>需关注</div>
+        </div>
+      </div>
+
+      {/* Quota usage overview */}
+      <div className="hd-quota-section" style={{ marginTop: 16 }}>
+        <h4 style={{ fontSize: 14, fontWeight: 600, color: "var(--site-text)", margin: "0 0 12px" }}>长者月度额度使用（前5）</h4>
+        <div className="hd-quota-list">
+          {[
+            { name: "王淑珍", used: 16, quota: 25 },
+            { name: "李德明", used: 22, quota: 25 },
+            { name: "陈国强", used: 20, quota: 25 },
+            { name: "张秀兰", used: 8, quota: 25 },
+            { name: "赵金凤", used: 4, quota: 25 },
+          ]
+            .sort((a, b) => (b.used / b.quota) - (a.used / a.quota))
+            .map(item => {
+              const pct = Math.round((item.used / item.quota) * 100);
+              const barColor = pct > 90 ? "var(--site-danger-text)" : pct > 70 ? "var(--site-warning-text)" : "var(--site-success-text)";
+              return (
+                <div key={item.name} className="hd-quota-item">
+                  <span className="hd-quota-item__name">{item.name}</span>
+                  <div className="hd-quota-item__bar">
+                    <div className="hd-quota-item__bar-fill" style={{ width: `${pct}%`, background: barColor }} />
+                  </div>
+                  <span className="hd-quota-item__label">{item.used}/{item.quota}h</span>
+                </div>
+              );
+            })
+          }
         </div>
       </div>
 

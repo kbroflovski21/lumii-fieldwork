@@ -14,10 +14,23 @@ import { DetailPageShell } from "../../shared/DetailPageShell";
 import type {
   SocialWorker,
   SocialWorkerStatus,
-  SocialWorkersResponse
+  SocialWorkersResponse,
+  Device,
 } from "./contracts";
 import { statusText } from "./contracts";
 import { siteOperationsApi, authFetch } from "./api";
+
+const workerDeviceTypeIcon: Record<string, string> = {
+  mmwave_radar: "\u{1F4E1}",
+  smart_badge: "\u{1F3F7}️",
+  phone_app: "\u{1F4F1}",
+};
+
+const workerDeviceTypeLabel: Record<string, string> = {
+  mmwave_radar: "毫米波雷达",
+  smart_badge: "智能工牌",
+  phone_app: "手机App",
+};
 import { isMutationDisabled } from "./WorkAreaLayout";
 import type { Resource } from "./useSiteOperationsData";
 import { useSiteOpsData } from "../../layouts/SiteOperationsLayout";
@@ -78,6 +91,14 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
   const mutationsDisabled = isMutationDisabled(operationalState);
 
   const workers = resource.status === "success" ? resource.data.socialWorkers : [];
+
+  // Fetch all devices to show per-worker device icons
+  const [allDevices, setAllDevices] = useState<Device[]>([]);
+  useEffect(() => {
+    authFetch("/api/devices").then(r => r.json()).then(data => {
+      setAllDevices(data.devices ?? []);
+    }).catch(() => {});
+  }, []);
 
   const openDrawer = useCallback((worker: SocialWorker) => {
     navigate(`/workers/${worker.id}`);
@@ -156,6 +177,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
           onWorkerCreated={handleWorkerCreated}
           onWorkerUpdated={handleWorkerUpdated}
           onWorkerRefresh={handleWorkerRefresh}
+          allDevices={allDevices}
         />
       ) : (
         <section aria-label="服务人员" className="sw-page">
@@ -208,6 +230,7 @@ export function SocialWorkersArea({ resource: resourceProp, onMutate: onMutatePr
                 onRowClick={openDrawer}
                 onNameClick={openDrawer}
                 selectedId={selectedId}
+                allDevices={allDevices}
               />
             </div>
           </div>
@@ -229,7 +252,8 @@ function WorkerContent({
   onCreateClick,
   onRowClick,
   onNameClick,
-  selectedId
+  selectedId,
+  allDevices
 }: {
   filtered: SocialWorker[];
   loading: boolean;
@@ -241,6 +265,7 @@ function WorkerContent({
   onRowClick: (worker: SocialWorker) => void;
   onNameClick: (worker: SocialWorker) => void;
   selectedId: string | null;
+  allDevices: Device[];
 }) {
   if (loading) return <EmptyState icon={UserRound} description="服务人员数据加载中..." />;
   if (error) return <EmptyState icon={X} description={error} isError />;
@@ -261,7 +286,7 @@ function WorkerContent({
           <span role="columnheader">姓名</span>
           <span role="columnheader">联系方式</span>
           <span role="columnheader">资质</span>
-          <span role="columnheader">常用工牌</span>
+          <span role="columnheader">设备</span>
           <span role="columnheader">表扬</span>
           <span role="columnheader">状态</span>
         </div>
@@ -297,16 +322,20 @@ function WorkerContent({
                   : <span className="sw-text-muted">—</span>}
               </div>
               <div role="cell">
-                {worker.preferredBadge ? (
-                  <span className="sw-badge-cell">
-                    <span className="sw-badge-code">{worker.preferredBadge.deviceCode}</span>
-                    <span className="sw-status-dot" data-tone={badgeStatusTone(worker.preferredBadge.status)}>
-                      {statusText[worker.preferredBadge.status] ?? worker.preferredBadge.status}
+                {(() => {
+                  const workerDevs = allDevices.filter(d => d.boundToId === worker.id && d.boundToType === "worker");
+                  if (workerDevs.length === 0) return <span className="sw-text-muted">--</span>;
+                  const types = [...new Set(workerDevs.map(d => d.deviceType))];
+                  return (
+                    <span className="sw-worker-devices">
+                      {types.map(t => (
+                        <span key={t} className="sw-worker-device-icon" title={workerDeviceTypeLabel[t] ?? t}>
+                          {workerDeviceTypeIcon[t] ?? ""}
+                        </span>
+                      ))}
                     </span>
-                  </span>
-                ) : (
-                  <span className="sw-text-muted">未绑定</span>
-                )}
+                  );
+                })()}
               </div>
               <div role="cell" className="sw-table__cell-praise">
                 <ThumbsUp size={14} className="sw-cell-icon sw-cell-icon--praise" />
@@ -343,7 +372,7 @@ function WorkerContent({
               </div>
               <div className="sw-mobile-card__meta">
                 <span>{(worker.qualificationLabels ?? []).length > 0 ? (worker.qualificationLabels ?? []).join("、") : "无资质"}</span>
-                <span>{worker.preferredBadge ? worker.preferredBadge.deviceCode : "未绑定工牌"}</span>
+                <span>{(() => { const devs = allDevices.filter(d => d.boundToId === worker.id && d.boundToType === "worker"); return devs.length > 0 ? [...new Set(devs.map(d => d.deviceType))].map(t => workerDeviceTypeIcon[t] ?? "").join(" ") : "无设备"; })()}</span>
                 <span>{worker.praiseSummary.praiseCount} 次表扬</span>
               </div>
             </button>
@@ -362,7 +391,8 @@ function WorkerDrawer({
   onView,
   onWorkerCreated,
   onWorkerUpdated,
-  onWorkerRefresh
+  onWorkerRefresh,
+  allDevices
 }: {
   drawer: Exclude<DrawerMode, { kind: "closed" }>;
   mutationsDisabled: boolean;
@@ -372,27 +402,31 @@ function WorkerDrawer({
   onWorkerCreated: () => void;
   onWorkerUpdated: () => void;
   onWorkerRefresh: () => void;
+  allDevices: Device[];
 }) {
-  if (drawer.kind === "view") return <ViewModal mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.worker)} onMutate={onWorkerRefresh} worker={drawer.worker} />;
+  if (drawer.kind === "view") return <ViewModal mutationsDisabled={mutationsDisabled} onClose={onClose} onEdit={() => onEdit(drawer.worker)} onMutate={onWorkerRefresh} worker={drawer.worker} allDevices={allDevices} />;
   if (drawer.kind === "edit") return <EditModal onCancel={() => onView(drawer.worker)} onClose={onClose} onSaved={onWorkerUpdated} worker={drawer.worker} />;
   return <CreateModal onClose={onClose} onCreated={onWorkerCreated} />;
 }
 
-type ViewTab = "overview" | "praise";
+type ViewTab = "overview" | "praise" | "devices";
 
 function ViewModal({
   mutationsDisabled,
   onClose,
   onEdit,
   onMutate,
-  worker
+  worker,
+  allDevices
 }: {
   mutationsDisabled: boolean;
   onClose: () => void;
   onEdit: () => void;
   onMutate?: () => void;
   worker: SocialWorker;
+  allDevices: Device[];
 }) {
+  const workerDevices = allDevices.filter(d => d.boundToId === worker.id && d.boundToType === "worker");
   const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [showBadgeSelect, setShowBadgeSelect] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState(worker.preferredBadge?.badgeId ?? "");
@@ -433,8 +467,9 @@ function ViewModal({
     setResetPwdLoading(false);
   };
 
-  const tabs: Array<{ id: ViewTab; label: string }> = [
+  const tabs: Array<{ id: ViewTab; label: string; count?: number }> = [
     { id: "overview", label: "档案概览" },
+    { id: "devices", label: "设备", count: workerDevices.length > 0 ? workerDevices.length : undefined },
     { id: "praise", label: "好评记录" },
   ];
 
@@ -450,6 +485,7 @@ function ViewModal({
           {tabs.map(tab => (
             <button className="dp-tabs__btn" data-active={activeTab === tab.id} key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">
               {tab.label}
+              {tab.count ? <span className="so-modal__tab-count">{tab.count}</span> : null}
             </button>
           ))}
         </div>
@@ -550,6 +586,49 @@ function ViewModal({
                 )}
               </div>
             </>
+          )}
+
+          {activeTab === "devices" && (
+            <div className="dp-section">
+              <div className="dp-section__head">
+                <h4 className="dp-section__title">绑定设备</h4>
+              </div>
+              {workerDevices.length === 0 ? (
+                <p className="sw-text-muted">该服务人员暂无绑定设备</p>
+              ) : (
+                <div className="sw-worker-device-list">
+                  {workerDevices.map(dev => (
+                    <div key={dev.id} className="sw-worker-device-item">
+                      <div className="sw-worker-device-item__header">
+                        <span className="dev-type-badge" data-type={dev.deviceType}>
+                          <span className="dev-type-badge__icon">{workerDeviceTypeIcon[dev.deviceType] ?? ""}</span>
+                          {workerDeviceTypeLabel[dev.deviceType] ?? dev.deviceType}
+                        </span>
+                        <StatusBadge tone={dev.deviceType === "phone_app" && dev.appAccount ? (dev.appAccount.passwordSet ? "success" : "warning") : (dev.status === "in_use" || dev.status === "available" ? "success" : dev.status === "offline" || dev.status === "low_battery" ? "warning" : "muted")}>
+                          {dev.deviceType === "phone_app" && dev.appAccount
+                            ? (dev.appAccount.passwordSet ? "密码已设置" : "密码未设置")
+                            : (statusText[dev.status] ?? dev.status)}
+                        </StatusBadge>
+                      </div>
+                      <dl className="dp-fields" style={{ marginTop: 8 }}>
+                        {dev.deviceType === "phone_app" && dev.appAccount ? (
+                          <>
+                            <div className="dp-field"><dt>账号</dt><dd><strong>{dev.appAccount.username}</strong></dd></div>
+                            <div className="dp-field"><dt>最后登录</dt><dd>{dev.appAccount.lastLoginAt ? formatSyncTime(dev.appAccount.lastLoginAt) : "--"}</dd></div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="dp-field"><dt>设备编码</dt><dd>{dev.deviceCode}</dd></div>
+                            {dev.batteryPercent != null && <div className="dp-field"><dt>电量</dt><dd>{dev.batteryPercent}%</dd></div>}
+                            <div className="dp-field"><dt>最后同步</dt><dd>{dev.lastSyncAt ? formatSyncTime(dev.lastSyncAt) : "--"}</dd></div>
+                          </>
+                        )}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === "praise" && (

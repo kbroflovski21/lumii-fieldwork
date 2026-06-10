@@ -7,6 +7,7 @@ const ROLE_LABELS: Record<string, string> = {
   org_admin: "集团管理",
   site_operator: "站点运营",
   careworker: "护理员",
+  gov_auditor: "审计员",
 };
 
 function hashNameToColor(name: string): string {

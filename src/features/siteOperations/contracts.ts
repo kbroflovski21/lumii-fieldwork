@@ -6,7 +6,12 @@ export type WorkAreaId =
   | "smart_badges"
   | "service_objects"
   | "service_schedules"
-  | "service_records";
+  | "service_records"
+  | "live_services"
+  | "completed_services"
+  | "follow_ups"
+  | "family_feedback"
+  | "training";
 
 export const workAreas: Array<{ id: WorkAreaId; label: string }> = [
   { id: "home", label: "首页" },
@@ -324,7 +329,7 @@ export type ServiceScheduleOccurrence = {
   timeWindow: { start: string; end: string; label?: string };
   assignedSocialWorkerId?: string;
   assignedSocialWorkerName?: string;
-  status: "unassigned" | "scheduled" | "in_progress" | "cancelled" | "completed";
+  status: "unassigned" | "scheduled" | "in_progress" | "cancelled" | "completed" | "missed";
   notes?: string;
   serviceRecordId?: string;
   planExceptionApplied?: boolean;
@@ -335,6 +340,13 @@ export type ServiceScheduleOccurrence = {
   latitude?: number;
   longitude?: number;
   riskTags: string[];
+
+  // 0606 additions
+  matchStatus?: "exact" | "partial" | "unplanned" | "missed";
+  plannedItems?: PlannedServiceItem[];
+  actualSessionId?: string;
+  recurringRuleId?: string;
+  mapDisplayPoint?: MapDisplayPoint;
 };
 
 export type ServiceSchedule = ServiceScheduleOccurrence;
@@ -524,6 +536,406 @@ export type ServiceRecordExportResult = MutationResult & {
   exportedAt: string;
 };
 
+// ═══════════════════════════════════════════════════════════════════════
+// V2 Data Model — 0604 Design Spec additions
+// All types below are NEW. Existing types above are preserved as-is.
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── 2.0 Qualification Tags (master data) ──
+
+export interface QualificationTag {
+  id: string;
+  name: string; // "护士", "养老护理员(初级)", "急救证", etc.
+  category: string; // "medical", "caregiving", "other"
+}
+
+// ── 2.1 Standard Catalog ──
+
+export interface ServiceStandardCatalog {
+  id: string;
+  name: string; // "杭州市长护险标准" | "国家长护险标准"
+  region: string; // "hangzhou" | "national"
+  version: string; // "2024-v1"
+  effectiveDate: string;
+  status: "active" | "archived";
+  categories: ServiceCategory[];
+  totalItems: number; // 41 | 36
+}
+
+export interface ServiceCategory {
+  id: string;
+  catalogId: string;
+  name: string; // "清洁卫生类" | "营养摄取类" | ...
+  sortOrder: number;
+}
+
+export interface ServiceStandardItem {
+  id: string;
+  catalogId: string;
+  categoryId: string;
+  itemCode?: string; // 国家标准18位编码（如有）
+  seq: number; // 项目编号 1-41
+  name: string; // "整理床单位" | "面部清洁" | ...
+  categoryName: string; // 大类名称（冗余方便显示）
+  referenceMinutes: number; // 单次服务参考时间（分钟）
+  frequency: string; // "1-2次/日" | "必要时" | "1次/周"
+  description?: string; // 项目内涵
+  serviceRequirements?: string; // 基本服务要求
+  notes?: string; // 注意事项
+  requiredQualifications: string[]; // 资质要求标签列表
+}
+
+// ── 2.2 Service Plan V2 (catalog-based) ──
+
+export interface ServicePlanV2 {
+  id: string;
+  serviceObjectId: string; // 对应长者
+  catalogId: string; // 使用哪套标准目录
+  preferredWorkerId?: string; // 常用服务人员（仅供参考，非硬约束）
+  status: "active" | "paused" | "archived";
+  createdAt: string;
+  updatedAt: string;
+  approvedBy?: string; // 审批人
+  items: ServicePlanItemV2[]; // 计划中的服务项目
+}
+
+export interface ServicePlanItemV2 {
+  id: string;
+  planId: string;
+  standardItemId: string; // 关联标准目录项
+  standardItemName: string; // 冗余：项目名称
+  categoryName: string; // 冗余：大类名称
+  referenceMinutes: number; // 参考工时
+  frequency: string; // 计划频次（可能与标准不同）
+  requiredQualifications: string[]; // 所需资质标签列表
+  notes?: string; // 个性化备注
+}
+
+// ── 2.4 Device (generalized from SmartBadge) ──
+
+export type DeviceType = "smart_badge" | "mmwave_radar" | "ble_beacon" | "smart_watch" | "phone_app";
+
+export type DeviceCapability =
+  | "audio_recording" // 录音
+  | "audio_playback" // 喇叭/TTS播放
+  | "mmwave_sensing" // 毫米波感知
+  | "ble_proximity" // 蓝牙近场
+  | "network_call" // 网络通话
+  | "gps_location"; // GPS定位
+
+export interface Device {
+  id: string;
+  deviceCode: string; // "GY-B001" | "GY-R001" | "GY-S001"
+  deviceType: DeviceType;
+  orgId: string;
+  siteId: string;
+  siteName: string;
+  status:
+    | "pending_activation"
+    | "available"
+    | "in_use"
+    | "offline"
+    | "low_battery"
+    | "sync_delayed"
+    | "lost"
+    | "disabled";
+  batteryPercent?: number;
+  activatedAt?: string;
+  lastSyncAt?: string;
+
+  // 绑定关系
+  boundToType?: "worker" | "elder_home";
+  boundToId?: string; // 护工ID 或 长者ID
+  boundToName?: string;
+
+  // phone_app 专属字段
+  appAccount?: { username: string; passwordSet: boolean; lastLoginAt?: string };
+
+  // 设备能力标记
+  capabilities: DeviceCapability[];
+}
+
+// ── 2.5 Service Session ──
+
+export interface SelectedServiceItem {
+  standardItemId: string;
+  name: string;
+  categoryName: string;
+  referenceMinutes: number;
+  frequency: string;
+  checked: boolean; // 护工勾选
+}
+
+export interface TranscriptEntry {
+  timestamp: string;
+  speaker: "worker" | "elder" | "unknown";
+  text: string;
+}
+
+export interface AIGuidanceEntry {
+  timestamp: string;
+  type: "reminder" | "warning" | "guidance";
+  message: string;
+  triggeredBy: "radar" | "audio" | "timer" | "system";
+  ttsPlayed: boolean;
+}
+
+export interface ServiceSession {
+  id: string;
+  serviceDate: string;
+  serviceObjectId: string;
+  serviceObjectName: string;
+  serviceObjectAddress: string;
+  workerId: string;
+  workerName: string;
+  workerQualifications: string[]; // 执行服务时该 worker 持有的资质快照
+  planId: string; // 关联服务计划
+
+  // 排班关联 (0606 additions)
+  scheduleId?: string;
+  scheduleMatchStatus?: "exact" | "partial" | "unplanned";
+  plannedItems?: PlannedServiceItem[];
+  confirmedItems?: PlannedServiceItem[];
+  itemsDiff?: "match" | "added" | "removed" | "changed";
+  durationStatus?: "normal" | "too_short" | "too_long";
+  elderVerification?: ElderVerification;
+
+  // 任务项（从服务计划中勾选）
+  selectedItems: SelectedServiceItem[];
+  estimatedMinutes: number; // 预估工时
+
+  // 生命周期状态
+  status: "items_selected" | "verifying" | "in_progress" | "completed" | "cancelled";
+
+  // 验证环节
+  verification: {
+    gpsMatch: boolean | null;
+    gpsWorkerLat?: number;
+    gpsWorkerLng?: number;
+    gpsElderLat?: number;
+    gpsElderLng?: number;
+    bleBeaconMatch: boolean | null;
+    bleBeaconId?: string;
+    voiceprintMatch?: boolean | null;
+    verifiedAt?: string;
+  };
+
+  // 时间戳
+  startedAt?: string; // 开始服务
+  completedAt?: string; // 结束服务
+  submittedAt?: string; // 提交（含拍照）
+
+  // 实时数据（服务进行中）
+  realtimeData?: {
+    audioStatus: "recording" | "paused" | "error";
+    radarStatus: "connected" | "disconnected";
+    radarDeviceId?: string;
+    transcriptLog: TranscriptEntry[];
+    aiGuidanceLog: AIGuidanceEntry[];
+  };
+
+  // 结束后数据
+  completionPhoto?: string; // 拍照URL
+  actualMinutes?: number; // 实际工时
+
+  // 证据链
+  evidenceChain: {
+    gps: boolean;
+    bleBeacon: boolean;
+    voiceprint: boolean;
+    audioRecording: boolean;
+    radarData: boolean;
+    photo: boolean;
+  };
+
+  // AI评估（服务完成后生成）
+  aiAssessment?: {
+    qualityScore: number; // 0-100
+    summary: string;
+    itemCompletionRate: number; // 项目完成率 0-1
+    anomalies: string[];
+    recommendations: string[];
+  };
+}
+
+// ── 2.6 Follow-Up Record ──
+
+export interface FollowUpRecord {
+  id: string;
+  serviceSessionId?: string; // 关联的服务会话（如有）
+  serviceObjectId: string;
+  serviceObjectName: string;
+  type: "in_person" | "phone_manual" | "phone_ai";
+  conductedBy: string; // 执行人ID
+  conductedByName: string;
+  conductedAt: string;
+  location?: string; // 上门回访的地址
+  conclusion: string; // 回访结论
+  notes?: string;
+  status: "scheduled" | "completed" | "cancelled";
+}
+
+// ── 2.7 Family Feedback ──
+
+export interface FamilyFeedback {
+  id: string;
+  serviceObjectId: string;
+  serviceObjectName: string;
+  familyContactId: string;
+  familyContactName: string;
+  familyRelation: string;
+  workerId?: string;
+  workerName?: string;
+  feedbackAt: string;
+  channel: "phone" | "wechat" | "in_person" | "app" | "other";
+  content: string;
+  sentiment: "positive" | "neutral" | "negative";
+  actionTaken?: string; // 针对反馈的措施
+  actionTakenAt?: string;
+  status: "pending" | "acknowledged" | "resolved";
+}
+
+// ── 2.8 Gov Audit — Anomaly Alert ──
+
+export interface AnomalyAlert {
+  id: string;
+  institutionId: string;
+  institutionName: string;
+  sessionId: string;
+  type:
+    | "gps_mismatch"
+    | "voiceprint_mismatch"
+    | "duration_abnormal"
+    | "missing_evidence"
+    | "pattern_detected"
+    | "quality_low";
+  severity: "low" | "medium" | "high" | "critical";
+  title: string;
+  description: string;
+  detectedAt: string;
+  status: "pending" | "verified" | "resolved" | "dismissed";
+  resolvedBy?: string;
+  resolvedAt?: string;
+  resolution?: string;
+}
+
+// ── Gov Overview Data ──
+
+export interface GovOverviewData {
+  todayCompleted: number;
+  weekCompleted: number;
+  sixDimensionPassRate: number; // 0-100
+  anomalyCount: number;
+  recentAnomalies: AnomalyAlert[];
+  qualityTrend: Array<{
+    week: string;
+    passRate: number;
+  }>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// V3 Data Model — 0606 Design Spec additions
+// All types below are NEW. Existing types above are preserved as-is.
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── 3.0 Policy Constraints (attached to catalog) ──
+
+export interface PolicyConstraint {
+  id: string;
+  catalogId: string;
+  name: string;
+  type: "duration_per_visit" | "visits_per_week" | "hours_per_month" | "max_elders_per_worker" | "custom";
+  rule: {
+    min?: number;
+    max?: number;
+    unit: "minutes" | "hours" | "count" | "days";
+    period?: "per_visit" | "per_week" | "per_month";
+  };
+  description: string;
+  severity: "hard" | "soft";
+}
+
+// ── 3.1 Recurring Schedule Rules ──
+
+export interface PlannedServiceItem {
+  standardItemId: string;
+  name: string;
+  referenceMinutes: number;
+}
+
+export interface RecurringScheduleRule {
+  id: string;
+  serviceObjectId: string;
+  assignedWorkerId: string;
+  planId: string;
+  cadence: string; // "weekly:mon,wed,fri"
+  cadenceLabel: string;
+  startTime: string;
+  endTime: string;
+  plannedItems: PlannedServiceItem[];
+  effectiveFrom: string;
+  effectiveUntil?: string;
+  status: "active" | "paused" | "archived";
+}
+
+// ── 3.2 Elder Verification (for service records) ──
+
+export interface ElderVerification {
+  status: "pass" | "fail" | "inconclusive" | "missing";
+  mobilityDetected: boolean;
+  mobilityLevel: "none" | "minimal" | "moderate" | "normal";
+  declaredDisabilityLevel: string;
+  consistentWithDeclaration: boolean;
+  radarDataAvailable: boolean;
+  heatmapUrl?: string;
+  timelineDataUrl?: string;
+  aiAnalysisSummary?: string;
+}
+
+// ── 3.3 Institution (for gov audit) ──
+
+export interface InstitutionSite {
+  id: string;
+  name: string;
+  address: string;
+  workerCount: number;
+  elderCount: number;
+  evidencePassRate: number;
+  elderVerifyPassRate: number;
+}
+
+export interface Institution {
+  id: string;
+  name: string;
+  type: "direct" | "franchise";
+  licenseNumber: string;
+  address: string;
+  siteCount: number;
+  workerCount: number;
+  elderCount: number;
+  evidencePassRate: number;
+  elderVerifyPassRate: number;
+  anomalyRate: number;
+  qualityScore: number;
+  sites: InstitutionSite[];
+}
+
+// ── Training Records ──
+
+export interface TrainingRecord {
+  id: string;
+  workerId: string;
+  workerName: string;
+  serviceItemId: string;
+  serviceItemName: string;
+  mode: "guidance" | "supervision" | "exam";
+  completedAt: string;
+  status: "completed" | "in_progress" | "failed";
+  score?: number; // only for exam mode, 0-100
+  siteId: string;
+  siteName: string;
+}
+
 export const statusText: Record<string, string> = {
   pending_activation: "待激活",
   available: "可用",
@@ -573,5 +985,36 @@ export const statusText: Record<string, string> = {
   service_ineligible: "资格待复核",
   plan_active: "计划生效",
   plan_paused: "计划暂停",
-  plan_exception_active: "例外生效"
+  plan_exception_active: "例外生效",
+  // V2 status additions
+  items_selected: "已选项目",
+  verifying: "验证中",
+  in_progress: "进行中",
+  paused: "已暂停",
+  pending: "待处理",
+  acknowledged: "已确认",
+  resolved: "已解决",
+  dismissed: "已忽略",
+  verified: "已核实",
+  in_person: "上门回访",
+  phone_manual: "人工电话",
+  phone_ai: "AI电话",
+  positive: "正面",
+  neutral: "中性",
+  negative: "负面",
+  gps_mismatch: "GPS不匹配",
+  voiceprint_mismatch: "声纹不匹配",
+  duration_abnormal: "时长异常",
+  missing_evidence: "证据缺失",
+  pattern_detected: "模式异常",
+  quality_low: "质量低",
+  low: "低",
+  medium: "中",
+  high: "高",
+  critical: "严重",
+  smart_badge: "智能工牌",
+  mmwave_radar: "毫米波雷达",
+  ble_beacon: "蓝牙星标",
+  smart_watch: "智能手表",
+  phone_app: "手机App",
 };
