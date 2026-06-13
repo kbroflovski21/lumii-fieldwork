@@ -12,6 +12,8 @@ import {
   policyConstraints, recurringScheduleRules, institutions,
   // Training
   trainingRecords,
+  // Radar
+  radarSessions, generateRadarSamples, computeSummaries,
 } from "./data.js";
 
 const app = express();
@@ -724,6 +726,38 @@ app.get("/api/training-records", (req, res) => {
 app.post("/api/training-records", (req, res) => {
   const id = uid();
   res.json({ ok: true, id, message: "created", trainingRecord: { id, ...req.body, completedAt: new Date().toISOString(), status: req.body.status ?? "completed" } });
+});
+
+// ── Radar Sessions ──
+
+app.get("/api/radar-sessions/by-session/:sessionId", (req, res) => {
+  const sessionId = req.params.sessionId;
+  const existing = radarSessions.find(s => s.serviceSessionId === sessionId);
+  if (existing) return res.json(existing);
+  const svcSession = serviceSessions.find(s => s.id === sessionId);
+  if (!svcSession) return res.status(404).json({ error: "Not found" });
+  const seed = parseInt(sessionId.replace(/\D/g, ""), 10) || 99;
+  const samples = generateRadarSamples(seed, 4.0, 3.5, 0.5, 0.3);
+  const summaries = computeSummaries(samples);
+  res.json({
+    id: `rsess-gen-${sessionId}`, deviceId: "dev-r1", serviceSessionId: sessionId,
+    workerName: svcSession.workerName, elderName: svcSession.serviceObjectName,
+    startTime: svcSession.startedAt ?? svcSession.serviceDate + "T09:00:00Z",
+    endTime: svcSession.completedAt ?? svcSession.serviceDate + "T09:30:00Z",
+    duration: svcSession.actualMinutes ?? 30, roomWidth: 4.0, roomHeight: 3.5,
+    bedPosition: { x: 0.5, y: 0.3, width: 2.0, height: 1.0 },
+    samples, ...summaries,
+  });
+});
+
+app.get("/api/radar-sessions/:deviceId", (req, res) => {
+  const sessions = radarSessions.filter(s => s.deviceId === req.params.deviceId);
+  res.json({ sessions });
+});
+
+app.get("/api/radar-sessions/:deviceId/:sessionId", (req, res) => {
+  const session = radarSessions.find(s => s.id === req.params.sessionId);
+  session ? res.json(session) : res.status(404).json({ error: "Not found" });
 });
 
 // ── Health ──

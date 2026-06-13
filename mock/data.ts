@@ -1576,3 +1576,220 @@ export const institutions = [
     ],
   },
 ];
+
+// ── Radar session mock data generator ──
+
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+interface RadarSample {
+  t: number;
+  worker: { x: number; y: number; posture: "standing" | "bending" | "walking"; movement: "large" | "medium" | "small" };
+  elder: { x: number; y: number; posture: "lying_supine" | "lying_side" | "sitting" | "standing"; movement: "large" | "medium" | "small"; inBed: boolean };
+  distance: number;
+}
+
+export function generateRadarSamples(sessionSeed: number, roomW: number, roomH: number, bedX: number, bedY: number): RadarSample[] {
+  const totalSeconds = 1800; // 30 min
+  const interval = 5;
+  const samples: RadarSample[] = [];
+  const doorX = 0.3, doorY = roomH - 0.3;
+  const bedCX = bedX + 1.0, bedCY = bedY + 0.45;
+
+  for (let i = 0; i < totalSeconds / interval; i++) {
+    const t = i * interval;
+    const phase = t / totalSeconds;
+    const r = (offset: number) => seededRandom(sessionSeed * 1000 + i * 7 + offset);
+
+    let wx: number, wy: number;
+    let wPosture: "standing" | "bending" | "walking";
+    let wMovement: "large" | "medium" | "small";
+    let ex: number, ey: number;
+    let ePosture: "lying_supine" | "lying_side" | "sitting" | "standing";
+    let eMovement: "large" | "medium" | "small";
+    let eInBed: boolean;
+
+    if (phase < 0.05) {
+      // Worker enters, walks toward bed
+      const p = phase / 0.05;
+      wx = lerp(doorX, bedCX + 0.5, p) + (r(1) - 0.5) * 0.1;
+      wy = lerp(doorY, bedCY + 0.5, p) + (r(2) - 0.5) * 0.1;
+      wPosture = "walking"; wMovement = "large";
+      ex = bedCX + (r(3) - 0.5) * 0.05; ey = bedCY + (r(4) - 0.5) * 0.05;
+      ePosture = "lying_supine"; eMovement = "small"; eInBed = true;
+    } else if (phase < 0.15) {
+      // Close contact - checking vitals
+      const p = (phase - 0.05) / 0.10;
+      wx = bedCX + 0.3 + (r(1) - 0.5) * 0.15;
+      wy = bedCY + 0.4 + (r(2) - 0.5) * 0.15;
+      wPosture = p < 0.5 ? "standing" : "bending"; wMovement = "small";
+      ex = bedCX + (r(3) - 0.5) * 0.05; ey = bedCY + (r(4) - 0.5) * 0.05;
+      ePosture = "lying_supine"; eMovement = "small"; eInBed = true;
+    } else if (phase < 0.25) {
+      // Help elder sit up
+      const p = (phase - 0.15) / 0.10;
+      wx = bedCX + 0.2 + (r(1) - 0.5) * 0.1;
+      wy = bedCY + 0.3 + (r(2) - 0.5) * 0.1;
+      wPosture = "bending"; wMovement = "medium";
+      ex = bedCX + (r(3) - 0.5) * 0.1; ey = bedCY + (r(4) - 0.5) * 0.1;
+      ePosture = p < 0.4 ? "lying_side" : "sitting";
+      eMovement = p < 0.4 ? "medium" : "large"; eInBed = p < 0.7;
+    } else if (phase < 0.35) {
+      // Worker gets supplies from across room
+      const p = (phase - 0.25) / 0.10;
+      const supplyX = roomW - 0.5, supplyY = roomH - 0.8;
+      wx = lerp(bedCX + 0.3, supplyX, Math.min(p * 2, 1)) + (r(1) - 0.5) * 0.1;
+      wy = lerp(bedCY + 0.3, supplyY, Math.min(p * 2, 1)) + (r(2) - 0.5) * 0.1;
+      wPosture = p < 0.7 ? "walking" : "bending"; wMovement = p < 0.7 ? "large" : "medium";
+      ex = bedCX + 0.3 + (r(3) - 0.5) * 0.1; ey = bedCY + (r(4) - 0.5) * 0.1;
+      ePosture = "sitting"; eMovement = "small"; eInBed = false;
+    } else if (phase < 0.50) {
+      // Worker returns, performs hygiene care
+      const p = (phase - 0.35) / 0.15;
+      wx = lerp(roomW - 0.5, bedCX + 0.25, Math.min(p * 2, 1)) + (r(1) - 0.5) * 0.15;
+      wy = lerp(roomH - 0.8, bedCY + 0.3, Math.min(p * 2, 1)) + (r(2) - 0.5) * 0.15;
+      wPosture = p < 0.3 ? "walking" : "bending"; wMovement = p < 0.3 ? "large" : "medium";
+      ex = bedCX + 0.2 + (r(3) - 0.5) * 0.1; ey = bedCY + (r(4) - 0.5) * 0.1;
+      ePosture = "sitting"; eMovement = p > 0.7 ? "medium" : "small"; eInBed = false;
+    } else if (phase < 0.60) {
+      // Worker tidies room, elder lies back
+      const p = (phase - 0.50) / 0.10;
+      wx = lerp(bedCX + 0.3, roomW * 0.5, p) + (r(1) - 0.5) * 0.3;
+      wy = lerp(bedCY + 0.3, roomH * 0.6, p) + (r(2) - 0.5) * 0.3;
+      wPosture = r(5) < 0.5 ? "walking" : "bending"; wMovement = "medium";
+      ex = bedCX + (r(3) - 0.5) * 0.1; ey = bedCY + (r(4) - 0.5) * 0.05;
+      ePosture = p < 0.4 ? "sitting" : "lying_side";
+      eMovement = p < 0.4 ? "medium" : "small"; eInBed = p >= 0.4;
+    } else if (phase < 0.75) {
+      // Worker returns for medication/feeding
+      const p = (phase - 0.60) / 0.15;
+      wx = lerp(roomW * 0.5, bedCX + 0.2, Math.min(p * 2, 1)) + (r(1) - 0.5) * 0.1;
+      wy = lerp(roomH * 0.6, bedCY + 0.3, Math.min(p * 2, 1)) + (r(2) - 0.5) * 0.1;
+      wPosture = p < 0.3 ? "walking" : "bending"; wMovement = p < 0.3 ? "large" : "small";
+      ex = bedCX + (r(3) - 0.5) * 0.05; ey = bedCY + (r(4) - 0.5) * 0.05;
+      ePosture = p < 0.3 ? "lying_side" : "lying_supine"; eMovement = "small"; eInBed = true;
+    } else if (phase < 0.85) {
+      // Final checks, nearby
+      const p = (phase - 0.75) / 0.10;
+      wx = bedCX + 0.6 + (r(1) - 0.5) * 0.2;
+      wy = bedCY + 0.5 + (r(2) - 0.5) * 0.2;
+      wPosture = "standing"; wMovement = "small";
+      ex = bedCX + (r(3) - 0.5) * 0.05; ey = bedCY + (r(4) - 0.5) * 0.05;
+      ePosture = "lying_supine"; eMovement = "small"; eInBed = true;
+    } else if (phase < 0.95) {
+      // Worker cleans up, moves around room
+      const p = (phase - 0.85) / 0.10;
+      wx = lerp(bedCX + 0.6, doorX + 1, p) + (r(1) - 0.5) * 0.3;
+      wy = lerp(bedCY + 0.5, doorY - 0.5, p) + (r(2) - 0.5) * 0.3;
+      wPosture = r(5) < 0.4 ? "walking" : "standing"; wMovement = "medium";
+      ex = bedCX + (r(3) - 0.5) * 0.03; ey = bedCY + (r(4) - 0.5) * 0.03;
+      ePosture = "lying_supine"; eMovement = "small"; eInBed = true;
+    } else {
+      // Worker exits
+      const p = (phase - 0.95) / 0.05;
+      wx = lerp(doorX + 1, doorX, p) + (r(1) - 0.5) * 0.05;
+      wy = lerp(doorY - 0.5, doorY, p) + (r(2) - 0.5) * 0.05;
+      wPosture = "walking"; wMovement = "large";
+      ex = bedCX + (r(3) - 0.5) * 0.02; ey = bedCY + (r(4) - 0.5) * 0.02;
+      ePosture = "lying_supine"; eMovement = "small"; eInBed = true;
+    }
+
+    // Clamp positions to room bounds
+    wx = clamp(wx, 0.1, roomW - 0.1);
+    wy = clamp(wy, 0.1, roomH - 0.1);
+    ex = clamp(ex, 0.1, roomW - 0.1);
+    ey = clamp(ey, 0.1, roomH - 0.1);
+
+    const distance = Math.round(Math.sqrt((wx - ex) ** 2 + (wy - ey) ** 2) * 100) / 100;
+
+    samples.push({
+      t,
+      worker: { x: Math.round(wx * 100) / 100, y: Math.round(wy * 100) / 100, posture: wPosture, movement: wMovement },
+      elder: { x: Math.round(ex * 100) / 100, y: Math.round(ey * 100) / 100, posture: ePosture, movement: eMovement, inBed: eInBed },
+      distance,
+    });
+  }
+  return samples;
+}
+
+export function computeSummaries(samples: RadarSample[]) {
+  const total = samples.length;
+  let close = 0, nearby = 0, far = 0;
+  let wLarge = 0, wMedium = 0, wSmall = 0;
+  let eLyingSupine = 0, eLyingSide = 0, eOutOfBed = 0;
+  let eLarge = 0, eMedium = 0, eSmall = 0;
+
+  for (const s of samples) {
+    if (s.distance < 0.5) close++;
+    else if (s.distance < 1.0) nearby++;
+    else far++;
+
+    if (s.worker.movement === "large") wLarge++;
+    else if (s.worker.movement === "medium") wMedium++;
+    else wSmall++;
+
+    if (!s.elder.inBed) eOutOfBed++;
+    else if (s.elder.posture === "lying_supine") eLyingSupine++;
+    else eLyingSide++;
+
+    if (s.elder.movement === "large") eLarge++;
+    else if (s.elder.movement === "medium") eMedium++;
+    else eSmall++;
+  }
+
+  const pct = (n: number) => Math.round(n / total * 1000) / 10;
+  return {
+    distanceSummary: { close: pct(close), nearby: pct(nearby), far: pct(far) },
+    workerMovementSummary: { large: pct(wLarge), medium: pct(wMedium), small: pct(wSmall) },
+    elderBedSummary: { lying_supine: pct(eLyingSupine), lying_side: pct(eLyingSide), out_of_bed: pct(eOutOfBed) },
+    elderMovementSummary: { large: pct(eLarge), medium: pct(eMedium), small: pct(eSmall) },
+  };
+}
+
+const session1Samples = generateRadarSamples(1, 4.0, 3.5, 0.5, 0.3);
+const session1Summaries = computeSummaries(session1Samples);
+const session2Samples = generateRadarSamples(2, 3.8, 3.2, 0.4, 0.2);
+const session2Summaries = computeSummaries(session2Samples);
+
+export const radarSessions = [
+  {
+    id: "rsess-1",
+    deviceId: "dev-r1",
+    serviceSessionId: "sess-01",
+    workerName: "刘秀英",
+    elderName: "王淑珍",
+    startTime: "2026-06-12T09:00:00Z",
+    endTime: "2026-06-12T09:30:00Z",
+    duration: 30,
+    roomWidth: 4.0,
+    roomHeight: 3.5,
+    bedPosition: { x: 0.5, y: 0.3, width: 2.0, height: 0.9 },
+    samples: session1Samples,
+    ...session1Summaries,
+  },
+  {
+    id: "rsess-2",
+    deviceId: "dev-r2",
+    serviceSessionId: "sess-02",
+    workerName: "陈建国",
+    elderName: "李德明",
+    startTime: "2026-06-12T14:00:00Z",
+    endTime: "2026-06-12T14:30:00Z",
+    duration: 30,
+    roomWidth: 3.8,
+    roomHeight: 3.2,
+    bedPosition: { x: 0.4, y: 0.2, width: 2.0, height: 0.9 },
+    samples: session2Samples,
+    ...session2Summaries,
+  },
+];

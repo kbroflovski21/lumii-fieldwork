@@ -8,6 +8,7 @@ import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import type { ServiceSession } from "./contracts";
 import { authFetch } from "./api";
 import { evidenceCount, evidenceScoreClass, buildAnomalyTags, scoreTone, formatDate, formatTime } from "./serviceTableUtils";
+import { RadarDetailView } from "./RadarDetailView";
 
 /* ── Tab type ── */
 type CompletedTab = "tab_summary" | "tab_evidence" | "tab_visual" | "tab_audio" | "tab_radar" | "tab_photos" | "tab_inspection";
@@ -431,60 +432,9 @@ function CompletedDetailPanel({ session, onBack }: { session: ServiceSession; on
           <div className="ls-detail__section">
             <h4>雷达证据详情</h4>
             {radarAvailable ? (
-              <>
-                <div className="ls-detail-radar-panels">
-                  <div className="ls-detail-radar-panel">
-                    <h5>全程轨迹回放</h5>
-                    <div className="ls-detail-signal__feed ls-detail-signal__feed--radar ls-detail-signal__feed--panel">
-                      <div className="ls-detail-radar-viz ls-detail-radar-viz--large">
-                        <div className="ls-detail-radar-viz__ring" />
-                        <div className="ls-detail-radar-viz__ring ls-detail-radar-viz__ring--2" />
-                        <div className="ls-detail-radar-viz__ring ls-detail-radar-viz__ring--3" />
-                        <div className="ls-detail-radar-viz__dot" />
-                        <div className="ls-detail-radar-viz__dot ls-detail-radar-viz__dot--2" />
-                      </div>
-                    </div>
-                    {/* Progress bar mock */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: "0 4px" }}>
-                      <button type="button" style={{ background: "none", border: "none", color: "var(--site-accent)", cursor: "pointer", padding: 0 }}><Play size={14} /></button>
-                      <div style={{ flex: 1, height: 4, background: "var(--site-line)", borderRadius: 2, position: "relative" }}>
-                        <div style={{ width: "40%", height: "100%", background: "var(--site-accent)", borderRadius: 2 }} />
-                      </div>
-                      <span style={{ fontSize: 11, color: "var(--site-muted)" }}>{Math.round(actualMin * 0.4)}:00 / {actualMin}:00</span>
-                    </div>
-                  </div>
-                  <div className="ls-detail-radar-panel">
-                    <h5>活动热力图</h5>
-                    <div className="ls-detail-signal__feed ls-detail-signal__feed--heatmap ls-detail-signal__feed--panel">
-                      <div className="ls-detail-heatmap">
-                        <div className="ls-detail-heatmap__spot" style={{ top: "30%", left: "40%", opacity: 0.9 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "50%", left: "60%", opacity: 0.6 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "65%", left: "35%", opacity: 0.4 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "40%", left: "55%", opacity: 0.7 }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
+              <RadarDetailView serviceSessionId={session.id} />
             ) : (
               <p style={{ color: "var(--site-muted)", fontSize: 13, padding: "40px 0", textAlign: "center" }}>本次服务未获取雷达数据</p>
-            )}
-
-            {/* AI识别结果 */}
-            {radarAvailable && (
-              <div className="ls-detail-ai-section">
-                <h4>AI识别结果</h4>
-                <div className="ls-detail-ai__items">
-                  <div className="ls-detail-ai__item">
-                    <span>老人失能程度识别</span>
-                    <span className="ls-detail-ai__status ls-detail-ai__status--green">符合失能特征</span>
-                  </div>
-                  <div className="ls-detail-ai__item">
-                    <span>护理人员运动轨迹识别</span>
-                    <span className="ls-detail-ai__status ls-detail-ai__status--green">符合要求</span>
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         )}

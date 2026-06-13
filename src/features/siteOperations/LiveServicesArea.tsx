@@ -7,6 +7,7 @@ import { FilterDropdown } from "../../shared/components/FilterDropdown";
 import { AvatarInitial } from "../../shared/components/AvatarInitial";
 import type { ServiceSession } from "./contracts";
 import { evidenceCount, evidenceScoreClass, formatTime } from "./serviceTableUtils";
+import { RadarDetailView } from "./RadarDetailView";
 
 type LiveTab = "tab_overview" | "tab_evidence" | "tab_visual" | "tab_audio" | "tab_radar" | "tab_photos" | "tab_inspection";
 
@@ -596,55 +597,10 @@ function SessionDetailPanel({ session, onBack }: { session: ServiceSession; onBa
           <div className="ls-detail__section">
             <h4>雷达证据详情</h4>
             {radarConnected ? (
-              <>
-                <div className="ls-detail-radar-panels">
-                  <div className="ls-detail-radar-panel">
-                    <h5>实时人员位置</h5>
-                    <div className="ls-detail-signal__feed ls-detail-signal__feed--radar ls-detail-signal__feed--panel">
-                      <div className="ls-detail-radar-viz ls-detail-radar-viz--large">
-                        <div className="ls-detail-radar-viz__ring" />
-                        <div className="ls-detail-radar-viz__ring ls-detail-radar-viz__ring--2" />
-                        <div className="ls-detail-radar-viz__ring ls-detail-radar-viz__ring--3" />
-                        <div className="ls-detail-radar-viz__dot" />
-                        <div className="ls-detail-radar-viz__dot ls-detail-radar-viz__dot--2" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ls-detail-radar-panel">
-                    <h5>服务期间活动热力图</h5>
-                    <div className="ls-detail-signal__feed ls-detail-signal__feed--heatmap ls-detail-signal__feed--panel">
-                      <div className="ls-detail-heatmap">
-                        <div className="ls-detail-heatmap__spot" style={{ top: "30%", left: "40%", opacity: 0.9 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "50%", left: "60%", opacity: 0.6 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "65%", left: "35%", opacity: 0.4 }} />
-                        <div className="ls-detail-heatmap__spot" style={{ top: "40%", left: "55%", opacity: 0.7 }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
+              <RadarDetailView serviceSessionId={session.id} />
             ) : (
               <p style={{ color: "var(--site-muted)", fontSize: 13, padding: "40px 0", textAlign: "center" }}>当前信号未接入</p>
             )}
-
-            {/* AI识别模式 */}
-            <div className="ls-detail-ai-section">
-              <h4>AI识别模式</h4>
-              <div className="ls-detail-ai__items">
-                <div className="ls-detail-ai__item">
-                  <span>老人失能程度识别</span>
-                  <span className={`ls-detail-ai__status ls-detail-ai__status--${radarConnected ? "green" : "gray"}`}>
-                    {radarConnected ? "符合失能特征" : "数据不足"}
-                  </span>
-                </div>
-                <div className="ls-detail-ai__item">
-                  <span>护理人员运动轨迹识别</span>
-                  <span className={`ls-detail-ai__status ls-detail-ai__status--${radarConnected ? "green" : "gray"}`}>
-                    {radarConnected ? "符合要求" : "数据不足"}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
